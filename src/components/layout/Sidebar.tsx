@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -14,8 +14,29 @@ import {
   HelpCircle,
   ChevronRight,
   Bell,
-  BookOpen
+  BookOpen,
+  Dumbbell
 } from 'lucide-react';
+
+// Track which modules have been prefetched to prevent redundant fetches
+const prefetchedModules = new Set<string>();
+
+// Helper function to dynamically prefetch a module
+const prefetchModule = (path: string) => {
+  if (prefetchedModules.has(path)) return; // Skip if already prefetched
+  
+  try {
+    // Dynamically import the module to prefetch it
+    import(`../../pages${path}`).catch(() => {
+      // Silent catch - prefetch failures shouldn't disrupt the UI
+      // console.log(`Prefetching ${path} - ready for navigation`);
+    });
+    
+    prefetchedModules.add(path);
+  } catch (error) {
+    // Silent catch for any prefetch errors
+  }
+};
 
 interface SidebarLinkProps {
   icon: React.ReactNode;
@@ -23,6 +44,7 @@ interface SidebarLinkProps {
   to: string;
   isActive?: boolean;
   hasSubmenu?: boolean;
+  prefetchOnHover?: boolean;
 }
 
 const SidebarLink: React.FC<SidebarLinkProps> = ({
@@ -30,19 +52,27 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
   label,
   to,
   isActive = false,
-  hasSubmenu = false
+  hasSubmenu = false,
+  prefetchOnHover = false,
 }) => {
   const navigate = useNavigate();
+  
+  // Handle hover to prefetch module
+  const handleMouseEnter = useCallback(() => {
+    if (prefetchOnHover) {
+      // For root paths like "/programs", we prefetch the module directly
+      const modulePath = to === '/' ? '' : to;
+      prefetchModule(modulePath);
+    }
+  }, [prefetchOnHover, to]);
   
   return (
     <button
       onClick={() => navigate(to)}
+      onMouseEnter={handleMouseEnter}
       className={`flex items-center w-full px-4 py-3 rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none ${
-        isActive 
-          ? 'bg-background-card text-accent-violet sidebar-active' 
-          : 'text-text-secondary hover:text-text-primary hover:bg-background-card/50'
+        isActive ? 'bg-accent-green/10 text-accent-green' : 'text-text-secondary hover:text-text-primary hover:bg-background-card/50'
       }`}
-      aria-current={isActive ? 'page' : undefined}
     >
       <span className="w-5 h-5 mr-3">{icon}</span>
       <span className="flex-1 text-left">{label}</span>
@@ -60,10 +90,9 @@ const Sidebar: React.FC = () => {
     <aside className="w-[250px] h-full bg-background-surface border-r border-border-light flex flex-col overflow-hidden">
       {/* Logo Header */}
       <div className="px-6 py-4 flex items-center">
-        <div className="bg-accent-violet bg-opacity-20 text-accent-violet p-2 rounded-lg mr-3">
-          <BarChart2 size={18} />
+        <div className="h-14">
+          <img src="/Logo.svg" alt="Jarvis Fitness" className="h-full invert" />
         </div>
-        <div className="font-bold text-lg">business space</div>
       </div>
       
       {/* Navigation */}
@@ -76,27 +105,11 @@ const Sidebar: React.FC = () => {
         />
         
         <SidebarLink 
-          icon={<BarChart2 size={18} />} 
-          label="Reports" 
-          to="/reports"
-          isActive={location.pathname === '/reports'}
-          hasSubmenu
-        />
-        
-        <SidebarLink 
-          icon={<FileText size={18} />} 
-          label="Transactions" 
-          to="/transactions"
-          isActive={location.pathname === '/transactions'}
-          hasSubmenu
-        />
-        
-        <SidebarLink 
-          icon={<ShoppingCart size={18} />} 
-          label="Products" 
-          to="/products"
-          isActive={location.pathname === '/products'}
-          hasSubmenu
+          icon={<Dumbbell size={18} />} 
+          label="Programs" 
+          to="/programs"
+          isActive={location.pathname === '/programs'}
+          prefetchOnHover={true} // Enable prefetching on hover for Programs
         />
         
         <SidebarLink 
@@ -107,35 +120,17 @@ const Sidebar: React.FC = () => {
         />
         
         <SidebarLink 
-          icon={<Star size={18} />} 
-          label="Features" 
-          to="/features"
-          isActive={location.pathname === '/features'}
-          hasSubmenu
+          icon={<BarChart2 size={18} />} 
+          label="Progress" 
+          to="/progress"
+          isActive={location.pathname === '/progress'}
         />
         
         <SidebarLink 
-          icon={<CheckSquare size={18} />} 
-          label="Task board" 
-          to="/tasks"
-          isActive={location.pathname === '/tasks'}
-          hasSubmenu
-        />
-        
-        <SidebarLink 
-          icon={<FolderKanban size={18} />} 
-          label="Projects" 
-          to="/projects"
-          isActive={location.pathname === '/projects'}
-          hasSubmenu
-        />
-        
-        <SidebarLink 
-          icon={<Settings size={18} />} 
-          label="Integrations" 
-          to="/integrations"
-          isActive={location.pathname === '/integrations'}
-          hasSubmenu
+          icon={<MessageCircle size={18} />} 
+          label="Coach" 
+          to="/"
+          isActive={location.pathname === '/'}
         />
       </nav>
       
@@ -147,11 +142,10 @@ const Sidebar: React.FC = () => {
       {/* Secondary Nav */}
       <nav className="px-3 py-4 space-y-1">
         <SidebarLink 
-          icon={<Bell size={18} />} 
-          label="Notifications" 
-          to="/notifications"
-          isActive={location.pathname === '/notifications'}
-          hasSubmenu
+          icon={<ShoppingCart size={18} />} 
+          label="Nutrition" 
+          to="/nutrition"
+          isActive={location.pathname === '/nutrition'}
         />
         
         <SidebarLink 
@@ -159,14 +153,13 @@ const Sidebar: React.FC = () => {
           label="Settings" 
           to="/settings"
           isActive={location.pathname === '/settings'}
-          hasSubmenu
         />
         
         <SidebarLink 
           icon={<HelpCircle size={18} />} 
-          label="FAQ" 
-          to="/faq"
-          isActive={location.pathname === '/faq'}
+          label="Help" 
+          to="/help"
+          isActive={location.pathname === '/help'}
         />
       </nav>
       
@@ -175,15 +168,15 @@ const Sidebar: React.FC = () => {
         <div className="flex items-center">
           <div className="relative">
             <img 
-              src="https://ui-avatars.com/api/?name=Max+Anderson&background=8B5CF6&color=fff&size=32" 
+              src="https://ui-avatars.com/api/?name=Fitness+User&background=10a37f&color=fff&size=32" 
               alt="User avatar" 
-              className="w-10 h-10 rounded-full border-2 border-accent-violet" 
+              className="w-10 h-10 rounded-full border-2 border-accent-green" 
             />
             <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background-surface rounded-full"></span>
           </div>
           <div className="ml-3">
-            <div className="text-sm font-medium">Max Anderson</div>
-            <div className="text-xs text-text-secondary">anderson@gmail.com</div>
+            <div className="text-sm font-medium">Fitness User</div>
+            <div className="text-xs text-text-secondary">fitness@example.com</div>
           </div>
           <button className="ml-auto text-text-secondary hover:text-text-primary">
             <motion.div 

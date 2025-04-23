@@ -3,19 +3,54 @@ import { Flame, Trophy, Calendar, ArrowUp } from 'lucide-react';
 import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
 import { cn } from '../../../lib/utils';
+import createLogger from '../../../utils/logger';
+
+const logger = createLogger('StreakCounter');
 
 /**
  * StreakCounter Component
  * Displays the user's current workout streak and motivational elements
  */
 const StreakCounter: React.FC = () => {
-  const { streak, loading, error, calculateStreak } = useDiaryStore();
+  // Get streak data from store with safe defaults
+  const { 
+    loading, 
+    error, 
+    calculateStreak 
+  } = useDiaryStore();
+  
+  // Safely extract streak data with defaults
+  const streakData = useDiaryStore(state => {
+    // Handle both object and primitive streak formats
+    if (typeof state.streak === 'object' && state.streak !== null) {
+      return {
+        currentStreak: state.streak.currentStreak || 0,
+        longestStreak: state.streak.longestStreak || 0,
+        lastSevenDays: Array.isArray(state.streak.lastSevenDays) ? state.streak.lastSevenDays : [],
+        streakChange: state.streak.streakChange || 0
+      };
+    }
+    // Default values
+    return {
+      currentStreak: 0,
+      longestStreak: 0,
+      lastSevenDays: [],
+      streakChange: 0
+    };
+  });
+  
   const { user } = useUserStore();
   
   // Calculate streak on component mount
   useEffect(() => {
-    if (user?.id) {
-      calculateStreak(user.id);
+    logger.debug('StreakCounter mounted');
+    try {
+      if (user?.id) {
+        logger.debug('Calculating streak for user', { userId: user.id });
+        calculateStreak(user.id);
+      }
+    } catch (err) {
+      logger.error('Error calculating streak', err);
     }
   }, [user?.id, calculateStreak]);
   
@@ -42,7 +77,7 @@ const StreakCounter: React.FC = () => {
   }
   
   // Empty state - no streak yet
-  if (!streak || streak.currentStreak === 0) {
+  if (streakData.currentStreak === 0) {
     return (
       <div className="bg-background-card rounded-2xl shadow-card p-4" data-testid="streak-counter-empty">
         <div className="flex justify-between items-center">
@@ -50,112 +85,70 @@ const StreakCounter: React.FC = () => {
             <Flame className="text-accent-violet mr-2" size={18} />
             Workout Streak
           </h3>
-          
-          <span className="bg-background-surface py-1 px-2 rounded-md text-sm flex items-center">
-            <Calendar size={14} className="mr-1 text-text-tertiary" />
-            Start Today
-          </span>
         </div>
         
-        <p className="text-sm text-text-secondary mt-2">
-          Complete a workout to start your streak. Consistency builds results!
-        </p>
+        <div className="mt-2 text-text-secondary text-sm">
+          <p>Complete your first workout to start your streak!</p>
+        </div>
       </div>
     );
   }
   
-  // Generate a gradient color for the streak based on its value
-  const getStreakColor = (streakValue: number) => {
-    if (streakValue >= 30) return 'from-purple-500 to-violet-600'; // 30+ days
-    if (streakValue >= 14) return 'from-indigo-500 to-blue-600';   // 14+ days
-    if (streakValue >= 7) return 'from-cyan-500 to-blue-500';      // 7+ days
-    return 'from-amber-500 to-orange-600';                         // < 7 days
-  };
-  
-  // Calculate if the current streak is equal to the longest streak
-  const isNewRecord = streak.currentStreak === streak.longestStreak && streak.currentStreak > 0;
-  
+  // Normal state with streak data
   return (
-    <div 
-      className={cn(
-        "bg-background-card rounded-2xl shadow-card p-4 border-l-4",
-        streak.currentStreak >= 7 ? "border-accent-violet" : "border-accent-green"
-      )}
-      data-testid="streak-counter"
-    >
-      <div className="flex justify-between items-center mb-1">
+    <div className="bg-background-card rounded-2xl shadow-card p-4" data-testid="streak-counter-active">
+      <div className="flex justify-between items-center mb-2">
         <h3 className="text-base font-semibold flex items-center">
           <Flame className={cn(
-            "mr-2",
-            streak.currentStreak >= 30 ? "text-violet-500" : 
-            streak.currentStreak >= 14 ? "text-blue-500" : 
-            streak.currentStreak >= 7 ? "text-cyan-500" : 
-            "text-orange-500"
+            "mr-2", 
+            streakData.currentStreak >= 7 ? "text-amber-500" : "text-accent-violet"
           )} size={18} />
-          Current Streak
+          Workout Streak
         </h3>
         
-        {streak.streakChange > 0 && (
-          <span className="bg-accent-green/20 text-accent-green py-1 px-2 rounded-md text-xs flex items-center">
-            <ArrowUp size={12} className="mr-1" />
-            +{streak.streakChange} days
-          </span>
+        {streakData.streakChange > 0 && (
+          <div className="flex items-center text-green-500 text-xs font-medium bg-green-500/10 px-2 py-0.5 rounded-full">
+            <ArrowUp size={12} className="mr-0.5" />
+            +{streakData.streakChange}
+          </div>
         )}
       </div>
       
-      <div className="flex justify-between items-center">
-        <div className="flex items-baseline">
-          <span className={cn(
-            "text-3xl font-bold bg-gradient-to-r bg-clip-text text-transparent",
-            getStreakColor(streak.currentStreak)
-          )}>
-            {streak.currentStreak}
-          </span>
-          <span className="text-text-secondary ml-1">days</span>
-        </div>
-        
-        <div className="flex items-center">
-          <div className="flex flex-col items-end mr-3">
-            <span className="text-xs text-text-tertiary">Longest</span>
-            <div className="flex items-baseline">
-              <span className="font-bold">{streak.longestStreak}</span>
-              <span className="text-xs text-text-tertiary ml-1">days</span>
-            </div>
+      <div className="flex items-end justify-between">
+        <div>
+          <div className="flex items-baseline">
+            <span className="text-2xl font-bold">{streakData.currentStreak}</span>
+            <span className="text-text-secondary text-sm ml-1.5">day{streakData.currentStreak !== 1 ? 's' : ''}</span>
           </div>
           
-          {isNewRecord && (
-            <Trophy size={18} className="text-accent-green" />
-          )}
+          <div className="flex items-center mt-1 text-xs text-text-secondary">
+            <Trophy size={12} className="mr-1 text-amber-500" />
+            <span>Best: {streakData.longestStreak} days</span>
+          </div>
         </div>
-      </div>
-      
-      {/* Mini calendar visualization (7 days) */}
-      <div className="flex items-center justify-between mt-2 bg-background-surface rounded-md p-2">
-        {Array.from({ length: 7 }).map((_, index) => {
-          const isActive = index < streak.lastSevenDays.filter(Boolean).length;
-          return (
+        
+        <div className="flex gap-0.5 items-center">
+          {Array.isArray(streakData.lastSevenDays) && streakData.lastSevenDays.map((active, i) => (
             <div 
-              key={index}
+              key={i}
               className={cn(
-                "w-6 h-6 rounded-full flex items-center justify-center text-xs",
-                isActive 
-                  ? "bg-gradient-to-r from-accent-violet to-accent-violet/80 text-white"
-                  : "bg-background-card text-text-tertiary"
+                "w-3 h-3 rounded-sm",
+                active 
+                  ? "bg-accent-violet" 
+                  : "bg-background-surface"
               )}
-              aria-label={isActive ? "Active day" : "Inactive day"}
-            >
-              {isActive ? <Flame size={12} /> : index + 1}
-            </div>
-          );
-        })}
+              title={`${active ? 'Active' : 'Inactive'} day`}
+            />
+          ))}
+        </div>
       </div>
       
       {/* Motivational message based on streak */}
       <p className="text-xs text-text-secondary mt-2">
-        {streak.currentStreak >= 30 ? "Amazing dedication! You're in the top tier of consistency." :
-         streak.currentStreak >= 14 ? "Fantastic work! Your consistency is becoming a solid habit." :
-         streak.currentStreak >= 7 ? "Great job! You've completed a full week of training." :
-         streak.currentStreak >= 3 ? "Good start! Keep the momentum going." :
+        {streakData.currentStreak >= 30 ? "Amazing dedication! You're in the top tier of consistency." :
+         streakData.currentStreak >= 14 ? "Fantastic work! Your consistency is becoming a solid habit." :
+         streakData.currentStreak >= 7 ? "Great job! You've completed a full week of training." :
+         streakData.currentStreak >= 3 ? "Good start! Keep the momentum going." :
          "You're on your way! Consistency is key to results."}
       </p>
     </div>
