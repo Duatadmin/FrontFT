@@ -1,0 +1,83 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Define safe area variables */
+    --safe-area-inset-top: env(safe-area-inset-top, 0px);
+    --safe-area-inset-right: env(safe-area-inset-right, 0px);
+    --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  }
+
+  html {
+    @apply font-sans antialiased tracking-tight;
+    /* Smooth scroll behavior */
+    scroll-behavior: smooth;
+  }
+
+  body {
+    /* Use new background color */
+    @apply bg-background text-text;
+    /* Prevent text selection */
+    @apply select-none; 
+    /* Ensure body takes full viewport height, accounting for virtual keyboard */
+    min-height: 100vh;
+    min-height: -webkit-fill-available; /* For mobile Safari */
+  }
+
+  /* Updated scrollbar */
+  ::-webkit-scrollbar {
+    @apply w-1.5 h-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-surface rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-[#4a4b57]; /* Slightly lighter surface on hover */
+  }
+  
+  *:focus {
+    outline: none;
+  }
+  *:focus-visible {
+    /* Focus rings applied directly in components */
+  }
+
+  #root {
+    /* Ensure root also respects viewport height changes */
+    min-height: 100vh;
+    min-height: -webkit-fill-available; 
+    @apply flex flex-col;
+  }
+}
+
+@layer components {
+  /* Animation utilities defined in config */
+  .animate-fade-in {
+    animation: fade-in 0.3s ease-out;
+  }
+  .animate-slide-in-up {
+    animation: slide-in-up 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+  }
+  
+  /* Custom prose styles for chat messages */
+  .prose-chat {
+    @apply prose-p:my-0 prose-headings:my-0 prose-ul:my-0 prose-ol:my-0 prose-li:my-0;
+    @apply prose-blockquote:my-0 prose-pre:my-0 prose-code:font-normal prose-code:before:content-none prose-code:after:content-none;
+    color: inherit; /* Inherit text color from bubble */
+  }
+  .prose-chat code {
+     @apply text-xs px-1 py-0.5 bg-black/20 rounded;
+  }
+}
+
+/* Keyframes are now defined in tailwind.config.js */
+/* @keyframes fade-in { ... } */
+/* @keyframes bounce { ... } */ 
