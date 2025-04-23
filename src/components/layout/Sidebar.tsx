@@ -13,7 +13,8 @@ import {
   MessageCircle,
   HelpCircle,
   ChevronRight,
-  Bell
+  Bell,
+  BookOpen
 } from 'lucide-react';
 
 interface SidebarLinkProps {
@@ -96,6 +97,13 @@ const Sidebar: React.FC = () => {
           to="/products"
           isActive={location.pathname === '/products'}
           hasSubmenu
+        />
+        
+        <SidebarLink 
+          icon={<BookOpen size={18} />} 
+          label="Training Diary" 
+          to="/diary"
+          isActive={location.pathname === '/diary'}
         />
         
         <SidebarLink 
