@@ -5,6 +5,7 @@ import App from './App.tsx'
 import Dashboard from './pages/dashboard'
 import EnhancedDashboard from './pages/EnhancedDashboard'
 import DiaryPage from './pages/DiaryPage'
+import EnhancedDiaryPage from './pages/EnhancedDiaryPage'
 import './index.css'
 import './styles/animations.css'
 
@@ -15,7 +16,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/" element={<App />} />
         <Route path="/dashboard" element={<EnhancedDashboard />} />
         <Route path="/dashboard-old" element={<Dashboard />} />
-        <Route path="/diary" element={<DiaryPage />} />
+        <Route path="/diary" element={<EnhancedDiaryPage />} />
+        <Route path="/diary-old" element={<DiaryPage />} />
         <Route path="*" element={<div className="flex items-center justify-center h-screen bg-background text-text">Page not found</div>} />
       </Routes>
     </BrowserRouter>

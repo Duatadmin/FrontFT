@@ -1,8 +1,16 @@
 import { create } from 'zustand';
-import { devtools } from 'zustand/middleware';
+import { devtools, persist } from 'zustand/middleware';
 import supabase, { WorkoutSession, TrainingPlan } from '../lib/supabaseClient';
 // Import mock data generators for development
 import { generateMockSessions, generateMockTrainingPlan } from '../lib/mockDiaryData';
+import { 
+  generateMockGoals, 
+  generateMockWeeklyReflections, 
+  generateCurrentWeekReflection, 
+  generateMockProgressPhotos, 
+  generateMockReflections,
+  calculateMockStreak
+} from '../lib/mockDiaryEnhancedData';
 
 // Filter types for workout sessions
 export type DiaryFilters = {
@@ -11,30 +19,170 @@ export type DiaryFilters = {
   prAchieved: boolean | null;
 };
 
+// Goal types
+export type Goal = {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  target_date: string;
+  type: 'short_term' | 'long_term';
+  progress: number;
+  created_at: string;
+  completed: boolean;
+};
+
+// For backward compatibility
+export type FitnessGoal = {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  target_value: number;
+  current_value: number;
+  unit: string;
+  category: 'strength' | 'endurance' | 'weight' | 'habit' | 'other';
+  target_date?: string;
+  created_at: string;
+  completed: boolean;
+  completed_at?: string;
+};
+
+// Weekly reflection type
+export type Challenge = {
+  id: string;
+  user_id: string;
+  text: string;
+  solution?: string;
+  week_id: string;
+};
+
+export type Reflection = {
+  id: string;
+  user_id: string;
+  text: string;
+  date: string;
+};
+
+export type WeeklyReflection = {
+  id: string;
+  user_id: string;
+  week_start_date: string;
+  week_end_date: string;
+  planned_sessions: number;
+  completed_sessions: number;
+  total_volume: number;
+  new_prs: number;
+  cardio_minutes: number;
+  avg_mood: number;
+  avg_sleep: number;
+  avg_soreness: number;
+  challenges: Challenge[];
+  wins: string[];
+  next_week_focus: string;
+  next_week_session_target: number;
+  created_at: string;
+  updated_at: string;
+};
+
+// Progress photo type
+export type ProgressPhoto = {
+  id: string;
+  user_id: string;
+  url: string;
+  caption?: string;
+  description?: string; // For backward compatibility
+  date: string;
+};
+
+// Active tab type
+export type DiaryTab = 'daily' | 'weekly' | 'goals';
+
 // State type for our store
-interface DiaryState {
+export interface DiaryState {  
+  // Reflections array
+  reflections: Reflection[];
+  
   // Data
   sessions: WorkoutSession[];
   currentPlan: TrainingPlan | null;
   todayWorkout: any | null; // The workout for today from the training plan
+  goals: Goal[];
+  weeklyReflections: WeeklyReflection[];
+  currentWeekReflection: WeeklyReflection | null;
+  progressPhotos: ProgressPhoto[];
+  streak: {
+    currentStreak: number; // Current consecutive days
+    longestStreak: number; // Longest streak ever achieved
+    lastSevenDays: boolean[]; // Activity for the last 7 days
+    streakChange: number; // Change since last check (for animations)
+  }; // Consecutive days with completed workouts
+  
   // UI state
   selectedSession: WorkoutSession | null;
+  activeTab: DiaryTab;
   filters: DiaryFilters;
   loading: {
     sessions: boolean;
     currentPlan: boolean;
+    goals: boolean;
+    weeklyReflection: boolean;
+    progressPhotos: boolean;
+    streak: boolean;
   };
   error: {
     sessions: string | null;
     currentPlan: string | null;
+    goals: string | null;
+    weeklyReflection: string | null;
+    progressPhotos: string | null;
+    streak: string | null;
   };
+  
   // Actions
+  // Sessions and plans
   fetchSessions: (userId: string, filters?: Partial<DiaryFilters>) => Promise<void>;
   fetchCurrentPlan: (userId: string) => Promise<void>;
+  markSessionCompleted: (userId: string, sessionData: Partial<WorkoutSession>) => Promise<void>;
+  
+  // Goals
+  fetchGoals: (userId: string) => Promise<void>;
+  addGoal: (goal: Goal) => void;
+  updateGoal: (goal: Goal) => void;
+  removeGoal: (goalId: string, userId: string) => void;
+  
+  // Reflections
+  addReflection: (reflection: Reflection) => void;
+  updateReflection: (reflection: Reflection) => void;
+  removeReflection: (reflectionId: string, userId: string) => void;
+  
+  // Challenges
+  addChallenge: (challenge: Challenge) => void;
+  updateChallenge: (challenge: Challenge) => void;
+  removeChallenge: (challengeId: string, userId: string) => void;
+  
+  // Photos
+  fetchProgressPhotos: (userId: string) => Promise<void>;
+  addProgressPhoto: (photo: ProgressPhoto) => void;
+  removeProgressPhoto: (photoId: string, userId: string) => void;
+
+  // Streak
+  calculateStreak: (userId: string) => void;
+  
+  // Weekly reflections
+  fetchWeeklyReflections: (userId: string) => Promise<void>;
+  fetchCurrentWeekReflection: (userId: string) => Promise<void>;
+  updateWeeklyReflection: (reflection: WeeklyReflection, userId: string) => Promise<void>;
+  
+  // UI actions
   setFilters: (filters: Partial<DiaryFilters>) => void;
+  setActiveTab: (tab: DiaryTab) => void;
   selectSession: (session: WorkoutSession | null) => void;
   clearErrors: () => void;
 }
+
+// Import enhanced diary actions
+import { createEnhancedDiaryActions } from './enhancedDiaryActions';
 
 // Get default date range (last 30 days)
 const getDefaultDateRange = () => {
@@ -62,28 +210,62 @@ const getTodayWorkout = (plan: TrainingPlan | null): any | null => {
 // Create the store
 const useDiaryStore = create<DiaryState>()(
   devtools(
-    (set, get) => ({
-      // Initial state
-      sessions: [],
-      currentPlan: null,
-      todayWorkout: null,
-      selectedSession: null,
-      filters: {
-        dateRange: getDefaultDateRange(),
-        focusArea: null,
-        prAchieved: null
-      },
-      loading: {
-        sessions: false,
-        currentPlan: false
-      },
-      error: {
-        sessions: null,
-        currentPlan: null
-      },
-      
-      // Actions
-      fetchSessions: async (userId, filters) => {
+    persist<DiaryState>(
+      (set, get) => ({
+        // Initial state
+        sessions: [],
+        currentPlan: null,
+        todayWorkout: null,
+        selectedSession: null,
+        goals: generateMockGoals(),
+        weeklyReflections: generateMockWeeklyReflections(),
+        currentWeekReflection: generateCurrentWeekReflection(),
+        progressPhotos: generateMockProgressPhotos(),
+        reflections: generateMockReflections(),
+        streak: {
+          currentStreak: 0,
+          longestStreak: 0,
+          lastSevenDays: Array(7).fill(false),
+          streakChange: 0
+        },
+        activeTab: 'daily' as DiaryTab,
+        filters: {
+          dateRange: getDefaultDateRange(),
+          focusArea: null,
+          prAchieved: null
+        },
+        loading: {
+          sessions: false,
+          currentPlan: false,
+          goals: false,
+          weeklyReflection: false,
+          progressPhotos: false,
+          streak: false
+        } as {
+          sessions: boolean;
+          currentPlan: boolean;
+          goals: boolean;
+          weeklyReflection: boolean;
+          progressPhotos: boolean;
+          streak: boolean;
+        },
+        error: {
+          sessions: null,
+          currentPlan: null,
+          goals: null,
+          weeklyReflection: null,
+          progressPhotos: null,
+          streak: null
+        } as {
+          sessions: string | null;
+          currentPlan: string | null;
+          goals: string | null;
+          weeklyReflection: string | null;
+          progressPhotos: string | null;
+          streak: string | null;
+        },
+      // Core diary actions
+      fetchSessions: async (userId: string, filters?: Partial<DiaryFilters>) => {
         try {
           set(state => ({
             loading: { ...state.loading, sessions: true },
@@ -94,7 +276,7 @@ const useDiaryStore = create<DiaryState>()(
           set({ filters: currentFilters });
           
           // For development, use mock data instead of Supabase queries
-          if (import.meta.env.DEV) {
+          if (process.env.NODE_ENV === 'development') {
             // Simulate network delay
             await new Promise(resolve => setTimeout(resolve, 800));
             
@@ -173,7 +355,7 @@ const useDiaryStore = create<DiaryState>()(
         }
       },
       
-      fetchCurrentPlan: async (userId) => {
+      fetchCurrentPlan: async (userId: string) => {
         try {
           set(state => ({
             loading: { ...state.loading, currentPlan: true },
@@ -181,7 +363,7 @@ const useDiaryStore = create<DiaryState>()(
           }));
           
           // For development, use mock data instead of Supabase query
-          if (import.meta.env.DEV) {
+          if (import.meta.env as any.DEV) {
             // Simulate network delay
             await new Promise(resolve => setTimeout(resolve, 600));
             
@@ -234,15 +416,36 @@ const useDiaryStore = create<DiaryState>()(
         get().fetchSessions(mockUserId);
       },
       
+      setActiveTab: (tab) => {
+        set({ activeTab: tab });
+      },
+      
       selectSession: (session) => {
         set({ selectedSession: session });
       },
       
-      clearErrors: () => {
-        set({
-          error: { sessions: null, currentPlan: null }
-        });
-      }
+      clearErrors: () => set(() => ({
+        error: {
+          sessions: null,
+          currentPlan: null,
+          goals: null,
+          weeklyReflection: null,
+          progressPhotos: null,
+          streak: null
+        }
+      })),
+      
+      // Add all enhanced diary actions 
+      ...createEnhancedDiaryActions(set, get)
+    }),
+    {
+      name: 'diary-store',
+      // Only persist certain parts of the state
+      partialize: (state) => ({
+        activeTab: state.activeTab,
+        filters: state.filters,
+        streak: state.streak
+      })
     }),
     { name: 'diary-store' }
   )
