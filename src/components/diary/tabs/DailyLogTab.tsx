@@ -1,7 +1,7 @@
 import React from 'react';
 import TodayCard from '../daily/TodayCard';
 import FiltersBar from '../daily/FiltersBar';
-import WorkoutHistoryTable from '../daily/WorkoutHistoryTable';
+import WorkoutDisplayCard from '../WorkoutDisplayCard';
 import SessionDrawer from '../SessionDrawer';
 
 /**
@@ -20,7 +20,7 @@ const DailyLogTab: React.FC = () => {
         {/* Workout history section */}
         <div className="lg:col-span-8 flex flex-col">
           <FiltersBar />
-          <WorkoutHistoryTable />
+          <WorkoutDisplayCard />
         </div>
       </div>
       

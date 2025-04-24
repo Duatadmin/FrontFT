@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import CurrentPlanCard from '../components/diary/CurrentPlanCard';
 import FiltersBar from '../components/diary/FiltersBar';
-import WorkoutTable from '../components/diary/WorkoutTable';
+import WorkoutDisplayCard from '../components/diary/WorkoutDisplayCard';
 import SessionDrawer from '../components/diary/SessionDrawer';
 import useDiaryStore from '../store/useDiaryStore';
 import useUserStore from '../store/useUserStore';
@@ -45,7 +45,7 @@ const DiaryPage: React.FC = () => {
             {/* Workout history */}
             <div className="lg:col-span-8 flex flex-col">
               <FiltersBar />
-              <WorkoutTable />
+              <WorkoutDisplayCard />
             </div>
           </div>
         </main>
