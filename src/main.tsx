@@ -8,6 +8,7 @@ import DiaryPage from './pages/DiaryPage'
 import EnhancedDiaryPage from './pages/EnhancedDiaryPage'
 import TestPage from './pages/TestPage'
 import ProgramsPageSkeleton from './components/skeletons/ProgramsPageSkeleton'
+import SupabaseTest from './SupabaseTest'
 
 // Import ProgramsPage with proper lazy-loading
 const ProgramsPage = React.lazy(() => {
@@ -42,6 +43,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <Route path="/diary" element={<EnhancedDiaryPage />} />
         <Route path="/diary-old" element={<DiaryPage />} />
         <Route path="/test" element={<TestPage />} />
+        <Route path="/supabase-test" element={<SupabaseTest />} />
         <Route path="/programs" element={
           <React.Suspense fallback={<ProgramsPageSkeleton />}>
             <ProgramsPage />

@@ -1,7 +1,24 @@
 import React, { useState } from 'react';
-import { TrainingPlan } from '../../../store/useProgramStore';
+import { TrainingPlan } from '../../../lib/stores/useProgramStore';
 import DaySessionDrawer from './DaySessionDrawer';
 import createLogger from '../../../utils/logger';
+
+// Local type mapping to bridge the gap between different store structures
+interface ProgramExercise {
+  id: string;
+  name: string;
+  sets: number;
+  reps: number;
+  load?: number;
+  rpe?: number;
+  notes?: string;
+}
+
+interface ProgramDay {
+  dayOfWeek: number; // 0 = Sunday, 6 = Saturday
+  focus: string;
+  exercises: ProgramExercise[];
+}
 
 const logger = createLogger('WeeklyPlanGrid');
 
@@ -38,7 +55,17 @@ const FOCUS_EMOJIS: Record<string, string> = {
  * WeeklyPlanGrid Component
  * Displays a 7-day grid showing workout schedule for the current program
  */
-const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ program }) => {
+const WeeklyPlanGrid: React.FC<{ program: TrainingPlan }> = ({ program }) => {
+  // Map weekday names to day numbers (0 = Sunday, 6 = Saturday)
+  const dayMapping: Record<string, number> = {
+    sunday: 0,
+    monday: 1,
+    tuesday: 2,
+    wednesday: 3,
+    thursday: 4,
+    friday: 5,
+    saturday: 6
+  };
   // State for the selected day drawer
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   
@@ -56,20 +83,9 @@ const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ program }) => {
     setSelectedDay(null);
   };
   
-  // Calculate total volume for a day (sets × reps × load)
-  const calculateDayVolume = (dayOfWeek: number) => {
-    const day = program.days.find(d => d.dayOfWeek === dayOfWeek);
-    if (!day) return 0;
-    
-    return day.exercises.reduce((total, exercise) => {
-      const load = exercise.load || 0;
-      return total + (exercise.sets * exercise.reps * load);
-    }, 0);
-  };
-  
-  // Get emoji for focus area
-  const getFocusEmoji = (focus: string) => {
-    const lowercaseFocus = focus.toLowerCase();
+  // Get emoji based on the day name since focus isn't available in the new structure
+  const getFocusEmoji = (dayName: string) => {
+    const lowercaseFocus = dayName.toLowerCase();
     for (const [key, emoji] of Object.entries(FOCUS_EMOJIS)) {
       if (lowercaseFocus.includes(key)) {
         return emoji;
@@ -81,53 +97,61 @@ const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ program }) => {
   return (
     <div data-testid="weekly-plan-grid">
       <h3 className="text-lg font-medium mb-4">Weekly Schedule</h3>
-      
-      <div className="grid grid-cols-7 gap-2 mb-6">
-        {DAYS.map(day => {
-          // Find program day if it exists
-          const programDay = program.days.find(d => d.dayOfWeek === day.value);
-          const hasWorkout = !!programDay;
-          const isToday = day.value === today;
-          const volume = calculateDayVolume(day.value);
-          
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-7 gap-4 mb-8">
+        {[0, 1, 2, 3, 4, 5, 6].map((dayOfWeek) => {
+          const dayName = [
+            'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
+          ][dayOfWeek];
+          const displayName = dayName.charAt(0).toUpperCase() + dayName.slice(1);
+          const exercises = program.days[dayName] || [];
+          const hasExercises = exercises.length > 0;
+          const isToday = dayOfWeek === today;
+
           return (
             <div 
-              key={day.value}
+              key={dayOfWeek}
               className={`
-                rounded-lg overflow-hidden transition-all
-                ${isToday ? 'ring-2 ring-primary' : ''}
-                ${hasWorkout ? 'cursor-pointer hover:shadow-md' : 'opacity-70'}
+                p-4 rounded-xl bg-card border border-border-light shadow-sm
+                ${isToday ? 'ring-1 ring-accent-green/50 bg-accent-green/5' : ''}
+                ${hasExercises ? 'cursor-pointer hover:shadow-md transition-shadow' : 'opacity-80'}
               `}
-              onClick={hasWorkout ? () => handleDayClick(day.value) : undefined}
-              data-testid={`day-cell-${day.label.toLowerCase()}`}
+              onClick={() => hasExercises && handleDayClick(dayOfWeek)}
             >
-              <div className="bg-background-surface px-3 py-2 text-center border-b border-border">
-                <p className={`font-medium ${isToday ? 'text-primary' : 'text-text-primary'}`}>
-                  {day.label}
-                </p>
+              <div className="flex justify-between items-start mb-2">
+                <h3 className="font-medium text-primary">{displayName}</h3>
+                {isToday && <span className="text-xs px-1.5 py-0.5 bg-accent-green/20 text-accent-green rounded-full">Today</span>}
               </div>
               
-              <div className={`p-4 min-h-[100px] flex flex-col justify-between ${hasWorkout ? 'bg-background-surface' : 'bg-background-surface/50'}`}>
-                {hasWorkout && programDay ? (
-                  <>
-                    <div>
-                      <div className="text-xl mb-1">{getFocusEmoji(programDay.focus)}</div>
-                      <h4 className="font-medium text-text-primary mb-1">{programDay.focus}</h4>
-                      <p className="text-xs text-text-secondary">{programDay.exercises.length} exercises</p>
-                    </div>
-                    <div 
-                      className="text-xs text-text-tertiary mt-2 bg-background-hover px-2 py-1 rounded self-start"
-                      title="Workout volume (sets × reps × load)"
-                    >
-                      Vol: {volume.toLocaleString()}
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex items-center justify-center h-full text-text-tertiary">
-                    <p className="text-sm">Rest Day</p>
+              {hasExercises ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                    {getFocusEmoji(dayName)} {dayName.charAt(0).toUpperCase() + dayName.slice(1)}
                   </div>
-                )}
-              </div>
+                  
+                  <div className="text-xs text-muted-foreground space-y-1.5">
+                    {exercises.slice(0, 3).map((ex, i) => (
+                      <div key={i} className="flex justify-between">
+                        <span>{ex}</span>
+                        <span>--</span>
+                      </div>
+                    ))}
+                    {exercises.length > 3 && (
+                      <div className="text-xs text-muted-foreground opacity-75">
+                        + {exercises.length - 3} more exercises
+                      </div>
+                    )}
+                  </div>
+                  
+                  {exercises.length > 0 && (
+                    <div className="text-xs flex justify-between text-muted-foreground pt-1 border-t border-border-light mt-2">
+                      <span>Exercises</span>
+                      <span>{exercises.length}</span>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-sm text-muted-foreground mt-2">Rest day</div>
+              )}
             </div>
           );
         })}
@@ -136,7 +160,18 @@ const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ program }) => {
       {/* Day session drawer */}
       {selectedDay !== null && (
         <DaySessionDrawer 
-          day={program.days.find(d => d.dayOfWeek === selectedDay)} 
+          day={{
+            dayOfWeek: selectedDay,
+            focus: DAYS.find(d => d.value === selectedDay)?.label || '',
+            exercises: program.days[[
+              'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
+            ][selectedDay]].map(name => ({
+              id: `ex-${Math.random().toString(36).substr(2, 9)}`,
+              name: name,
+              sets: 3,
+              reps: 10
+            }))
+          }}
           isOpen={selectedDay !== null}
           onClose={handleCloseDrawer}
           dayLabel={DAYS.find(d => d.value === selectedDay)?.label || ''}

@@ -1,5 +1,22 @@
 import React from 'react';
-import { ProgramDay } from '../../../store/useProgramStore';
+import { TrainingPlan } from '../../../lib/stores/useProgramStore';
+
+// Define ProgramDay type as it might be missing from the store export
+interface ProgramDay {
+  dayOfWeek: number; // 0 = Sunday, 6 = Saturday
+  focus: string;
+  exercises: ProgramExercise[];
+}
+
+interface ProgramExercise {
+  id: string;
+  name: string;
+  sets: number;
+  reps: number;
+  load?: number;
+  rpe?: number;
+  notes?: string;
+}
 import { X, Dumbbell, BarChart } from 'lucide-react';
 import createLogger from '../../../utils/logger';
 

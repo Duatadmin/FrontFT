@@ -26,11 +26,23 @@ const prefetchModule = (path: string) => {
   if (prefetchedModules.has(path)) return; // Skip if already prefetched
   
   try {
-    // Dynamically import the module to prefetch it
-    import(`../../pages${path}`).catch(() => {
-      // Silent catch - prefetch failures shouldn't disrupt the UI
-      // console.log(`Prefetching ${path} - ready for navigation`);
-    });
+    // Add paths we know exist to avoid dynamic path construction issues
+    if (path === '/programs') {
+      // Using @vite-ignore to suppress dynamic import warnings
+      // @ts-ignore
+      /* @vite-ignore */
+      import('../../pages/programs').catch(() => {
+        // Silent catch - prefetch failures shouldn't disrupt the UI
+      });
+    } else if (path === '/dashboard') {
+      // @ts-ignore
+      /* @vite-ignore */
+      import('../../pages/EnhancedDashboard').catch(() => {});
+    } else if (path === '/diary') {
+      // @ts-ignore
+      /* @vite-ignore */
+      import('../../pages/EnhancedDiaryPage').catch(() => {});
+    }
     
     prefetchedModules.add(path);
   } catch (error) {
@@ -131,6 +143,13 @@ const Sidebar: React.FC = () => {
           label="Coach" 
           to="/"
           isActive={location.pathname === '/'}
+        />
+        
+        <SidebarLink 
+          icon={<Bell size={18} />} 
+          label="Supabase Test" 
+          to="/supabase-test"
+          isActive={location.pathname === '/supabase-test'}
         />
       </nav>
       

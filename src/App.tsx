@@ -3,6 +3,7 @@ import ChatLayout from './components/chat/ChatLayout';
 import { Message } from './types';
 import chatService from './services/chatService';
 import { checkApiStatus } from './services/apiService';
+import SupabaseTest from './SupabaseTest';
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([
@@ -15,6 +16,7 @@ function App() {
   
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState<boolean | null>(null);
+  const [showSupabaseTest, setShowSupabaseTest] = useState(false);
 
   // Check API connection on component mount
   useEffect(() => {
@@ -91,12 +93,27 @@ function App() {
   };
 
   return (
-    <ChatLayout
-      messages={messages}
-      isLoading={isLoading}
-      onSendMessage={handleSendMessage}
-    />
+    <div>
+      <div className="fixed top-0 right-0 z-50 p-2">
+        <button 
+          onClick={() => setShowSupabaseTest(!showSupabaseTest)}
+          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+        >
+          {showSupabaseTest ? 'Show Chat App' : 'Test Supabase'}
+        </button>
+      </div>
+      
+      {showSupabaseTest ? (
+        <SupabaseTest />
+      ) : (
+        <ChatLayout
+          messages={messages}
+          isLoading={isLoading}
+          onSendMessage={handleSendMessage}
+        />
+      )}
+    </div>
   );
 }
 
-export default App; 
+export default App;

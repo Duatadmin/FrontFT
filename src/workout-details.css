@@ -1,0 +1,43 @@
+/* Workout Details CSS */
+.workout-details {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Table styles */
+.workout-details table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.workout-details th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  text-align: left;
+  padding: 0.5rem 0.75rem;
+}
+
+.workout-details td {
+  padding: 0.5rem 0.75rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.workout-details tr:hover {
+  background-color: #f9fafb;
+}
+
+/* Fix for ReactNode error in TypeScript */
+.workout-details pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+}

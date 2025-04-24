@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
+import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import MainLayout from '../../components/layout/MainLayout';
 import { Dumbbell, Target, FileStack } from 'lucide-react';
 import CurrentProgramTab from '../../components/programs/CurrentProgramTab';
@@ -14,21 +15,21 @@ const ProgramsPage: React.FC = () => {
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-text-primary" data-testid="programs-page-title">
+        <h1 className="text-xl font-bold text-text-primary" data-testid="programs-page-title">
           Training Programs & Goals
         </h1>
       </div>
       
       <Tabs 
         defaultValue="current" 
-        className="w-full"
+        className="w-full mb-4"
         data-testid="programs-tabs"
       >
-        <TabsList className="grid grid-cols-3 mb-8">
+        <TabsList className="grid grid-cols-3 mb-6 w-full bg-background-surface">
           <TabsTrigger 
             value="current"
             data-testid="current-program-tab-trigger"
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm"
           >
             <Dumbbell className="h-4 w-4" />
             <span className="hidden sm:inline">Current Program</span>
@@ -38,7 +39,7 @@ const ProgramsPage: React.FC = () => {
           <TabsTrigger 
             value="goals"
             data-testid="goals-tab-trigger"
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm"
           >
             <Target className="h-4 w-4" />
             <span>Goals</span>
@@ -47,7 +48,7 @@ const ProgramsPage: React.FC = () => {
           <TabsTrigger 
             value="templates"
             data-testid="templates-tab-trigger"
-            className="flex items-center gap-2"
+            className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm"
           >
             <FileStack className="h-4 w-4" />
             <span className="hidden sm:inline">Templates & Builder</span>
@@ -55,22 +56,30 @@ const ProgramsPage: React.FC = () => {
           </TabsTrigger>
         </TabsList>
         
-        <TabsContent value="current" data-testid="current-program-tab-content">
+        <TabsContent value="current" data-testid="current-program-tab-content" className="mt-4">
           <CurrentProgramTab />
         </TabsContent>
         
-        <TabsContent value="goals" data-testid="goals-tab-content">
-          <div className="bg-background-surface rounded-xl p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-2">Goals</h2>
-            <p className="text-text-secondary">Track your fitness goals and progress here.</p>
-          </div>
+        <TabsContent value="goals" data-testid="goals-tab-content" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Training Goals</CardTitle>
+              <CardDescription className="text-sm">
+                Set and track your fitness goals here.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </TabsContent>
         
-        <TabsContent value="templates" data-testid="templates-tab-content">
-          <div className="bg-background-surface rounded-xl p-6 mb-6">
-            <h2 className="text-xl font-semibold mb-2">Templates & Builder</h2>
-            <p className="text-text-secondary">Create and manage workout templates here.</p>
-          </div>
+        <TabsContent value="templates" data-testid="templates-tab-content" className="mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Program Templates</CardTitle>
+              <CardDescription className="text-sm">
+                Browse and customize training templates.
+              </CardDescription>
+            </CardHeader>
+          </Card>
         </TabsContent>
       </Tabs>
     </MainLayout>

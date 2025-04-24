@@ -1,7 +1,8 @@
 import React, { useEffect } from 'react';
 import { useProgramStore } from '../../lib/stores/useProgramStore';
 import WeeklyPlanGrid from './WeeklyPlanGrid';
-import { CalendarDays, BarChart2, Clock } from 'lucide-react';
+import { CalendarDays, BarChart2, Clock, RefreshCw } from 'lucide-react';
+import { Card, CardHeader, CardContent, CardTitle, CardDescription, CardFooter } from '../ui/Card';
 
 const CurrentProgramTab: React.FC = () => {
   const { currentPlan, isLoading, error, fetchCurrentPlan } = useProgramStore();
@@ -14,38 +15,55 @@ const CurrentProgramTab: React.FC = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center p-10">
-        <div className="animate-pulse text-accent-green">Loading your training plan...</div>
-      </div>
+      <Card className="mb-6">
+        <CardContent className="flex justify-center items-center py-8">
+          <div className="flex items-center gap-2">
+            <RefreshCw className="h-4 w-4 animate-spin text-accent-green" />
+            <span className="text-sm text-text-secondary">Loading your training plan...</span>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
   
   // Error state
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-2 text-red-600">Error Loading Plan</h2>
-        <p className="text-red-600">There was a problem loading your training plan. Please try again later.</p>
-        <button 
-          onClick={() => fetchCurrentPlan()}
-          className="mt-4 px-4 py-2 bg-background-card text-text-primary rounded-lg hover:bg-background-card/80"
-        >
-          Retry
-        </button>
-      </div>
+      <Card className="border-red-200 mb-6">
+        <CardHeader>
+          <CardTitle className="text-red-600">Error Loading Plan</CardTitle>
+          <CardDescription className="text-red-600 text-sm">
+            There was a problem loading your training plan. Please try again later.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <button 
+            onClick={() => fetchCurrentPlan()}
+            className="px-3 py-1.5 text-sm bg-background-card text-text-primary rounded-md hover:bg-background-card/80 transition-colors"
+          >
+            Retry
+          </button>
+        </CardFooter>
+      </Card>
     );
   }
   
   // Empty state - No plan found
   if (!currentPlan) {
     return (
-      <div className="bg-background-surface rounded-xl p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-2">No Active Program</h2>
-        <p className="text-text-secondary mb-4">You don't have an active training program yet.</p>
-        <button className="px-4 py-2 bg-accent-green text-white rounded-lg hover:bg-accent-green/90">
-          Create New Program
-        </button>
-      </div>
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>No Active Program</CardTitle>
+          <CardDescription className="text-sm">
+            You don't have an active training program yet.
+          </CardDescription>
+        </CardHeader>
+        <CardFooter>
+          <button className="px-3 py-1.5 text-sm bg-accent-green text-white rounded-md hover:bg-accent-green/90 transition-colors">
+            Create New Program
+          </button>
+        </CardFooter>
+      </Card>
     );
   }
   
@@ -58,34 +76,41 @@ const CurrentProgramTab: React.FC = () => {
   });
   
   return (
-    <div>
-      {/* Program summary card */}
-      <div className="bg-background-surface rounded-xl p-6 mb-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold">{currentPlan.name}</h2>
-          <div className="inline-flex items-center px-3 py-1 bg-accent-green/10 text-accent-green text-sm rounded-full mt-2 sm:mt-0">
-            <Clock size={14} className="mr-1" />
-            <span>Active</span>
+    <div className="space-y-6">
+      {/* Program info card */}
+      <Card>
+        <CardHeader className="pb-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
+            <CardTitle>{currentPlan.name}</CardTitle>
+            <span className="px-2 py-0.5 bg-accent-green/10 text-accent-green rounded-full text-xs mt-2 sm:mt-0">
+              Active
+            </span>
           </div>
-        </div>
+          <CardDescription className="text-sm">{currentPlan.description}</CardDescription>
+        </CardHeader>
         
-        <p className="text-text-secondary mb-4">{currentPlan.description}</p>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <div className="flex items-center">
-            <CalendarDays size={18} className="text-text-tertiary mr-2" />
-            <span className="text-sm">Started: {formattedStartDate}</span>
+        <CardContent>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="flex items-center">
+              <CalendarDays className="h-4 w-4 text-text-tertiary mr-2" />
+              <span className="text-sm text-text-secondary">Started: {formattedStartDate}</span>
+            </div>
+            
+            <div className="flex items-center">
+              <Clock className="h-4 w-4 text-text-tertiary mr-2" />
+              <span className="text-sm text-text-secondary">
+                {currentPlan.end_date ? `Ends: ${new Date(currentPlan.end_date).toLocaleDateString()}` : 'Ongoing program'}
+              </span>
+            </div>
           </div>
-          <div className="flex items-center">
-            <BarChart2 size={18} className="text-text-tertiary mr-2" />
-            <span className="text-sm">Program ID: {currentPlan.id.substring(0, 8)}</span>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
       
-      {/* Weekly schedule grid */}
-      <h3 className="text-lg font-medium mb-3">Weekly Schedule</h3>
-      <WeeklyPlanGrid plan={currentPlan} />
+      {/* Weekly plan section */}
+      <div>
+        <h3 className="text-base font-medium mb-3 text-text-primary">Weekly Schedule</h3>
+        <WeeklyPlanGrid plan={currentPlan} />
+      </div>
     </div>
   );
 };

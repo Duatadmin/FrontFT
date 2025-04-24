@@ -78,18 +78,10 @@ const generateMockData = (): DashboardData => {
   };
 };
 
-export interface DashboardError {
-  code: string;
-  message: string;
-  missingData?: string;
-  affectedModule?: string;
-}
-
 export function useDashboardData() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<DashboardError | null>(null);
-  const [dataSource, setDataSource] = useState<'real' | 'mock'>('real');
+  const [error, setError] = useState<Error | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -98,15 +90,7 @@ export function useDashboardData() {
     try {
       const userId = await getCurrentUserId();
       if (!userId) {
-        setError({
-          code: 'AUTH_ERROR',
-          message: 'Missing data: user_id. Cannot render dashboard.',
-          missingData: 'user_id',
-          affectedModule: 'dashboard'
-        });
-        setData(generateMockData());
-        setDataSource('mock');
-        return;
+        throw new Error('No user ID available');
       }
 
       // Check if we should use mock data
@@ -117,62 +101,17 @@ export function useDashboardData() {
         console.log('Using mock dashboard data');
         const mockData = generateMockData();
         setData(mockData);
-        setDataSource('mock');
       } else {
         // Fetch real data from Supabase using our data adapter
-        console.log('Fetching real dashboard data from Supabase for user:', userId);
+        console.log('Fetching real dashboard data from Supabase');
         
         // Get recent workouts (last 5)
-        const workoutsResult = await fetchWorkoutSessions(
+        const recentWorkouts = await fetchWorkoutSessions(
           userId,
           undefined,
           undefined,
           undefined
         );
-        
-        if (!workoutsResult.success || !workoutsResult.data) {
-          if (workoutsResult.error) {
-            setError({
-              code: workoutsResult.error.code,
-              message: `Missing data: ${workoutsResult.error.missingData}. Cannot render recent workouts.`,
-              missingData: workoutsResult.error.missingData,
-              affectedModule: 'recent workouts'
-            });
-          } else {
-            setError({
-              code: 'DATA_ERROR',
-              message: 'Missing data: workout_sessions. Cannot render recent workouts.',
-              missingData: 'workout_sessions',
-              affectedModule: 'recent workouts'
-            });
-          }
-          
-          // Fallback to mock data
-          setData(generateMockData());
-          setDataSource('mock');
-          return;
-        }
-        
-        const recentWorkouts = workoutsResult.data;
-        console.log(`Successfully fetched ${recentWorkouts.length} recent workouts`);
-        
-        // Log what data we're using for each workout
-        recentWorkouts.forEach(workout => {
-          console.log(`Using workout data - ID: ${workout.id}, Date: ${workout.completed_at || workout.created_at}, Focus: ${workout.focus_area}`);
-          
-          // Validate critical fields
-          if (!workout.id) {
-            console.warn('Missing data: workout_id in a workout session');
-          }
-          
-          if (!workout.completed_at && !workout.created_at) {
-            console.warn(`Missing data: timestamp for workout ${workout.id}`);
-          }
-          
-          if (!workout.focus_area) {
-            console.warn(`Missing data: focus_area for workout ${workout.id}`);
-          }
-        });
         
         // Calculate stats for the current month
         const now = new Date();
@@ -196,20 +135,13 @@ export function useDashboardData() {
         };
         
         setData(dashboardData);
-        setDataSource('real');
-        console.log('Dashboard successfully populated with real Supabase data');
       }
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
-      setError({
-        code: 'UNEXPECTED_ERROR',
-        message: `Unexpected error: ${err instanceof Error ? err.message : String(err)}`,
-        affectedModule: 'dashboard'
-      });
+      setError(err instanceof Error ? err : new Error(String(err)));
       
       // Fallback to mock data on error
       setData(generateMockData());
-      setDataSource('mock');
     } finally {
       setLoading(false);
     }
@@ -219,11 +151,5 @@ export function useDashboardData() {
     fetchData();
   }, []);
 
-  return {
-    data,
-    loading,
-    error,
-    dataSource,
-    refetch: fetchData
-  };
+  return { data, loading, error, refetch: fetchData };
 }
