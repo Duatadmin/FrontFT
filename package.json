@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start": "vite preview --host 0.0.0.0 --port $PORT"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
@@ -27,9 +28,11 @@
     "@tanstack/react-virtual": "^3.13.6",
     "@types/react-dom": "^19.1.2",
     "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
     "framer-motion": "^11.18.2",
     "lucide-react": "^0.488.0",
     "react": "^19.1.0",
+    "react-date-range": "^2.0.1",
     "react-dom": "^19.1.0",
     "react-router-dom": "^6.22.3",
     "recharts": "^2.12.2",

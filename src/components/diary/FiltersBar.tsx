@@ -67,6 +67,7 @@ const FiltersBar: React.FC = () => {
           <button 
             onClick={() => setIsCalendarOpen(!isCalendarOpen)}
             className="flex items-center px-3 py-1.5 text-sm rounded-lg bg-background-card hover:bg-background-card/80"
+            data-testid="date-range-filter"
           >
             <Calendar size={14} className="mr-1.5" />
             {filters.dateRange ? (
@@ -79,7 +80,7 @@ const FiltersBar: React.FC = () => {
           </button>
           
           {isCalendarOpen && (
-            <div className="absolute top-full left-0 mt-1 p-3 bg-background-card rounded-lg shadow-lg border border-border-light min-w-[280px] z-20">
+            <div className="absolute top-full left-0 mt-1 p-3 bg-background-card rounded-lg shadow-lg border border-border-light min-w-[280px] z-20" data-testid="date-picker-dropdown">
               <div className="mb-3">
                 <label className="text-xs text-text-secondary mb-1 block">From</label>
                 <input 
@@ -90,6 +91,7 @@ const FiltersBar: React.FC = () => {
                     to: filters.dateRange?.to || new Date().toISOString().split('T')[0]
                   })}
                   className="w-full p-2 bg-background-surface border border-border-light rounded-md text-sm focus:ring-1 focus:ring-accent-violet"
+                  data-testid="date-from-input"
                 />
               </div>
               <div className="mb-3">
@@ -102,6 +104,7 @@ const FiltersBar: React.FC = () => {
                     to: e.target.value
                   })}
                   className="w-full p-2 bg-background-surface border border-border-light rounded-md text-sm focus:ring-1 focus:ring-accent-violet"
+                  data-testid="date-to-input"
                 />
               </div>
               <div className="flex justify-between">
@@ -112,10 +115,17 @@ const FiltersBar: React.FC = () => {
                   Cancel
                 </button>
                 <button 
-                  onClick={() => handleDateRangeChange(filters.dateRange || {
-                    from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-                    to: new Date().toISOString().split('T')[0]
-                  })}
+                  onClick={() => {
+                    handleDateRangeChange(filters.dateRange || {
+                      from: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                      to: new Date().toISOString().split('T')[0]
+                    });
+                    
+                    // Trigger a refetch with the new date range
+                    const userId = '792ee0b8-5ba2-40a5-8f35-ab1bff798908'; // Test user ID
+                    const store = useDiaryStore.getState();
+                    store.fetchSessions(userId, { dateRange: filters.dateRange });
+                  }}
                   className="text-sm text-accent-violet font-medium"
                 >
                   Apply

@@ -1,0 +1,139 @@
+/* Calendar styling for DateRangeFilter component */
+.custom-calendar .rdrCalendarWrapper {
+  background-color: transparent;
+  color: white;
+  font-family: inherit;
+}
+
+.custom-calendar .rdrMonthAndYearWrapper {
+  padding-top: 10px;
+  background-color: transparent;
+}
+
+.custom-calendar .rdrMonth {
+  padding: 0 0.5rem 1rem;
+}
+
+.custom-calendar .rdrMonthName {
+  color: white;
+  font-weight: 600;
+}
+
+.custom-calendar .rdrWeekDay {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+}
+
+.custom-calendar .rdrDay {
+  color: white;
+}
+
+.custom-calendar .rdrDayNumber span {
+  color: white;
+}
+
+.custom-calendar .rdrDayDisabled .rdrDayNumber span {
+  color: rgba(255, 255, 255, 0.3);
+  opacity: 0.5;
+}
+
+.custom-calendar .rdrDayToday .rdrDayNumber span:after {
+  background: rgb(124, 58, 237); /* accent-violet */
+}
+
+.custom-calendar .rdrDateDisplayItem {
+  background-color: rgba(124, 58, 237, 0.1);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  color: white;
+}
+
+.custom-calendar .rdrDateDisplayItemActive {
+  border-color: rgb(124, 58, 237);
+}
+
+.custom-calendar .rdrMonthAndYearPickers select {
+  color: white;
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.custom-calendar .rdrMonthAndYearPickers select:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.custom-calendar .rdrNextPrevButton {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.custom-calendar .rdrNextPrevButton:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.custom-calendar .rdrPprevButton i {
+  border-color: transparent white transparent transparent;
+}
+
+.custom-calendar .rdrNextButton i {
+  border-color: transparent transparent transparent white;
+}
+
+.custom-calendar .rdrDayStartPreview, 
+.custom-calendar .rdrDayEndPreview, 
+.custom-calendar .rdrDayInPreview {
+  border-color: rgba(124, 58, 237, 0.3);
+}
+
+.custom-calendar .rdrDayStartOfMonth .rdrDayNumber span, 
+.custom-calendar .rdrDayStartOfWeek .rdrDayNumber span {
+  color: white;
+}
+
+.custom-calendar .rdrDayEndOfMonth .rdrDayNumber span, 
+.custom-calendar .rdrDayEndOfWeek .rdrDayNumber span {
+  color: white;
+}
+
+.custom-calendar .rdrStartEdge,
+.custom-calendar .rdrEndEdge {
+  background-color: rgb(124, 58, 237);
+  color: white;
+}
+
+.custom-calendar .rdrInRange {
+  background-color: rgba(124, 58, 237, 0.2);
+  color: white;
+}
+
+.custom-calendar .rdrDayHovered {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.custom-calendar .rdrDayActive {
+  background-color: rgba(124, 58, 237, 0.2);
+}
+
+/* Animation for dropdown */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .custom-calendar .rdrCalendarWrapper {
+    font-size: 14px;
+  }
+  
+  .custom-calendar .rdrMonth {
+    padding: 0;
+  }
+  
+  .custom-calendar .rdrDay {
+    height: 40px;
+  }
+}
