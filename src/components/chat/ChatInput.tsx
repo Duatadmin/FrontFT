@@ -1,14 +1,41 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { SendHorizonal } from 'lucide-react'; // Using lucide-react for icons
+import useVoiceAssistant from '../../hooks/useVoiceAssistant';
+import { VoiceButton, WalkieToggleButton, AudioVisualizer } from '../voice';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
   isLoading: boolean;
+  onTtsPlaybackStart?: () => void;
+  onTtsPlaybackEnd?: () => void;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
+const ChatInput: React.FC<ChatInputProps> = ({ 
+  onSendMessage, 
+  isLoading,
+  onTtsPlaybackStart,
+  onTtsPlaybackEnd 
+}) => {
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Initialize voice assistant
+  const voiceAssistant = useVoiceAssistant({
+    onTranscriptComplete: (transcript) => {
+      if (transcript.trim()) {
+        onSendMessage(transcript.trim());
+      }
+    },
+    onTtsPlaybackStart,
+    onTtsPlaybackEnd,
+    initialMode: 'ptt',
+    vadSensitivity: 0.7
+  });
+  
+  // Initialize voice assistant on component mount
+  useEffect(() => {
+    voiceAssistant.init();
+  }, []);
 
   // Auto-resize textarea height
   useEffect(() => {
@@ -56,6 +83,22 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Input field container */}
         <div className="relative flex items-end bg-input rounded-xl border border-border shadow-sm transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/30">
+        {/* Visualization display */}
+        {voiceAssistant.isListening && (
+          <div className="absolute -top-12 left-0 right-0 flex justify-center items-center h-10">
+            <div className="flex items-center justify-center px-3 py-1 rounded-full bg-black/60 backdrop-blur-md">
+              <AudioVisualizer 
+                getVisualizationData={voiceAssistant.getVisualizationData} 
+                isActive={voiceAssistant.isListening} 
+                width={120} 
+                height={24}
+              />
+              <span className="ml-2 text-xs text-white/80">
+                {voiceAssistant.transcript || 'Listening...'}
+              </span>
+            </div>
+          </div>
+        )}
           <textarea
             ref={textareaRef}
             value={inputValue}
@@ -68,22 +111,43 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading }) => {
             autoComplete="off"
             style={{ scrollbarWidth: 'thin' }}
           />
-          {/* Send Button */}
-          <button
-            onClick={handleSend}
-            className={`absolute right-2 bottom-2 flex items-center justify-center p-2 rounded-lg transition-all duration-200 
-                        ${inputValue.trim() && !isLoading 
-                          ? 'bg-primary text-white hover:opacity-80 active:scale-95' 
-                          : 'bg-input text-textSecondary cursor-not-allowed opacity-60'}`}
-            disabled={!inputValue.trim() || isLoading}
-            aria-label="Send message"
-          >
-            <SendHorizonal size={18} />
-          </button>
+          {/* Voice & Send buttons */}
+          <div className="absolute right-2 bottom-2 flex items-center space-x-2">
+            {/* Push-to-talk button */}
+            {voiceAssistant.mode === 'ptt' && (
+              <VoiceButton 
+                isListening={voiceAssistant.isListening}
+                onStartListening={voiceAssistant.startListening}
+                onStopListening={voiceAssistant.stopListening}
+                disabled={isLoading}
+              />
+            )}
+            
+            {/* Walkie-talkie toggle button */}
+            <WalkieToggleButton 
+              isWalkieMode={voiceAssistant.mode === 'walkie'}
+              isListening={voiceAssistant.isListening}
+              onToggle={voiceAssistant.toggleWalkieMode}
+              disabled={isLoading}
+            />
+            
+            {/* Send Button */}
+            <button
+              onClick={handleSend}
+              className={`flex items-center justify-center p-2 rounded-lg transition-all duration-200 
+                      ${inputValue.trim() && !isLoading 
+                        ? 'bg-primary text-white hover:opacity-80 active:scale-95' 
+                        : 'bg-input text-textSecondary cursor-not-allowed opacity-60'}`}
+              disabled={!inputValue.trim() || isLoading}
+              aria-label="Send message"
+            >
+              <SendHorizonal size={18} />
+            </button>
+          </div>
         </div>
       </div>
     </div>
   );
 };
 
-export default ChatInput; 
+export default ChatInput;
