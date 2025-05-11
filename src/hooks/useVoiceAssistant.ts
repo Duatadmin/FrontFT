@@ -655,6 +655,7 @@ export default function useVoiceAssistant({
     stopListening,
     stopTts,
     setMode,
+    init, // Export the init function to fix initialization error
     
     // Visualization
     getAudioVisualizationData,
