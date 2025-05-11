@@ -230,7 +230,7 @@ export default function useVoiceAssistant({
   useEffect(() => {
     // Initialize mic activation sound
     if (!micActivationSoundRef.current) {
-      const activationSound = new Audio('/sounds/mic-activation.mp3');
+      const activationSound = new Audio('/sounds/mic_activation.aiff');
       activationSound.volume = 0.5;
       activationSound.preload = 'auto';
       micActivationSoundRef.current = activationSound;
@@ -278,10 +278,25 @@ export default function useVoiceAssistant({
   }, []);
 
   // Setup WebSocket connection (simplified with the hook)
-  const setupWebSocket = useCallback(() => {
+  // Reference to track active session and debounce connect attempts
+  const isSessionActiveRef = useRef<boolean>(false);
+
+  // Set up WebSocket connection to ASR service with awaitable connection
+  const setupWebSocket = useCallback(async () => {
     console.log('[WS-DEBUG] Setting up WebSocket connection to:', ASR_WEBSOCKET_URL);
-    connectAsr();
-    return wsRef.current;
+    try {
+      // Wait for connection to be established
+      const ws = await connectAsr();
+      console.log('[WS-DEBUG] WebSocket connection established successfully');
+      return ws;
+    } catch (error) {
+      console.error('[WS-ERROR] Failed to connect to WebSocket server:', error);
+      setState(prev => ({
+        ...prev,
+        error: 'Could not connect to speech recognition service'
+      }));
+      return null;
+    }
   }, [connectAsr]);
   
   // Initialize audio context and microphone
@@ -466,22 +481,60 @@ export default function useVoiceAssistant({
       console.log('[VOICE] Successfully initialized audio context and got microphone permissions');
     }
     
+    // Check if another session is already active
+    if (isSessionActiveRef.current) {
+      console.warn('[VOICE] 🛑 A voice session is already active');
+      setState(prev => ({ ...prev, isBusy: false }));
+      return;
+    }
+    
+    // Set session active flag to prevent multiple connections
+    isSessionActiveRef.current = true;
+    
+    // Helper function to ensure audio context is ready
+    const waitForContextReady = async () => {
+      if (audioContextRef.current?.state !== 'running') {
+        console.log('[VOICE] Resuming audio context...');
+        await audioContextRef.current?.resume();
+        console.log('[VOICE] Audio context resumed successfully');
+      }
+    };
+    
     // Setup WebSocket if needed
     if (!isAsrConnected) {
       console.log('[WS-DEBUG] WebSocket not open, setting up new connection');
-      setupWebSocket();
-      
-      // If we still can't set up a WebSocket after trying, abort the recording process
-      if (!wsRef.current) {
-        console.error('[WS-ERROR] Failed to set up WebSocket, aborting recording');
-        throw new Error('Failed to establish a connection to the voice service');
+      try {
+        // Wait for WebSocket connection to be established
+        const ws = await setupWebSocket();
+        
+        if (!ws) {
+          console.error('[WS-ERROR] Failed to set up WebSocket, aborting recording');
+          setState(prev => ({ 
+            ...prev, 
+            isBusy: false, 
+            error: 'Failed to establish a connection to the voice service' 
+          }));
+          isSessionActiveRef.current = false;
+          return;
+        }
+        
+        console.log('[WS-DEBUG] WebSocket connection established');
+      } catch (error) {
+        console.error('[WS-ERROR] WebSocket connection error:', error);
+        setState(prev => ({ 
+          ...prev, 
+          isBusy: false, 
+          error: 'Connection error' 
+        }));
+        isSessionActiveRef.current = false;
+        return;
       }
-      
-      console.log('[WS-DEBUG] Waiting for WebSocket to connect...');
-      // We'll proceed anyway, as the WebSocket events will handle the errors if it fails to connect
     } else {
       console.log('[WS-DEBUG] Using existing WebSocket connection');
     }
+    
+    // Ensure audio context is ready
+    await waitForContextReady();
     
     // Start recording
     try {
@@ -603,8 +656,16 @@ export default function useVoiceAssistant({
     }
   }, [init, setupWebSocket, state.isBusy, state.mode, handleSilenceDetection, cleanupAudio]);
 
-  // Stop recording and finalize transcript
+  // Stop recording and send end-of-stream signal
   const stopListening = useCallback(() => {
+    console.log('[VOICE] Stopping voice recording...');
+    
+    // Cancel the busy timeout since we're explicitly stopping
+    if (busyTimeoutRef.current) {
+      clearTimeout(busyTimeoutRef.current);
+      busyTimeoutRef.current = null;
+    }
+    
     // Determine which cleanup method to use based on active recording method
     if (features.usingFallback && mediaRecorderRef.current) {
       // Stop MediaRecorder if it's active
@@ -640,6 +701,9 @@ export default function useVoiceAssistant({
       isListening: false,
       isProcessing: true // Still processing the final transcript
     }));
+    
+    // Reset session active flag to allow new recording sessions
+    isSessionActiveRef.current = false;
   }, [sendEndOfStreamWithSilence, features.usingFallback]);
 
   // Play TTS response

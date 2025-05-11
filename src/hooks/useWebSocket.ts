@@ -88,124 +88,156 @@ export function useWebSocket(
 
   /**
    * Creates a new WebSocket connection
+   * @returns A promise that resolves when the connection is open or rejects if it fails
    */
-  const connect = useCallback(() => {
-    // Skip if URL is empty
-    if (!url) {
-      console.warn('[WS] Skipping connection: URL is empty');
-      return null;
-    }
-
-    // Skip if already unmounted
-    if (isUnmountedRef.current) {
-      console.warn('[WS] Component unmounted, skipping connection');
-      return null;
-    }
-    
-    // Skip if already connecting
-    if (isConnectingRef.current) {
-      console.log('[WS] Already connecting, skipping duplicate connection');
-      return wsRef.current;
-    }
-    
-    // Set connecting flag
-    isConnectingRef.current = true;
-
-    // Clean up any existing connection
-    cleanup();
-
-    try {
-      console.log('[WS] 🔄 Connecting to:', url);
-      const ws = new WebSocket(url, protocols);
-      wsRef.current = ws;
-
-      // Set up event handlers
-      ws.onopen = () => {
-        console.log('[WS] ✅ Connected:', url);
-        isConnectingRef.current = false;
-        
-        // Set up ping interval if enabled
-        if (enablePing && !pingIntervalRef.current) {
-          pingIntervalRef.current = setInterval(() => {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-              try {
-                const message = typeof pingMessage === 'string' 
-                  ? pingMessage 
-                  : JSON.stringify(pingMessage);
-                
-                ws.send(message);
-                console.log('[WS] 💓 Sent keep-alive ping');
-              } catch (err) {
-                console.warn('[WS] Error sending ping:', err);
+  const connect = useCallback((): Promise<WebSocket | null> => {
+    return new Promise((resolve, reject) => {
+      // Skip if URL is empty
+      if (!url) {
+        console.warn('[WS] Skipping connection: URL is empty');
+        reject(new Error('WebSocket URL is empty'));
+        return;
+      }
+  
+      // Skip if already unmounted
+      if (isUnmountedRef.current) {
+        console.warn('[WS] Component unmounted, skipping connection');
+        reject(new Error('Component unmounted'));
+        return;
+      }
+      
+      // If already connected, resolve immediately
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        console.log('[WS] Already connected, reusing existing connection');
+        resolve(wsRef.current);
+        return;
+      }
+      
+      // Skip if already connecting
+      if (isConnectingRef.current) {
+        console.log('[WS] Already connecting, waiting for existing connection');
+        // We'll wait for the existing connection and resolve with that
+        const checkExistingInterval = setInterval(() => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            clearInterval(checkExistingInterval);
+            resolve(wsRef.current);
+          } else if (!isConnectingRef.current && !wsRef.current) {
+            // Connection attempt failed
+            clearInterval(checkExistingInterval);
+            reject(new Error('Connection attempt failed'));
+          }
+        }, 100);
+        return;
+      }
+      
+      // Set connecting flag
+      isConnectingRef.current = true;
+  
+      // Clean up any existing connection
+      cleanup();
+  
+      try {
+        console.log('[WS] 🔄 Connecting to:', url);
+        const ws = new WebSocket(url, protocols);
+        wsRef.current = ws;
+  
+        // Set up event handlers
+        ws.onopen = () => {
+          console.log('[WS] ✅ Connected:', url);
+          isConnectingRef.current = false;
+          
+          // Set up ping interval if enabled
+          if (enablePing && !pingIntervalRef.current) {
+            pingIntervalRef.current = setInterval(() => {
+              if (ws && ws.readyState === WebSocket.OPEN) {
+                try {
+                  const message = typeof pingMessage === 'string' 
+                    ? pingMessage 
+                    : JSON.stringify(pingMessage);
+                  
+                  ws.send(message);
+                  console.log('[WS] 💓 Sent keep-alive ping');
+                } catch (err) {
+                  console.warn('[WS] Error sending ping:', err);
+                }
               }
+            }, pingInterval);
+          }
+          
+          // Call user provided onOpen handler
+          if (onOpen) {
+            try {
+              onOpen();
+            } catch (err) {
+              console.error('[WS] Error in onOpen handler:', err);
             }
-          }, pingInterval);
-        }
-        
-        // Call user provided onOpen handler
-        if (onOpen) {
-          try {
-            onOpen();
-          } catch (err) {
-            console.error('[WS] Error in onOpen handler:', err);
           }
-        }
-      };
-
-      ws.onmessage = (e) => {
-        // Default message logging if no handler provided
-        if (!onMessage) {
-          console.log('[WS] 📩 Message:', typeof e.data === 'string' && e.data.length < 100 
-            ? e.data 
-            : '[data]');
-        } else {
-          try {
-            onMessage(e);
-          } catch (err) {
-            console.error('[WS] Error in onMessage handler:', err);
+          
+          // Resolve the promise
+          resolve(ws);
+        };
+  
+        ws.onmessage = (e) => {
+          // Default message logging if no handler provided
+          if (!onMessage) {
+            console.log('[WS] 📩 Message:', typeof e.data === 'string' && e.data.length < 100 
+              ? e.data 
+              : '[data]');
+          } else {
+            try {
+              onMessage(e);
+            } catch (err) {
+              console.error('[WS] Error in onMessage handler:', err);
+            }
           }
-        }
-      };
-
-      ws.onerror = (e) => {
-        console.error('[WS] ❌ Error:', e);
+        };
+  
+        ws.onerror = (e) => {
+          console.error('[WS] ❌ Error:', e);
+          isConnectingRef.current = false;
+          
+          if (onError) {
+            try {
+              onError(e);
+            } catch (err) {
+              console.error('[WS] Error in onError handler:', err);
+            }
+          }
+          
+          // Reject the promise
+          reject(e);
+        };
+  
+        ws.onclose = (e) => {
+          console.warn('[WS] ❌ Disconnected:', e.code, e.reason || 'No reason');
+          isConnectingRef.current = false;
+          
+          // Clear the ping interval
+          if (pingIntervalRef.current) {
+            clearInterval(pingIntervalRef.current);
+            pingIntervalRef.current = null;
+          }
+          
+          // Call user provided onClose handler
+          if (onClose) {
+            try {
+              onClose(e);
+            } catch (err) {
+              console.error('[WS] Error in onClose handler:', err);
+            }
+          }
+          
+          // If we're still waiting for connection, reject the promise
+          if (isConnectingRef.current) {
+            reject(new Error(`WebSocket closed: ${e.code} ${e.reason || 'No reason'}`));
+          }
+        };
+      } catch (error) {
+        console.error('[WS] ❌ Failed to create WebSocket:', error);
         isConnectingRef.current = false;
-        
-        if (onError) {
-          try {
-            onError(e);
-          } catch (err) {
-            console.error('[WS] Error in onError handler:', err);
-          }
-        }
-      };
-
-      ws.onclose = (e) => {
-        console.warn('[WS] ❌ Disconnected:', e.code, e.reason || 'No reason');
-        isConnectingRef.current = false;
-        
-        // Clear the ping interval
-        if (pingIntervalRef.current) {
-          clearInterval(pingIntervalRef.current);
-          pingIntervalRef.current = null;
-        }
-        
-        // Call user provided onClose handler
-        if (onClose) {
-          try {
-            onClose(e);
-          } catch (err) {
-            console.error('[WS] Error in onClose handler:', err);
-          }
-        }
-      };
-
-      return ws;
-    } catch (error) {
-      console.error('[WS] ❌ Failed to create WebSocket:', error);
-      isConnectingRef.current = false;
-      return null;
-    }
+        reject(error);
+      }
+    });
   }, [url, protocols, enablePing, pingInterval, pingMessage, onOpen, onMessage, onError, onClose, cleanup]);
 
   /**
@@ -216,12 +248,12 @@ export function useWebSocket(
       console.warn('[WS] Cannot send: No WebSocket instance');
       return false;
     }
-    
+
     if (wsRef.current.readyState !== WebSocket.OPEN) {
       console.warn('[WS] Cannot send: WebSocket is not open (state:', wsRef.current.readyState, ')');
       return false;
     }
-    
+
     try {
       wsRef.current.send(data);
       return true;
@@ -229,20 +261,20 @@ export function useWebSocket(
       console.error('[WS] Error sending data:', error);
       return false;
     }
-  }, []);
+  }, [wsRef]);
 
   /**
    * Reconnects the WebSocket
    */
   const reconnect = useCallback(() => {
-    console.log('[WS] 🔄 Reconnecting...');
-    connect();
+    console.log('[WS] Reconnecting...');
+    return connect();
   }, [connect]);
 
   // Set up the WebSocket connection and cleanup on unmount
   useEffect(() => {
     isUnmountedRef.current = false;
-    
+
     // Connect immediately if option is set
     if (immediateConnect) {
       connect();
