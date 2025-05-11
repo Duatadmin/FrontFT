@@ -21,6 +21,7 @@ interface VoiceAssistantState {
   isProcessing: boolean;
   error: string | null;
   isTtsPlaying: boolean;
+  isBusy: boolean; // New busy state to prevent overlapping sessions
 }
 
 interface UseVoiceAssistantOptions {
@@ -45,7 +46,8 @@ export default function useVoiceAssistant({
     transcript: '',
     isProcessing: false,
     error: null,
-    isTtsPlaying: false
+    isTtsPlaying: false,
+    isBusy: false
   });
 
   // Refs
@@ -59,9 +61,18 @@ export default function useVoiceAssistant({
   const vadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const streamEndedRef = useRef<boolean>(false);
+  const busyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const micActivationSoundRef = useRef<HTMLAudioElement | null>(null);
 
-  // Initialize the audio element for TTS playback
+  // Initialize the audio elements for TTS playback and mic activation sound
   useEffect(() => {
+    // Initialize mic activation sound
+    if (!micActivationSoundRef.current) {
+      const activationSound = new Audio('/sounds/mic-activation.mp3');
+      activationSound.volume = 0.5;
+      activationSound.preload = 'auto';
+      micActivationSoundRef.current = activationSound;
+    }
     if (!audioElementRef.current) {
       const audioEl = new Audio();
       audioEl.addEventListener('play', () => {
@@ -149,11 +160,21 @@ export default function useVoiceAssistant({
         // Handle final transcript (after speech ends)
         else if (response.type === 'final_transcript') {
           const finalTranscript = response.text.trim();
+          
+          // Clear the busy timeout as we've received a response
+          if (busyTimeoutRef.current) {
+            clearTimeout(busyTimeoutRef.current);
+            busyTimeoutRef.current = null;
+          }
+          
           setState(prev => ({ 
             ...prev, 
             transcript: finalTranscript,
-            isProcessing: false
+            isProcessing: false,
+            isBusy: false // Release busy lock after receiving transcript
           }));
+          
+          console.log('[VOICE] ✅ Received final transcript, releasing busy state');
           
           if (finalTranscript && onTranscriptComplete) {
             onTranscriptComplete(finalTranscript);
@@ -184,6 +205,18 @@ export default function useVoiceAssistant({
         // If we were actively listening, stop listening
         stopListening();
       }
+      
+      // Also ensure busy state is released if WebSocket closes
+      if (state.isBusy) {
+        console.log('[VOICE] WebSocket closed, releasing busy state');
+        setState(prev => ({ ...prev, isBusy: false }));
+        
+        // Clear busy timeout if it exists
+        if (busyTimeoutRef.current) {
+          clearTimeout(busyTimeoutRef.current);
+          busyTimeoutRef.current = null;
+        }
+      }
     };
     
     wsRef.current = ws;
@@ -191,8 +224,36 @@ export default function useVoiceAssistant({
 
   // Start recording and sending audio
   const startListening = useCallback(async () => {
+    // Check if a session is already active and reject if busy
+    if (state.isBusy) {
+      console.warn('[VOICE] 🚫 Cannot start new session - voice system is busy');
+      return;
+    }
+    
+    // Set busy state immediately to prevent multiple calls
+    setState(prev => ({ ...prev, isBusy: true }));
+    
+    // Play mic activation sound
+    try {
+      if (micActivationSoundRef.current) {
+        await micActivationSoundRef.current.play();
+        console.log('[VOICE] 🔊 Played mic activation sound');
+      }
+    } catch (error) {
+      console.warn('[VOICE] Could not play mic activation sound:', error);
+    }
+    
     // Reset stream ended flag
     streamEndedRef.current = false;
+    
+    // Set a timeout to automatically clear busy state in case of hanging
+    if (busyTimeoutRef.current) {
+      clearTimeout(busyTimeoutRef.current);
+    }
+    busyTimeoutRef.current = setTimeout(() => {
+      console.warn('[VOICE] ⚠️ Busy state timeout reached (10s), resetting state');
+      setState(prev => ({ ...prev, isBusy: false }));
+    }, 10000); // 10 second timeout
     
     // Initialize if not already done
     if (!audioContextRef.current || !streamRef.current) {
@@ -285,8 +346,15 @@ export default function useVoiceAssistant({
       setState(prev => ({ 
         ...prev, 
         isListening: false,
+        isBusy: false, // Release busy state on error
         error: error instanceof Error ? error.message : 'Failed to start recording' 
       }));
+      
+      // Clear busy timeout on error
+      if (busyTimeoutRef.current) {
+        clearTimeout(busyTimeoutRef.current);
+        busyTimeoutRef.current = null;
+      }
     }
   }, [init, setupWebSocket, state.mode, vadSensitivity]);
 
@@ -515,6 +583,7 @@ export default function useVoiceAssistant({
     isProcessing: state.isProcessing,
     error: state.error,
     isTtsPlaying: state.isTtsPlaying,
+    isBusy: state.isBusy, // Expose busy state to UI
     
     // Methods
     init,
