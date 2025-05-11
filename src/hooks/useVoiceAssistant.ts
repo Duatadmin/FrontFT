@@ -6,7 +6,7 @@ const ASR_WEBSOCKET_URL = `${VOICE_API_BASE}/v1/asr/ws`;
 const TTS_URL = `${VOICE_API_BASE}/v1/tts`;
 const TTS_STOP_URL = `${VOICE_API_BASE}/v1/tts/stop`;
 
-// Audio Configuration 
+// Audio Configuration - Deepgram requires 16kHz mono
 const AUDIO_CONFIG = {
   sampleRate: 16000,
   channelCount: 1
@@ -21,7 +21,7 @@ interface VoiceAssistantState {
   isProcessing: boolean;
   error: string | null;
   isTtsPlaying: boolean;
-  isBusy: boolean; // New busy state to prevent overlapping sessions
+  isBusy: boolean; // Prevents multiple concurrent sessions
 }
 
 interface UseVoiceAssistantOptions {
@@ -31,10 +31,10 @@ interface UseVoiceAssistantOptions {
   vadSensitivity?: number; // 0-1, for Voice Activity Detection in walkie mode
   initialMode?: VoiceMode;
   
-  // New options for auto-sending transcripts to chat
-  autoSendToChat?: boolean; // Whether to automatically send transcripts to chat
-  setChatInputText?: (text: string) => void; // Function to set text in chat input
-  sendChatMessage?: (text: string) => void; // Function to trigger send action
+  // Auto-send transcripts to chat
+  autoSendToChat?: boolean;
+  setChatInputText?: (text: string) => void;
+  sendChatMessage?: (text: string) => void;
 }
 
 export default function useVoiceAssistant({
@@ -60,19 +60,19 @@ export default function useVoiceAssistant({
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const audioWorkletNodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const streamSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const audioDataRef = useRef<Uint8Array | null>(null);
   const currentRequestIdRef = useRef<string | null>(null);
   const vadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const audioElementRef = useRef<HTMLAudioElement | null>(null);
-  const streamEndedRef = useRef<boolean>(false);
   const busyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const micActivationSoundRef = useRef<HTMLAudioElement | null>(null);
-  // Flag to track if we've saved a debug recording in this session
-  const saveDebugRecordingRef = useRef<boolean>(false);
+  const streamEndedRef = useRef<boolean>(false);
+  const isAudioWorkletLoadedRef = useRef<boolean>(false);
 
   // Initialize the audio elements for TTS playback and mic activation sound
   useEffect(() => {
@@ -83,6 +83,7 @@ export default function useVoiceAssistant({
       activationSound.preload = 'auto';
       micActivationSoundRef.current = activationSound;
     }
+    
     if (!audioElementRef.current) {
       const audioEl = new Audio();
       audioEl.addEventListener('play', () => {
@@ -111,38 +112,17 @@ export default function useVoiceAssistant({
     };
   }, [onTtsPlaybackStart, onTtsPlaybackEnd]);
 
-  // Initialize WebSocket connection and media devices
-  const init = useCallback(async () => {
-    try {
-      // Request microphone access
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      streamRef.current = stream;
-
-      // Setup Audio Context for visualization and analysis
-      const audioContext = new AudioContext({ sampleRate: AUDIO_CONFIG.sampleRate });
-      audioContextRef.current = audioContext;
-      
-      // Create analyzer for visualization and VAD
-      const analyser = audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
-      analyserRef.current = analyser;
-      audioDataRef.current = dataArray;
-
-      // Connect stream to analyzer
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-      
-      return true;
-    } catch (error) {
-      console.error('Failed to initialize voice assistant:', error);
-      setState(prev => ({ 
-        ...prev, 
-        error: error instanceof Error ? error.message : 'Failed to access microphone'
-      }));
-      return false;
+  // Cleanup function for audio resources
+  const cleanupAudio = useCallback(() => {
+    // Disconnect and clean up the AudioWorkletNode
+    if (audioWorkletNodeRef.current) {
+      audioWorkletNodeRef.current.disconnect();
+      audioWorkletNodeRef.current.port.onmessage = null;
+      audioWorkletNodeRef.current = null;
     }
+    
+    // Note: we don't disconnect the source or close the context here
+    // because we might want to reuse them for the next recording session
   }, []);
 
   // Setup WebSocket connection
@@ -244,27 +224,76 @@ export default function useVoiceAssistant({
     };
     
     wsRef.current = ws;
-  }, [onTranscriptComplete, state.isListening]);
+  }, []);
+  
+  // Initialize audio context and microphone
+  const init = useCallback(async () => {
+    try {
+      // Request microphone access
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          channelCount: AUDIO_CONFIG.channelCount,
+          sampleRate: AUDIO_CONFIG.sampleRate,
+        } 
+      });
+      streamRef.current = stream;
+
+      // Setup Audio Context for processing
+      const audioContext = new AudioContext({ 
+        latencyHint: 'interactive', 
+        sampleRate: AUDIO_CONFIG.sampleRate 
+      });
+      audioContextRef.current = audioContext;
+      
+      // Create analyzer for visualization and VAD
+      const analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      const bufferLength = analyser.frequencyBinCount;
+      const dataArray = new Uint8Array(bufferLength);
+      analyserRef.current = analyser;
+      audioDataRef.current = dataArray;
+      
+      // Load the PCM processor worklet if not already loaded
+      if (!isAudioWorkletLoadedRef.current) {
+        try {
+          await audioContext.audioWorklet.addModule('/pcm-processor.js');
+          isAudioWorkletLoadedRef.current = true;
+          console.log('[VOICE] PCM processor worklet loaded successfully');
+        } catch (error) {
+          console.error('[VOICE] Failed to load PCM processor worklet:', error);
+          throw new Error('Failed to load audio processing module');
+        }
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('[VOICE] Failed to initialize voice assistant:', error);
+      setState(prev => ({ 
+        ...prev, 
+        error: error instanceof Error ? error.message : 'Failed to access microphone'
+      }));
+      return false;
+    }
+  }, []);
 
   /**
    * Helper function to send silence and end_of_stream message
-   * Sends 500ms of silence followed by the end_of_stream message to help Deepgram detect the end of speech
+   * Sends 1 second of silence followed by the end_of_stream message to help Deepgram detect the end of speech
    */
   const sendEndOfStreamWithSilence = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      // 500ms of silence at 16kHz, mono, 16-bit PCM => 16,000 samples => 32,000 bytes (Uint8Array)
-      const silenceSamples = 16000; // 500ms × 16kHz
-      const silence = new Uint8Array(silenceSamples * 2); // 2 bytes per sample (16-bit)
-      const silenceBuffer = silence.buffer;
-
-      // Send 500ms of silent audio
-      wsRef.current.send(silenceBuffer);
-      console.log('[WS] 🔇 Sent 500ms of silence to Deepgram');
+      // 1 second of silence at 16kHz, mono, 16-bit PCM (Int16)
+      const silenceSamples = 16000; // 1s × 16kHz
+      const silence = new Int16Array(silenceSamples); // All zeros = silence
+      
+      // Send 1 second of silent audio
+      wsRef.current.send(silence.buffer);
+      console.log('[WS] 🔇 Sent 1 second of silence to Deepgram');
 
       // Wait 100ms (safety delay), then close the stream
       setTimeout(() => {
         if (wsRef.current?.readyState === WebSocket.OPEN) {
-          // Send the required end_of_stream message
+          // Send the required end_of_stream message that Deepgram expects
           wsRef.current.send(JSON.stringify({ type: 'end_of_stream' }));
           console.log('[WS] ✅ Sent end_of_stream to Deepgram');
           
@@ -278,7 +307,32 @@ export default function useVoiceAssistant({
       console.warn('[WS] 🛑 Could not send silence buffer, WebSocket state:', wsRef.current?.readyState);
     }
   }, []);
-  
+
+  // Handle silence detection for walkie-talkie mode
+  const handleSilenceDetection = useCallback((audioLevel: number) => {
+    const silenceThreshold = 0.01; // Adjust based on testing
+    
+    if (audioLevel < silenceThreshold) {
+      // If we're not already tracking silence, start a timer
+      if (!vadTimeoutRef.current) {
+        vadTimeoutRef.current = setTimeout(() => {
+          // Check if we're still listening
+          if (state.isListening && state.mode === 'walkie') {
+            console.log('[VOICE] Silence detected for 1.5s, stopping recording automatically');
+            stopListening();
+          }
+          vadTimeoutRef.current = null;
+        }, 1500); // 1.5 seconds of silence
+      }
+    } else {
+      // Cancel the silence timer if we hear something
+      if (vadTimeoutRef.current) {
+        clearTimeout(vadTimeoutRef.current);
+        vadTimeoutRef.current = null;
+      }
+    }
+  }, []);
+
   // Start recording and sending audio
   const startListening = useCallback(async () => {
     // Check if a session is already active and reject if busy
@@ -338,110 +392,47 @@ export default function useVoiceAssistant({
         error: null 
       }));
       
-      // Check if the PCM codec is supported (required by Deepgram)
-      const preferredMimeType = 'audio/webm;codecs=pcm';
-      const fallbackMimeType = 'audio/webm';
+      const audioContext = audioContextRef.current!;
       
-      let mimeType = fallbackMimeType;
-      if (MediaRecorder.isTypeSupported(preferredMimeType)) {
-        mimeType = preferredMimeType;
-        console.log('[VOICE] Using PCM codec for best Deepgram compatibility');
-      } else {
-        console.warn('[VOICE] ⚠️ PCM codec not supported in this browser. Using fallback format, which may cause issues with Deepgram.');
+      // Create media stream source if needed
+      if (!streamSourceRef.current && streamRef.current) {
+        const source = audioContext.createMediaStreamSource(streamRef.current);
+        streamSourceRef.current = source;
+        
+        // Connect to analyzer for visualization
+        source.connect(analyserRef.current!);
       }
       
-      // Create a MediaRecorder to capture audio with proper encoding
-      const mediaRecorder = new MediaRecorder(streamRef.current!, {
-        mimeType: mimeType
-      });
+      // Create and connect the AudioWorkletNode for PCM processing
+      const workletNode = new AudioWorkletNode(audioContext, 'pcm-processor');
+      audioWorkletNodeRef.current = workletNode;
       
-      // Log the actual MIME type used (may differ from requested type)
-      console.log('[VOICE] MediaRecorder created with requested MIME type:', mimeType);
-      console.log('[VOICE] Actual MediaRecorder MIME type:', mediaRecorder.mimeType);
-      
-      // Reset debug recording flag for this session
-      saveDebugRecordingRef.current = false;
-      
-      // Send audio data chunks to server via WebSocket
-      mediaRecorder.ondataavailable = async (event) => {
-        // Log detailed info about the media chunk
-        console.log('[VOICE] Received media chunk of type:', event.data.type, 'size:', event.data.size);
-        
-        // Don't send any audio chunks if the stream has ended or WebSocket is not open
+      // Handle messages from the audio processor
+      workletNode.port.onmessage = (event) => {
+        // Skip if stream has ended
         if (streamEndedRef.current) {
-          console.log('[WS] Ignoring audio chunk - stream already ended');
           return;
         }
         
-        // Save a test recording locally (only once per session)
-        if (event.data.size > 0 && !saveDebugRecordingRef.current) {
-          try {
-            saveDebugRecordingRef.current = true;
-            const url = URL.createObjectURL(event.data);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `test-audio-${Date.now()}.webm`;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            console.log('[VOICE] Downloaded .webm for inspection');
-            setTimeout(() => {
-              document.body.removeChild(a);
-              URL.revokeObjectURL(url);
-            }, 100);
-          } catch (error) {
-            console.error('[VOICE] Failed to save debug recording:', error);
-          }
-        }
+        const { audioData, audioLevel, isSilent } = event.data;
         
-        // Process and send audio data if valid
-        if (event.data.size > 0) {
-          try {
-            // Convert to ArrayBuffer and send to WebSocket
-            const buffer = await event.data.arrayBuffer();
-            
-            if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
-              wsRef.current.send(buffer);
-              console.log('[WS] Sent chunk as ArrayBuffer to backend. Size:', buffer.byteLength);
-            } else {
-              if (streamEndedRef.current) {
-                console.log('[WS] Skipping chunk send - stream ended during conversion');
-              } else {
-                console.warn('[WS] WebSocket is not open. Chunk not sent. State:', wsRef.current?.readyState);
-              }
-            }
-          } catch (error) {
-            console.error('[WS] Error converting audio chunk to ArrayBuffer:', error);
+        // Send audio data to WebSocket if connection is open
+        if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
+          wsRef.current.send(audioData);
+          console.log('[WS] Sent audio chunk as PCM Int16. Level:', audioLevel.toFixed(4));
+          
+          // For walkie-talkie mode, use audio level for VAD
+          if (state.mode === 'walkie' && isSilent) {
+            handleSilenceDetection(audioLevel);
           }
-        } else {
-          console.warn('[WS] Received empty audio chunk, not sending');
         }
       };
       
-      // Handle recording stop event
-      mediaRecorder.onstop = () => {
-        // Mark stream as ended BEFORE sending end_of_stream
-        streamEndedRef.current = true;
-        console.log('[WS] Marked stream as ended, no more audio chunks will be sent');
-        
-        // Send the end_of_stream message to properly close the stream
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(JSON.stringify({ type: "end_of_stream" }));
-          console.log('[WS] ✅ Sent end_of_stream to Deepgram');
-        } else {
-          console.warn('[WS] 🛑 Could not send end_of_stream, WebSocket state:', wsRef.current?.readyState);
-        }
-      };
+      // Connect the processing chain: mediaStream -> workletNode
+      streamSourceRef.current.connect(workletNode);
       
-      // Set small timeslice for low-latency streaming (100ms chunks)
-      mediaRecorder.start(100);
-      mediaRecorderRef.current = mediaRecorder;
-      console.log('[VOICE] MediaRecorder started with 100ms chunks, state:', mediaRecorder.state);
+      console.log('[VOICE] AudioWorklet started, streaming PCM audio data');
       
-      // For walkie-talkie mode, setup Voice Activity Detection
-      if (state.mode === 'walkie') {
-        setupVoiceActivityDetection(vadSensitivity);
-      }
     } catch (error) {
       console.error('Failed to start recording:', error);
       setState(prev => ({ 
@@ -451,22 +442,25 @@ export default function useVoiceAssistant({
         error: error instanceof Error ? error.message : 'Failed to start recording' 
       }));
       
+      // Clean up resources
+      cleanupAudio();
+      
       // Clear busy timeout on error
       if (busyTimeoutRef.current) {
         clearTimeout(busyTimeoutRef.current);
         busyTimeoutRef.current = null;
       }
     }
-  }, [init, setupWebSocket, state.mode, vadSensitivity]);
-
-
+  }, [init, setupWebSocket, state.isBusy, state.mode, handleSilenceDetection, cleanupAudio]);
 
   // Stop recording and finalize transcript
   const stopListening = useCallback(() => {
-    // Stop MediaRecorder if active
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-      mediaRecorderRef.current.stop();
-      console.log('[VOICE] MediaRecorder stopped');
+    // Disconnect the audio worklet node
+    if (audioWorkletNodeRef.current) {
+      audioWorkletNodeRef.current.disconnect();
+      audioWorkletNodeRef.current.port.onmessage = null;
+      audioWorkletNodeRef.current = null;
+      console.log('[VOICE] Disconnected AudioWorklet node');
     }
     
     // Clear VAD timeout if active
@@ -488,7 +482,7 @@ export default function useVoiceAssistant({
       isListening: false,
       isProcessing: true // Still processing the final transcript
     }));
-  }, []);
+  }, [sendEndOfStreamWithSilence]);
 
   // Play TTS response
   const playTtsResponse = useCallback((audioUrl: string, requestId: string) => {
@@ -499,193 +493,120 @@ export default function useVoiceAssistant({
     
     // Set audio source and play
     audioElementRef.current.src = audioUrl;
-    audioElementRef.current.play().catch(error => {
-      console.error('Failed to play TTS response:', error);
-    });
+    audioElementRef.current.play()
+      .catch(error => console.error('Failed to play TTS response:', error));
   }, []);
 
-  // Stop TTS playback (used for barge-in)
-  const stopTtsPlayback = useCallback(async () => {
-    // Pause audio element
+  // Stop TTS playback
+  const stopTts = useCallback(async () => {
+    // Stop audio playback
     if (audioElementRef.current) {
       audioElementRef.current.pause();
+      audioElementRef.current.src = '';
     }
     
-    // Send stop request to server with current request ID
+    // Send stop request to server if we have a current request ID
     if (currentRequestIdRef.current) {
       try {
-        await fetch(`${TTS_STOP_URL}?request_id=${currentRequestIdRef.current}`, {
-          method: 'POST'
-        });
+        await fetch(`${TTS_STOP_URL}?request_id=${currentRequestIdRef.current}`, { method: 'POST' });
+        console.log('[TTS] Sent stop request for TTS playback');
       } catch (error) {
         console.error('Failed to stop TTS playback:', error);
       }
       
-      // Clear current request ID
       currentRequestIdRef.current = null;
     }
     
     setState(prev => ({ ...prev, isTtsPlaying: false }));
   }, []);
 
-  // Barge-in function: stop TTS and start listening
-  const bargeIn = useCallback(async () => {
-    // Stop TTS playback if active
-    if (state.isTtsPlaying) {
-      await stopTtsPlayback();
-    }
-    
-    // Start listening
-    startListening();
-  }, [state.isTtsPlaying, stopTtsPlayback, startListening]);
-
-  // Set mode (PTT or Walkie-Talkie)
-  const setMode = useCallback((newMode: VoiceMode) => {
-    // Stop listening when changing modes
-    if (state.isListening) {
-      stopListening();
-    }
-    
-    setState(prev => ({ ...prev, mode: newMode }));
-  }, [state.isListening, stopListening]);
-
-  // Toggle walkie-talkie mode on/off
-  const toggleWalkieMode = useCallback(() => {
-    const isCurrentlyInWalkieMode = state.mode === 'walkie';
-    
-    // If currently in walkie mode, stop listening and switch to PTT
-    if (isCurrentlyInWalkieMode) {
-      if (state.isListening) {
-        stopListening();
-      }
-      setMode('ptt');
-    } 
-    // Otherwise, switch to walkie mode and start listening
-    else {
-      setMode('walkie');
-      startListening();
-    }
-  }, [state.mode, state.isListening, stopListening, setMode, startListening]);
-
-  // Voice Activity Detection for walkie-talkie mode
-  const setupVoiceActivityDetection = useCallback((sensitivity: number) => {
-    if (!analyserRef.current || !audioDataRef.current) return;
-    
-    // Function to detect audio levels and determine if speech is present
-    const checkAudioLevel = () => {
-      // Get audio data
-      analyserRef.current!.getByteTimeDomainData(audioDataRef.current!);
-      
-      // Calculate RMS (root mean square) to determine audio level
-      let sum = 0;
-      for (let i = 0; i < audioDataRef.current!.length; i++) {
-        // Convert to signed value (-128 to 127)
-        const signedValue = audioDataRef.current![i] - 128;
-        sum += signedValue * signedValue;
-      }
-      const rms = Math.sqrt(sum / audioDataRef.current!.length);
-      
-      // Normalize to 0-1
-      const normalizedRms = rms / 128;
-      
-      // Debug audio levels
-      // console.log('Audio level:', normalizedRms);
-      
-      // Low audio level detected
-      if (normalizedRms < sensitivity * 0.1) {
-        // Add a delay before stopping to avoid cutting off speech
-        if (!vadTimeoutRef.current && state.isListening) {
-          vadTimeoutRef.current = setTimeout(() => {
-            // Double-check we're still below threshold
-            analyserRef.current!.getByteTimeDomainData(audioDataRef.current!);
-            sum = 0;
-            for (let i = 0; i < audioDataRef.current!.length; i++) {
-              const signedValue = audioDataRef.current![i] - 128;
-              sum += signedValue * signedValue;
-            }
-            const finalRms = Math.sqrt(sum / audioDataRef.current!.length) / 128;
-            
-            // Only stop if still below threshold
-            if (finalRms < sensitivity * 0.1) {
-              stopListening();
-            }
-            
-            vadTimeoutRef.current = null;
-          }, 1500); // 1.5s of silence before stopping
-        }
-      } 
-      // Audio detected, clear timeout
-      else if (vadTimeoutRef.current) {
-        clearTimeout(vadTimeoutRef.current);
-        vadTimeoutRef.current = null;
-      }
-      
-      // Continue checking if in walkie mode and listening
-      if (state.mode === 'walkie' && state.isListening) {
-        requestAnimationFrame(checkAudioLevel);
-      }
-    };
-    
-    // Start checking audio levels
-    checkAudioLevel();
-  }, [state.mode, state.isListening, stopListening]);
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      // Stop media tracks
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      
-      // Close WebSocket
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
-      
-      // Close AudioContext
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-      
-      // Stop MediaRecorder
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stop();
-      }
-      
-      // Clear VAD timeout
-      if (vadTimeoutRef.current) {
-        clearTimeout(vadTimeoutRef.current);
-      }
-    };
+  // Set voice mode (push-to-talk or walkie-talkie)
+  const setMode = useCallback((mode: VoiceMode) => {
+    setState(prev => ({ ...prev, mode }));
   }, []);
 
-  // Get audio visualization data for custom visualizer components
-  const getVisualizationData = useCallback(() => {
-    if (!analyserRef.current || !audioDataRef.current) return null;
-    
-    analyserRef.current.getByteTimeDomainData(audioDataRef.current);
+  // Get audio visualization data for the AudioVisualizer component
+  const getAudioVisualizationData = useCallback(() => {
+    if (!analyserRef.current || !audioDataRef.current) {
+      return null;
+    }
+
+    // Get frequency data from analyzer
+    analyserRef.current.getByteFrequencyData(audioDataRef.current);
     return audioDataRef.current;
   }, []);
 
-  // Return the hook API
+  // Clean up resources on unmount
+  useEffect(() => {
+    return () => {
+      // Stop recording if active
+      if (state.isListening) {
+        stopListening();
+      }
+      
+      // Clean up audio resources
+      cleanupAudio();
+      
+      // Close WebSocket connection
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+      
+      // Close audio context
+      if (audioContextRef.current) {
+        audioContextRef.current.close().catch(err => console.error('Error closing AudioContext:', err));
+      }
+      
+      // Release microphone
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+        streamRef.current = null;
+      }
+      
+      // Clear any timeouts
+      if (vadTimeoutRef.current) {
+        clearTimeout(vadTimeoutRef.current);
+      }
+      if (busyTimeoutRef.current) {
+        clearTimeout(busyTimeoutRef.current);
+      }
+    };
+  }, [state.isListening, stopListening, cleanupAudio]);
+
+  // Get audio level for visualization
+  const getAudioLevel = useCallback(() => {
+    if (!analyserRef.current || !audioDataRef.current) {
+      return 0;
+    }
+
+    analyserRef.current.getByteFrequencyData(audioDataRef.current);
+    const values = audioDataRef.current;
+    let sum = 0;
+    for (let i = 0; i < values.length; i++) {
+      sum += values[i];
+    }
+    return sum / values.length / 255; // Normalized 0-1
+  }, []);
+
   return {
     // State
     isListening: state.isListening,
     transcript: state.transcript,
-    mode: state.mode,
     isProcessing: state.isProcessing,
     error: state.error,
     isTtsPlaying: state.isTtsPlaying,
-    isBusy: state.isBusy, // Expose busy state to UI
+    isBusy: state.isBusy,
+    mode: state.mode,
     
-    // Methods
-    init,
+    // Actions
     startListening,
     stopListening,
-    bargeIn,
+    stopTts,
     setMode,
-    toggleWalkieMode,
-    getVisualizationData
+    
+    // Visualization
+    getAudioVisualizationData,
+    getAudioLevel,
   };
 }
