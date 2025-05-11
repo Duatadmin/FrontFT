@@ -30,6 +30,11 @@ interface UseVoiceAssistantOptions {
   onTtsPlaybackEnd?: () => void;
   vadSensitivity?: number; // 0-1, for Voice Activity Detection in walkie mode
   initialMode?: VoiceMode;
+  
+  // New options for auto-sending transcripts to chat
+  autoSendToChat?: boolean; // Whether to automatically send transcripts to chat
+  setChatInputText?: (text: string) => void; // Function to set text in chat input
+  sendChatMessage?: (text: string) => void; // Function to trigger send action
 }
 
 export default function useVoiceAssistant({
@@ -37,7 +42,10 @@ export default function useVoiceAssistant({
   onTtsPlaybackStart,
   onTtsPlaybackEnd,
   vadSensitivity = 0.7,
-  initialMode = 'ptt'
+  initialMode = 'ptt',
+  autoSendToChat = false,
+  setChatInputText,
+  sendChatMessage
 }: UseVoiceAssistantOptions = {}) {
   // State management
   const [state, setState] = useState<VoiceAssistantState>({
@@ -176,8 +184,22 @@ export default function useVoiceAssistant({
           
           console.log('[VOICE] ✅ Received final transcript, releasing busy state');
           
-          if (finalTranscript && onTranscriptComplete) {
-            onTranscriptComplete(finalTranscript);
+          if (finalTranscript) {
+            // Call the original transcript complete callback if provided
+            if (onTranscriptComplete) {
+              onTranscriptComplete(finalTranscript);
+            }
+            
+            // Auto-send to chat if enabled and functions are provided
+            if (autoSendToChat && finalTranscript.trim() && setChatInputText && sendChatMessage) {
+              console.log('[VOICE] 🚀 Auto-sending transcript to chat:', finalTranscript);
+              
+              // Set the transcript in the chat input
+              setChatInputText(finalTranscript);
+              
+              // Trigger the send action
+              sendChatMessage(finalTranscript);
+            }
           }
           
           // Auto-play TTS response if provided
