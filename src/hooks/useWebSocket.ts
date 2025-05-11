@@ -25,9 +25,10 @@ export function useWebSocket(
   options: UseWebSocketOptions = {}
 ) {
   const wsRef = useRef<WebSocket | null>(null);
-  const pingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const reconnectTimerRef = useRef<NodeJS.Timeout | null>(null);
   const isUnmountedRef = useRef<boolean>(false);
+  const isConnectingRef = useRef<boolean>(false);
 
   // Default options
   const {
@@ -46,10 +47,10 @@ export function useWebSocket(
    * Safely closes the WebSocket connection and cleans up resources
    */
   const cleanup = useCallback(() => {
-    // Clear ping timer
-    if (pingTimerRef.current) {
-      clearInterval(pingTimerRef.current);
-      pingTimerRef.current = null;
+    // Clear ping interval
+    if (pingIntervalRef.current) {
+      clearInterval(pingIntervalRef.current);
+      pingIntervalRef.current = null;
     }
 
     // Clear reconnect timer
@@ -62,7 +63,7 @@ export function useWebSocket(
     if (wsRef.current) {
       const ws = wsRef.current;
       
-      // Remove all event listeners to prevent memory leaks
+      // First remove all event listeners to prevent memory leaks
       ws.onopen = null;
       ws.onclose = null;
       ws.onerror = null;
@@ -71,11 +72,18 @@ export function useWebSocket(
       // Close the connection if it's not already closed
       if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
         console.log('[WS] 🔌 Closing WebSocket connection');
-        ws.close();
+        try {
+          ws.close();
+        } catch (err) {
+          console.error('[WS] Error closing WebSocket:', err);
+        }
       }
       
       wsRef.current = null;
     }
+    
+    // Reset connecting state
+    isConnectingRef.current = false;
   }, []);
 
   /**
@@ -85,14 +93,23 @@ export function useWebSocket(
     // Skip if URL is empty
     if (!url) {
       console.warn('[WS] Skipping connection: URL is empty');
-      return;
+      return null;
     }
 
     // Skip if already unmounted
     if (isUnmountedRef.current) {
       console.warn('[WS] Component unmounted, skipping connection');
-      return;
+      return null;
     }
+    
+    // Skip if already connecting
+    if (isConnectingRef.current) {
+      console.log('[WS] Already connecting, skipping duplicate connection');
+      return wsRef.current;
+    }
+    
+    // Set connecting flag
+    isConnectingRef.current = true;
 
     // Clean up any existing connection
     cleanup();
@@ -103,25 +120,36 @@ export function useWebSocket(
       wsRef.current = ws;
 
       // Set up event handlers
-      ws.onopen = (e) => {
+      ws.onopen = () => {
         console.log('[WS] ✅ Connected:', url);
+        isConnectingRef.current = false;
         
         // Set up ping interval if enabled
-        if (enablePing) {
-          pingTimerRef.current = setInterval(() => {
-            if (ws.readyState === WebSocket.OPEN) {
-              const message = typeof pingMessage === 'string' 
-                ? pingMessage 
-                : JSON.stringify(pingMessage);
-              
-              ws.send(message);
-              console.log('[WS] 💓 Sent keep-alive ping');
+        if (enablePing && !pingIntervalRef.current) {
+          pingIntervalRef.current = setInterval(() => {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+              try {
+                const message = typeof pingMessage === 'string' 
+                  ? pingMessage 
+                  : JSON.stringify(pingMessage);
+                
+                ws.send(message);
+                console.log('[WS] 💓 Sent keep-alive ping');
+              } catch (err) {
+                console.warn('[WS] Error sending ping:', err);
+              }
             }
           }, pingInterval);
         }
         
         // Call user provided onOpen handler
-        if (onOpen) onOpen();
+        if (onOpen) {
+          try {
+            onOpen();
+          } catch (err) {
+            console.error('[WS] Error in onOpen handler:', err);
+          }
+        }
       };
 
       ws.onmessage = (e) => {
@@ -131,31 +159,51 @@ export function useWebSocket(
             ? e.data 
             : '[data]');
         } else {
-          onMessage(e);
+          try {
+            onMessage(e);
+          } catch (err) {
+            console.error('[WS] Error in onMessage handler:', err);
+          }
         }
       };
 
       ws.onerror = (e) => {
         console.error('[WS] ❌ Error:', e);
-        onError?.(e);
+        isConnectingRef.current = false;
+        
+        if (onError) {
+          try {
+            onError(e);
+          } catch (err) {
+            console.error('[WS] Error in onError handler:', err);
+          }
+        }
       };
 
       ws.onclose = (e) => {
         console.warn('[WS] ❌ Disconnected:', e.code, e.reason || 'No reason');
+        isConnectingRef.current = false;
         
-        // Clear the ping timer
-        if (pingTimerRef.current) {
-          clearTimeout(pingTimerRef.current);
-          pingTimerRef.current = null;
+        // Clear the ping interval
+        if (pingIntervalRef.current) {
+          clearInterval(pingIntervalRef.current);
+          pingIntervalRef.current = null;
         }
         
         // Call user provided onClose handler
-        onClose?.(e);
+        if (onClose) {
+          try {
+            onClose(e);
+          } catch (err) {
+            console.error('[WS] Error in onClose handler:', err);
+          }
+        }
       };
 
       return ws;
     } catch (error) {
       console.error('[WS] ❌ Failed to create WebSocket:', error);
+      isConnectingRef.current = false;
       return null;
     }
   }, [url, protocols, enablePing, pingInterval, pingMessage, onOpen, onMessage, onError, onClose, cleanup]);
@@ -164,8 +212,13 @@ export function useWebSocket(
    * Sends data through the WebSocket if it's open
    */
   const send = useCallback((data: string | ArrayBufferLike | Blob | ArrayBufferView) => {
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      console.warn('[WS] Cannot send: WebSocket is not open');
+    if (!wsRef.current) {
+      console.warn('[WS] Cannot send: No WebSocket instance');
+      return false;
+    }
+    
+    if (wsRef.current.readyState !== WebSocket.OPEN) {
+      console.warn('[WS] Cannot send: WebSocket is not open (state:', wsRef.current.readyState, ')');
       return false;
     }
     
@@ -202,12 +255,17 @@ export function useWebSocket(
     };
   }, [url, connect, cleanup, immediateConnect]);
 
+  // Check if WebSocket is connected
+  const isConnected = useCallback(() => {
+    return wsRef.current?.readyState === WebSocket.OPEN;
+  }, []);
+
   return {
     wsRef,
     send,
     reconnect,
     connect,
     disconnect: cleanup,
-    isConnected: wsRef.current?.readyState === WebSocket.OPEN
+    isConnected: isConnected()
   };
 }
