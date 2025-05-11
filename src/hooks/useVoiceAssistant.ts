@@ -244,11 +244,44 @@ export default function useVoiceAssistant({
     wsRef.current = ws;
   }, [onTranscriptComplete, state.isListening]);
 
+  /**
+   * Helper function to send silence and end_of_stream message
+   * Sends 500ms of silence followed by the end_of_stream message to help Deepgram detect the end of speech
+   */
+  const sendEndOfStreamWithSilence = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      // 500ms of silence at 16kHz, mono, 16-bit PCM => 16,000 samples => 32,000 bytes (Uint8Array)
+      const silenceSamples = 16000; // 500ms × 16kHz
+      const silence = new Uint8Array(silenceSamples * 2); // 2 bytes per sample (16-bit)
+      const silenceBuffer = silence.buffer;
+
+      // Send 500ms of silent audio
+      wsRef.current.send(silenceBuffer);
+      console.log('[WS] 🔇 Sent 500ms of silence to Deepgram');
+
+      // Wait 100ms (safety delay), then close the stream
+      setTimeout(() => {
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          // Send the required end_of_stream message
+          wsRef.current.send(JSON.stringify({ type: 'end_of_stream' }));
+          console.log('[WS] ✅ Sent end_of_stream to Deepgram');
+          
+          // Important: Don't close the WebSocket yet - we need to wait for the transcript response
+          console.log('[WS] Keeping WebSocket open to receive transcript...');
+        } else {
+          console.warn('[WS] 🛑 Could not send end_of_stream, WebSocket state:', wsRef.current?.readyState);
+        }
+      }, 100);
+    } else {
+      console.warn('[WS] 🛑 Could not send silence buffer, WebSocket state:', wsRef.current?.readyState);
+    }
+  }, []);
+  
   // Start recording and sending audio
   const startListening = useCallback(async () => {
     // Check if a session is already active and reject if busy
     if (state.isBusy) {
-      console.warn('[VOICE] 🚫 Cannot start new session - voice system is busy');
+      console.warn('[VOICE] 🛑 Cannot start new session - voice system is busy');
       return;
     }
     
@@ -380,6 +413,8 @@ export default function useVoiceAssistant({
     }
   }, [init, setupWebSocket, state.mode, vadSensitivity]);
 
+
+
   // Stop recording and finalize transcript
   const stopListening = useCallback(() => {
     // Stop MediaRecorder if active
@@ -398,17 +433,8 @@ export default function useVoiceAssistant({
     streamEndedRef.current = true;
     console.log('[WS] Marked stream as ended in stopListening()');
     
-    // Send end_of_stream signal required by Deepgram
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      // Send the required end_of_stream message
-      wsRef.current.send(JSON.stringify({ type: 'end_of_stream' }));
-      console.log('[WS] ✅ Sent end_of_stream to Deepgram');
-      
-      // Important: Don't close the WebSocket yet - we need to wait for the transcript response
-      console.log('[WS] Keeping WebSocket open to receive transcript...');
-    } else {
-      console.warn('[WS] 🛑 Could not send end_of_stream, WebSocket state:', wsRef.current?.readyState);
-    }
+    // Send silence and end_of_stream signal required by Deepgram
+    sendEndOfStreamWithSilence();
     
     // Update state
     setState(prev => ({ 
