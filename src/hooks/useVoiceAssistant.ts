@@ -3,6 +3,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 // Voice Assistant API endpoints
 const VOICE_API_BASE = 'https://ftvoiceservice-production.up.railway.app';
 const ASR_WEBSOCKET_URL = `${VOICE_API_BASE}/v1/asr/ws`;
+const TEST_WEBSOCKET_URL = `${VOICE_API_BASE}/v1/test/ws`; // Test WebSocket endpoint
 const TTS_URL = `${VOICE_API_BASE}/v1/tts`;
 const TTS_STOP_URL = `${VOICE_API_BASE}/v1/tts/stop`;
 
@@ -57,6 +58,13 @@ export default function useVoiceAssistant({
     isTtsPlaying: false,
     isBusy: false
   });
+  
+  // Feature detection for fallback strategies
+  const [features, setFeatures] = useState({
+    websocketConnectable: null as boolean | null, // Can we connect to WebSocket?
+    audioWorkletAvailable: null as boolean | null, // Is AudioWorklet supported?
+    usingFallback: false // Are we using MediaRecorder fallback?
+  });
 
   // Refs
   const wsRef = useRef<WebSocket | null>(null);
@@ -73,6 +81,63 @@ export default function useVoiceAssistant({
   const micActivationSoundRef = useRef<HTMLAudioElement | null>(null);
   const streamEndedRef = useRef<boolean>(false);
   const isAudioWorkletLoadedRef = useRef<boolean>(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null); // For fallback mode
+
+  // Test WebSocket connectivity on mount
+  useEffect(() => {
+    // Only run this test once on mount
+    if (features.websocketConnectable === null) {
+      testWebSocketConnection();
+    }
+  }, []);
+  
+  // Test if the WebSocket endpoint is reachable
+  const testWebSocketConnection = useCallback(async () => {
+    console.log('[WS-TEST] Testing WebSocket connectivity to:', TEST_WEBSOCKET_URL);
+    
+    try {
+      // Create a test WebSocket connection with timeout
+      const testWs = new WebSocket(TEST_WEBSOCKET_URL);
+      let connectionSuccessful = false;
+      
+      // Set up a timeout - 5 seconds should be enough to establish connection
+      const timeout = setTimeout(() => {
+        if (!connectionSuccessful) {
+          console.warn('[WS-TEST] WebSocket connection test timed out');
+          testWs.close();
+          setFeatures(prev => ({ ...prev, websocketConnectable: false }));
+        }
+      }, 5000);
+      
+      // Handle success case
+      testWs.onopen = () => {
+        console.log('[WS-TEST] ✅ Test WebSocket connected successfully');
+        connectionSuccessful = true;
+        clearTimeout(timeout);
+        setFeatures(prev => ({ ...prev, websocketConnectable: true }));
+        
+        // Send a ping and close after response
+        testWs.send(JSON.stringify({ type: 'ping' }));
+        setTimeout(() => testWs.close(), 1000);
+      };
+      
+      // Handle error case
+      testWs.onerror = (error) => {
+        console.error('[WS-TEST] ❌ Test WebSocket connection failed:', error);
+        connectionSuccessful = true; // Prevent timeout from firing
+        clearTimeout(timeout);
+        setFeatures(prev => ({ ...prev, websocketConnectable: false }));
+      };
+      
+      // Handle message (optional)
+      testWs.onmessage = (event) => {
+        console.log('[WS-TEST] Received test response:', event.data);
+      };
+    } catch (error) {
+      console.error('[WS-TEST] WebSocket connection test error:', error);
+      setFeatures(prev => ({ ...prev, websocketConnectable: false }));
+    }
+  }, []);
 
   // Initialize the audio elements for TTS playback and mic activation sound
   useEffect(() => {
@@ -285,12 +350,15 @@ export default function useVoiceAssistant({
       analyserRef.current = analyser;
       audioDataRef.current = dataArray;
       
-      // Load the PCM processor worklet if not already loaded
-      if (!isAudioWorkletLoadedRef.current) {
+      // Check and set AudioWorklet availability
+      const hasAudioWorklet = 'audioWorklet' in AudioContext.prototype;
+      setFeatures(prev => ({ ...prev, audioWorkletAvailable: hasAudioWorklet }));
+      
+      // Try loading the PCM processor worklet if supported
+      if (hasAudioWorklet && !isAudioWorkletLoadedRef.current) {
         try {
           console.log('[VOICE-DEBUG] Starting AudioWorklet loading process');
           console.log('[VOICE-DEBUG] AudioContext state:', audioContext.state);
-          console.log('[VOICE-DEBUG] AudioWorklet support check:', 'audioWorklet' in AudioContext.prototype);
           
           // Log the full URL we're trying to load
           const baseUrl = window.location.origin;
@@ -307,10 +375,18 @@ export default function useVoiceAssistant({
             message: error.message, 
             stack: error.stack 
           });
-          throw new Error('Failed to load audio processing module');
+          
+          // Don't throw here - we'll fall back to MediaRecorder
+          setFeatures(prev => ({ ...prev, usingFallback: true }));
+          console.log('[VOICE] Falling back to MediaRecorder due to AudioWorklet load failure');
         }
       } else {
-        console.log('[VOICE-DEBUG] AudioWorklet already loaded, skipping initialization');
+        if (!hasAudioWorklet) {
+          console.log('[VOICE] AudioWorklet not supported in this browser, using MediaRecorder fallback');
+          setFeatures(prev => ({ ...prev, usingFallback: true }));
+        } else {
+          console.log('[VOICE-DEBUG] AudioWorklet already loaded, skipping initialization');
+        }
       }
       
       return true;
@@ -466,59 +542,70 @@ export default function useVoiceAssistant({
         source.connect(analyserRef.current!);
       }
       
-      // Create and connect the AudioWorkletNode for PCM processing
-      console.log('[VOICE-DEBUG] Creating AudioWorkletNode with processor name: "pcm-processor"');
-      try {
-        const workletNode = new AudioWorkletNode(audioContext, 'pcm-processor');
-        audioWorkletNodeRef.current = workletNode;
-        console.log('[VOICE-DEBUG] ✅ AudioWorkletNode created successfully');
-        
-        // Handle messages from the audio processor
-        console.log('[VOICE-DEBUG] Setting up message port handler for AudioWorkletNode');
-        let messageCount = 0;
-        workletNode.port.onmessage = (event) => {
-          // Log first few messages to confirm data is flowing
-          if (messageCount < 5) {
-            console.log(`[VOICE-DEBUG] Received message #${messageCount} from AudioWorklet:`, 
-              event.data ? { hasAudioData: !!event.data.audioData } : 'No data');
-            messageCount++;
-          }
-          
-          // Skip if stream has ended
-          if (streamEndedRef.current) {
-            return;
-          }
-          
-          const { audioData, audioLevel, isSilent } = event.data;
-          
-          // Send audio data to WebSocket if connection is open
-          if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
-            wsRef.current.send(audioData);
-            console.log('[WS] Sent audio chunk as PCM Int16. Level:', audioLevel.toFixed(4));
-            
-            // For walkie-talkie mode, use audio level for VAD
-            if (state.mode === 'walkie' && isSilent) {
-              handleSilenceDetection(audioLevel);
-            }
-          }
-        };
-        
-        // Connect the processing chain: mediaStream -> workletNode
-        console.log('[VOICE-DEBUG] Connecting audio nodes: streamSource -> workletNode');
+      // Decide which audio capture method to use
+      if (!features.usingFallback && isAudioWorkletLoadedRef.current) {
+        // Use AudioWorklet approach
+        console.log('[VOICE-DEBUG] Creating AudioWorkletNode with processor name: "pcm-processor"');
         try {
-          streamSourceRef.current.connect(workletNode);
-          console.log('[VOICE-DEBUG] ✅ Audio processing chain connected successfully');
+          const workletNode = new AudioWorkletNode(audioContext, 'pcm-processor');
+          audioWorkletNodeRef.current = workletNode;
+          console.log('[VOICE-DEBUG] ✅ AudioWorkletNode created successfully');
+          
+          // Handle messages from the audio processor
+          console.log('[VOICE-DEBUG] Setting up message port handler for AudioWorkletNode');
+          let messageCount = 0;
+          workletNode.port.onmessage = (event) => {
+            // Log first few messages to confirm data is flowing
+            if (messageCount < 5) {
+              console.log(`[VOICE-DEBUG] Received message #${messageCount} from AudioWorklet:`, 
+                event.data ? { hasAudioData: !!event.data.audioData } : 'No data');
+              messageCount++;
+            }
+            
+            // Skip if stream has ended
+            if (streamEndedRef.current) {
+              return;
+            }
+            
+            const { audioData, audioLevel, isSilent } = event.data;
+            
+            // Send audio data to WebSocket if connection is open
+            if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
+              wsRef.current.send(audioData);
+              console.log('[WS] Sent audio chunk as PCM Int16. Level:', audioLevel.toFixed(4));
+              
+              // For walkie-talkie mode, use audio level for VAD
+              if (state.mode === 'walkie' && isSilent) {
+                handleSilenceDetection(audioLevel);
+              }
+            }
+          };
+          
+          // Connect the processing chain: mediaStream -> workletNode
+          console.log('[VOICE-DEBUG] Connecting audio nodes: streamSource -> workletNode');
+          try {
+            streamSourceRef.current.connect(workletNode);
+            console.log('[VOICE-DEBUG] ✅ Audio processing chain connected successfully');
+          } catch (error) {
+            console.error('[VOICE-ERROR] ❌ Failed to connect audio processing chain:', error);
+            // Instead of throwing, we'll fall back to MediaRecorder
+            setFeatures(prev => ({ ...prev, usingFallback: true }));
+            setupMediaRecorderFallback();
+            return; // Exit the AudioWorklet setup
+          }
+          
+          console.log('[VOICE] ✅ AudioWorklet started, streaming PCM audio data');
+          
         } catch (error) {
-          console.error('[VOICE-ERROR] ❌ Failed to connect audio processing chain:', error);
-          throw new Error('Failed to connect audio nodes: ' + error.message);
+          console.error('[VOICE-ERROR] ❌ Failed to create AudioWorkletNode:', error);
+          console.error('[VOICE-ERROR] Available processors:', audioContext.audioWorklet);
+          // Fall back to MediaRecorder
+          setFeatures(prev => ({ ...prev, usingFallback: true }));
+          setupMediaRecorderFallback();
         }
-        
-        console.log('[VOICE] ✅ AudioWorklet started, streaming PCM audio data');
-        
-      } catch (error) {
-        console.error('[VOICE-ERROR] ❌ Failed to create AudioWorkletNode:', error);
-        console.error('[VOICE-ERROR] Available processors:', audioContext.audioWorklet);
-        throw new Error('Failed to create AudioWorkletNode: ' + error.message);
+      } else {
+        // Use MediaRecorder fallback
+        setupMediaRecorderFallback();
       }
       
       // Removed duplicate content that's now integrated in the workletNode creation block above
@@ -553,8 +640,16 @@ export default function useVoiceAssistant({
 
   // Stop recording and finalize transcript
   const stopListening = useCallback(() => {
-    // Disconnect the audio worklet node
-    if (audioWorkletNodeRef.current) {
+    // Determine which cleanup method to use based on active recording method
+    if (features.usingFallback && mediaRecorderRef.current) {
+      // Stop MediaRecorder if it's active
+      if (mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+        console.log('[VOICE] MediaRecorder stopped');
+      }
+      mediaRecorderRef.current = null;
+    } else if (audioWorkletNodeRef.current) {
+      // Disconnect the audio worklet node
       audioWorkletNodeRef.current.disconnect();
       audioWorkletNodeRef.current.port.onmessage = null;
       audioWorkletNodeRef.current = null;
@@ -580,7 +675,7 @@ export default function useVoiceAssistant({
       isListening: false,
       isProcessing: true // Still processing the final transcript
     }));
-  }, [sendEndOfStreamWithSilence]);
+  }, [sendEndOfStreamWithSilence, features.usingFallback]);
 
   // Play TTS response
   const playTtsResponse = useCallback((audioUrl: string, requestId: string) => {
@@ -687,6 +782,70 @@ export default function useVoiceAssistant({
     return sum / values.length / 255; // Normalized 0-1
   }, []);
 
+  // Setup MediaRecorder as a fallback option
+  const setupMediaRecorderFallback = useCallback(() => {
+    console.log('[VOICE] Setting up MediaRecorder fallback');
+    
+    try {
+      if (!streamRef.current) {
+        console.error('[VOICE] Cannot set up MediaRecorder: No media stream available');
+        return;
+      }
+      
+      // Use PCM codec for best compatibility with Deepgram
+      // NOTE: This will fall back to browser default if PCM is not supported
+      const options = { mimeType: 'audio/webm;codecs=pcm' };
+      
+      // Create MediaRecorder with requested options
+      let recorder: MediaRecorder;
+      try {
+        recorder = new MediaRecorder(streamRef.current, options);
+        console.log('[VOICE] MediaRecorder created with requested MIME type:', options.mimeType);
+      } catch (e) {
+        // If PCM is not supported, use default format
+        recorder = new MediaRecorder(streamRef.current);
+        console.warn('[VOICE] PCM codec not supported, using fallback format:', recorder.mimeType);
+      }
+      
+      // Log the actual MIME type being used
+      console.log('[VOICE] Actual MediaRecorder MIME type:', recorder.mimeType);
+      
+      // Set up data handler to forward chunks to WebSocket
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
+          // Convert Blob to ArrayBuffer for sending over WebSocket
+          event.data.arrayBuffer().then(buffer => {
+            if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
+              wsRef.current.send(buffer);
+              console.log('[WS] Sent chunk as ArrayBuffer to backend. Size:', buffer.byteLength);
+            } else {
+              console.warn('[WS] WebSocket is not open. Chunk not sent. State:', wsRef.current?.readyState);
+            }
+          });
+          
+          console.log('[VOICE] Received media chunk of type:', event.data.type, 'size:', event.data.size);
+        }
+      };
+      
+      // Store reference for later use
+      mediaRecorderRef.current = recorder;
+      
+      // Start recording with small chunk size for responsiveness
+      const CHUNK_SIZE_MS = 100; // 100ms chunks for real-time transmission
+      recorder.start(CHUNK_SIZE_MS);
+      console.log('[VOICE] MediaRecorder started with ' + CHUNK_SIZE_MS + 'ms chunks, state:', recorder.state);
+      
+    } catch (error) {
+      console.error('[VOICE] Failed to set up MediaRecorder fallback:', error);
+      setState(prev => ({ 
+        ...prev, 
+        error: 'Failed to set up audio recording',
+        isListening: false,
+        isBusy: false
+      }));
+    }
+  }, []);
+
   return {
     // State
     isListening: state.isListening,
@@ -696,6 +855,9 @@ export default function useVoiceAssistant({
     isTtsPlaying: state.isTtsPlaying,
     isBusy: state.isBusy,
     mode: state.mode,
+    
+    // Technical details
+    features,
     
     // Actions
     startListening,
