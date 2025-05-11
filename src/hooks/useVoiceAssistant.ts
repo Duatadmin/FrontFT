@@ -246,9 +246,9 @@ export default function useVoiceAssistant({
         // Send the end_of_stream message to properly close the stream
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ type: "end_of_stream" }));
-          console.log('[WS] Sent end_of_stream to Deepgram');
+          console.log('[WS] ✅ Sent end_of_stream to Deepgram');
         } else {
-          console.warn('[WS] Could not send end_of_stream, WebSocket state:', wsRef.current?.readyState);
+          console.warn('[WS] 🛑 Could not send end_of_stream, WebSocket state:', wsRef.current?.readyState);
         }
       };
       
@@ -285,17 +285,17 @@ export default function useVoiceAssistant({
       vadTimeoutRef.current = null;
     }
     
-    // Send end-of-speech signal to server
+    // Send end_of_stream signal required by Deepgram
     if (wsRef.current?.readyState === WebSocket.OPEN) {
-      // First send end-of-speech signal
-      wsRef.current.send(JSON.stringify({ type: 'end_of_speech' }));
-      console.log('[WS] Sent end-of-speech signal');
-      
-      // Also send the crucial end_of_stream message that Deepgram expects
+      // Send the required end_of_stream message
+      // Note: we've removed end_of_speech to avoid confusion
       wsRef.current.send(JSON.stringify({ type: 'end_of_stream' }));
-      console.log('[WS] Sent end_of_stream signal to Deepgram');
+      console.log('[WS] ✅ Sent end_of_stream to Deepgram');
+      
+      // Important: Don't close the WebSocket yet - we need to wait for the transcript response
+      console.log('[WS] Keeping WebSocket open to receive transcript...');
     } else {
-      console.warn('[WS] Could not send end signals, WebSocket state:', wsRef.current?.readyState);
+      console.warn('[WS] 🛑 Could not send end_of_stream, WebSocket state:', wsRef.current?.readyState);
     }
     
     // Update state
