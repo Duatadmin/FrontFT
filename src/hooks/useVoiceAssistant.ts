@@ -127,17 +127,35 @@ export default function useVoiceAssistant({
 
   // Setup WebSocket connection
   const setupWebSocket = useCallback(() => {
+    console.log('[WS-DEBUG] Setting up WebSocket connection to:', ASR_WEBSOCKET_URL);
+    
     // Close existing connection if any
     if (wsRef.current) {
-      wsRef.current.close();
+      console.log('[WS-DEBUG] Closing existing WebSocket connection, state:', wsRef.current.readyState);
+      try {
+        wsRef.current.close();
+      } catch (error) {
+        console.warn('[WS-ERROR] Error closing existing WebSocket:', error);
+      }
     }
 
-    // Create new WebSocket connection
-    const ws = new WebSocket(ASR_WEBSOCKET_URL);
-    
-    ws.onopen = () => {
-      console.log('[WS] WebSocket connection established, readyState:', ws.readyState);
-    };
+    // Create new WebSocket connection with timeout handling
+    try {
+      const ws = new WebSocket(ASR_WEBSOCKET_URL);
+      
+      // Set connection timeout (5 seconds)
+      const connectionTimeout = setTimeout(() => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          console.error('[WS-ERROR] WebSocket connection timeout after 5 seconds');
+          ws.close();
+          setState(prev => ({ ...prev, error: 'Connection timeout. Please try again.', isBusy: false }));
+        }
+      }, 5000);
+      
+      ws.onopen = () => {
+        console.log('[WS] ✅ WebSocket connection established, readyState:', ws.readyState);
+        clearTimeout(connectionTimeout); // Clear timeout on successful connection
+      };
     
     ws.onmessage = (event) => {
       try {
@@ -199,12 +217,16 @@ export default function useVoiceAssistant({
     };
     
     ws.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      setState(prev => ({ ...prev, error: 'Connection error. Please try again.' }));
+      console.error('[WS-ERROR] WebSocket error:', error);
+      setState(prev => ({ 
+        ...prev, 
+        error: 'Connection error. Please try again.',
+        isBusy: false // Release busy state on error
+      }));
     };
     
-    ws.onclose = () => {
-      console.log('WebSocket connection closed');
+    ws.onclose = (event) => {
+      console.log('[WS] WebSocket connection closed. Code:', event.code, 'Reason:', event.reason || 'No reason provided');
       if (state.isListening) {
         // If we were actively listening, stop listening
         stopListening();
@@ -224,7 +246,17 @@ export default function useVoiceAssistant({
     };
     
     wsRef.current = ws;
-  }, []);
+    return ws; // Return the WebSocket instance for immediate use if needed
+  } catch (error) {
+    console.error('[WS-ERROR] Failed to create WebSocket:', error);
+    setState(prev => ({ 
+      ...prev, 
+      error: 'Failed to create connection. Please try again.',
+      isBusy: false // Release busy state on error 
+    }));
+    return null;
+  }
+  }, [setState]);
   
   // Initialize audio context and microphone
   const init = useCallback(async () => {
@@ -395,7 +427,22 @@ export default function useVoiceAssistant({
     
     // Setup WebSocket if needed
     if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
-      setupWebSocket();
+      console.log('[WS-DEBUG] WebSocket not open, setting up new connection');
+      const ws = setupWebSocket();
+      
+      // If we can't set up a WebSocket, abort the recording process
+      if (!ws) {
+        console.error('[WS-ERROR] Failed to set up WebSocket, aborting recording');
+        throw new Error('Failed to establish a connection to the voice service');
+      }
+      
+      // Wait briefly for WebSocket connection to establish
+      if (ws.readyState !== WebSocket.OPEN) {
+        console.log('[WS-DEBUG] Waiting for WebSocket to connect...');
+        // We'll proceed anyway, as the WebSocket events will handle the errors if it fails to connect
+      }
+    } else {
+      console.log('[WS-DEBUG] Using existing WebSocket connection, state:', wsRef.current.readyState);
     }
     
     // Start recording
