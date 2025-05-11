@@ -237,16 +237,41 @@ export default function useVoiceAssistant({
     }
   }, [features.websocketConnectable, testWebSocketConnection]);
 
+  // Small base64-encoded beep sound as fallback (short beep)
+  const FALLBACK_BEEP = 'data:audio/mp3;base64,SUQzBAAAAAAAI1RTU0UAAAAPAAADTGF2ZjU4Ljc2LjEwMAAAAAAAAAAAAAAA//tQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWGluZwAAAA8AAAACAAADmADMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM//////////////////////////////////////////////////////////////////8AAAAATGF2YzU4LjEzAAAAAAAAAAAAAAAAJAYAAAAAAAAAA5jaabd9AAAAAAAAAAAAAAAAAAAAAP/7kGQAD/AAAGkAAAAIAAANIAAAAQAAAaQAAAAgAAA0gAAABExBTUUzLjEwMFVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU=';
+
   // Initialize the audio elements for TTS playback and mic activation sound
   useEffect(() => {
-    // Initialize mic activation sound with a browser-compatible format
+    // Initialize mic activation sound with fallback mechanisms
     if (!micActivationSoundRef.current) {
-      const activationSound = new Audio('/sounds/mic_activation.mp3');
-      activationSound.volume = 0.5;
-      activationSound.preload = 'auto';
-      // Force preload to ensure the sound is ready when needed
-      activationSound.load();
-      micActivationSoundRef.current = activationSound;
+      try {
+        // Create with browser-compatible format - use hyphen instead of underscore
+        const activationSound = new Audio('/sounds/mic-activation.mp3');
+        activationSound.volume = 0.5;
+        activationSound.preload = 'auto';
+        
+        // Add error handler for loading failures
+        activationSound.onerror = () => {
+          console.log('[VOICE] External mic sound failed to load, using fallback beep');
+          const fallbackSound = new Audio(FALLBACK_BEEP);
+          fallbackSound.volume = 0.5;
+          micActivationSoundRef.current = fallbackSound;
+        };
+        
+        // Force preload to ensure the sound is ready when needed
+        activationSound.load();
+        micActivationSoundRef.current = activationSound;
+      } catch (err) {
+        console.warn('[VOICE] Error creating activation sound, using fallback:', err);
+        // Create fallback beep as absolute fallback
+        try {
+          const fallbackBeep = new Audio(FALLBACK_BEEP);
+          fallbackBeep.volume = 0.3;
+          micActivationSoundRef.current = fallbackBeep;
+        } catch (e) {
+          console.error('[VOICE] Could not create any activation sound:', e);
+        }
+      }
     }
     
     if (!audioElementRef.current) {
@@ -297,20 +322,76 @@ export default function useVoiceAssistant({
   // Set up WebSocket connection to ASR service with awaitable connection
   const setupWebSocket = useCallback(async () => {
     console.log('[WS-DEBUG] Setting up WebSocket connection to:', ASR_WEBSOCKET_URL);
+    
+    // Check if an existing connection is in CLOSING state and wait for it
+    if (wsRef.current?.readyState === WebSocket.CLOSING) {
+      console.log('[WS-DEBUG] WebSocket is in CLOSING state, waiting to complete...');
+      // Wait for existing connection to fully close
+      await new Promise(resolve => setTimeout(resolve, 300));
+    }
+    
+    // Close any existing connection that's not already closed
+    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
+      console.log('[WS-DEBUG] Cleaning up existing WebSocket connection');
+      disconnectAsr();
+      // Give time for cleanup to complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
     try {
       // Wait for connection to be established
       const ws = await connectAsr();
-      console.log('[WS-DEBUG] WebSocket connection established successfully');
+      
+      if (!ws) {
+        throw new Error('WebSocket connection failed');
+      }
+      
+      // Make sure the connection is fully open
+      if (ws.readyState !== WebSocket.OPEN) {
+        console.log('[WS-DEBUG] WebSocket connected but not yet open, waiting...');
+        // Wait for it to transition to OPEN state
+        await new Promise((resolve, reject) => {
+          const checkOpenState = () => {
+            if (ws.readyState === WebSocket.OPEN) {
+              resolve(true);
+            } else if (ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+              reject(new Error('WebSocket closed during connection establishment'));
+            } else {
+              // Still connecting, check again soon
+              setTimeout(checkOpenState, 50);
+            }
+          };
+          checkOpenState();
+        });
+      }
+      
+      // Send handshake immediately after connection is open
+      try {
+        const handshakeMessage = JSON.stringify({ type: 'handshake' });
+        if (sendToAsr(handshakeMessage)) {
+          console.log('[WS-DEBUG] Sent handshake message to ASR server');
+        } else {
+          console.warn('[WS-DEBUG] Failed to send handshake');
+        }
+      } catch (err) {
+        console.warn('[WS-DEBUG] Error sending handshake:', err);
+      }
+      
+      console.log('[WS-DEBUG] WebSocket connection established and ready');
       return ws;
     } catch (error) {
       console.error('[WS-ERROR] Failed to connect to WebSocket server:', error);
       setState(prev => ({
         ...prev,
-        error: 'Could not connect to speech recognition service'
+        error: 'Could not connect to speech recognition service',
+        isBusy: false // Reset busy state to prevent getting stuck
       }));
+      
+      // Reset session active flag if connection fails
+      isSessionActiveRef.current = false;
       return null;
     }
-  }, [connectAsr]);
+  }, [connectAsr, disconnectAsr, sendToAsr]);
   
   // Initialize audio context and microphone
   const init = useCallback(async () => {
@@ -699,7 +780,7 @@ export default function useVoiceAssistant({
   const stopListening = useCallback(() => {
     console.log('[VOICE] Stopping voice recording...');
     
-    // Cancel the busy timeout since we're explicitly stopping
+    // Cancel busy timeout since we're explicitly stopping
     if (busyTimeoutRef.current) {
       clearTimeout(busyTimeoutRef.current);
       busyTimeoutRef.current = null;
@@ -708,38 +789,68 @@ export default function useVoiceAssistant({
     // Determine which cleanup method to use based on active recording method
     if (features.usingFallback && mediaRecorderRef.current) {
       // Stop MediaRecorder if it's active
-      if (mediaRecorderRef.current.state === 'recording') {
-        mediaRecorderRef.current.stop();
-        console.log('[VOICE] MediaRecorder stopped');
+      try {
+        if (mediaRecorderRef.current.state === 'recording') {
+          mediaRecorderRef.current.stop();
+          console.log('[VOICE] MediaRecorder stopped');
+        }
+      } catch (err) {
+        console.warn('[VOICE] Error stopping MediaRecorder:', err);
       }
       mediaRecorderRef.current = null;
     } else if (audioWorkletNodeRef.current) {
       // Disconnect the audio worklet node
-      audioWorkletNodeRef.current.disconnect();
-      audioWorkletNodeRef.current.port.onmessage = null;
+      try {
+        audioWorkletNodeRef.current.disconnect();
+        audioWorkletNodeRef.current.port.onmessage = null;
+        console.log('[VOICE] Disconnected AudioWorklet node');
+      } catch (err) {
+        console.warn('[VOICE] Error disconnecting AudioWorklet:', err);
+      }
       audioWorkletNodeRef.current = null;
-      console.log('[VOICE] Disconnected AudioWorklet node');
     }
     
     // Clear VAD timeout if active
     if (vadTimeoutRef.current) {
       clearTimeout(vadTimeoutRef.current);
-      vadTimeoutRef.current = null;
     }
     
     // Mark stream as ended to prevent any more audio chunks from being sent
     streamEndedRef.current = true;
     console.log('[WS] Marked stream as ended in stopListening()');
     
-    // Send silence and end_of_stream signal required by Deepgram
-    sendEndOfStreamWithSilence();
+    // Send silence and end_of_stream signal with state validation
+    try {
+      if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+        sendEndOfStreamWithSilence();
+      } else {
+        console.warn('[WS] Cannot send end of stream - WebSocket is not in OPEN state');
+      }
+    } catch (err) {
+      console.warn('[VOICE] Error sending end of stream:', err);
+    }
     
-    // Update state
+    // Update state - ALWAYS reset busy state to prevent getting stuck
     setState(prev => ({ 
       ...prev, 
       isListening: false,
-      isProcessing: true // Still processing the final transcript
+      isBusy: false,       // Explicitly release busy state
+      isProcessing: true   // Still processing the final transcript
     }));
+    
+    // Reset session active flag to allow new recording sessions
+    isSessionActiveRef.current = false;
+    
+    // Safety timeout to ensure busy state is released if server doesn't respond
+    setTimeout(() => {
+      setState(prev => {
+        if (prev.isProcessing) {
+          console.log('[VOICE] Safety timeout: Forcing processing state to reset');
+          return { ...prev, isProcessing: false };
+        }
+        return prev;
+      });
+    }, 10000); // 10 second timeout
     
     // Reset session active flag to allow new recording sessions
     isSessionActiveRef.current = false;
