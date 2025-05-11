@@ -336,10 +336,24 @@ export default function useVoiceAssistant({
         error: null 
       }));
       
-      // Create a MediaRecorder to capture audio
+      // Check if the PCM codec is supported (required by Deepgram)
+      const preferredMimeType = 'audio/webm;codecs=pcm';
+      const fallbackMimeType = 'audio/webm';
+      
+      let mimeType = fallbackMimeType;
+      if (MediaRecorder.isTypeSupported(preferredMimeType)) {
+        mimeType = preferredMimeType;
+        console.log('[VOICE] Using PCM codec for best Deepgram compatibility');
+      } else {
+        console.warn('[VOICE] ⚠️ PCM codec not supported in this browser. Using fallback format, which may cause issues with Deepgram.');
+      }
+      
+      // Create a MediaRecorder to capture audio with proper encoding
       const mediaRecorder = new MediaRecorder(streamRef.current!, {
-        mimeType: 'audio/webm' // Most compatible format
+        mimeType: mimeType
       });
+      
+      console.log('[VOICE] MediaRecorder created with MIME type:', mimeType);
       
       // Send audio data chunks to server via WebSocket
       mediaRecorder.ondataavailable = (event) => {
