@@ -3,8 +3,8 @@ import { useWebSocket } from './useWebSocket';
 
 // Voice Assistant API endpoints
 const VOICE_API_BASE = 'https://ftvoiceservice-production.up.railway.app';
-const ASR_WEBSOCKET_URL = `${VOICE_API_BASE}/v1/asr/ws`;
-const TEST_WEBSOCKET_URL = `${VOICE_API_BASE}/v1/test/ws`; // Test WebSocket endpoint
+const ASR_WEBSOCKET_URL = `wss://${VOICE_API_BASE.replace('https://', '')}/v1/asr/ws`;
+const TEST_WEBSOCKET_URL = `wss://${VOICE_API_BASE.replace('https://', '')}/v1/test/ws`; // Test WebSocket endpoint
 const TTS_URL = `${VOICE_API_BASE}/v1/tts`;
 const TTS_STOP_URL = `${VOICE_API_BASE}/v1/tts/stop`;
 
