@@ -134,7 +134,7 @@ export default function useVoiceAssistant({
     const ws = new WebSocket(ASR_WEBSOCKET_URL);
     
     ws.onopen = () => {
-      console.log('WebSocket connection established');
+      console.log('[WS] WebSocket connection established, readyState:', ws.readyState);
     };
     
     ws.onmessage = (event) => {
@@ -192,8 +192,13 @@ export default function useVoiceAssistant({
   const startListening = useCallback(async () => {
     // Initialize if not already done
     if (!audioContextRef.current || !streamRef.current) {
+      console.log('[VOICE] Initializing audio context and requesting microphone permissions...');
       const initialized = await init();
-      if (!initialized) return;
+      if (!initialized) {
+        console.error('[VOICE] Failed to initialize audio context or get microphone permissions');
+        return;
+      }
+      console.log('[VOICE] Successfully initialized audio context and got microphone permissions');
     }
     
     // Setup WebSocket if needed
@@ -219,13 +224,27 @@ export default function useVoiceAssistant({
       // Send audio data chunks to server via WebSocket
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-          wsRef.current.send(event.data);
+          // Convert Blob to ArrayBuffer before sending
+          event.data.arrayBuffer().then((buffer) => {
+            wsRef.current?.send(buffer);
+            console.log('[WS] Sent audio chunk of size:', buffer.byteLength);
+          }).catch(error => {
+            console.error('[WS] Error converting audio chunk to ArrayBuffer:', error);
+          });
+        } else {
+          if (event.data.size === 0) {
+            console.warn('[WS] Received empty audio chunk, not sending');
+          }
+          if (wsRef.current?.readyState !== WebSocket.OPEN) {
+            console.warn('[WS] WebSocket not open, current state:', wsRef.current?.readyState);
+          }
         }
       };
       
       // Set small timeslice for low-latency streaming (100ms chunks)
       mediaRecorder.start(100);
       mediaRecorderRef.current = mediaRecorder;
+      console.log('[VOICE] MediaRecorder started with 100ms chunks, state:', mediaRecorder.state);
       
       // For walkie-talkie mode, setup Voice Activity Detection
       if (state.mode === 'walkie') {
@@ -246,6 +265,7 @@ export default function useVoiceAssistant({
     // Stop MediaRecorder if active
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop();
+      console.log('[VOICE] MediaRecorder stopped');
     }
     
     // Clear VAD timeout if active
@@ -257,6 +277,9 @@ export default function useVoiceAssistant({
     // Send end-of-speech signal to server
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({ type: 'end_of_speech' }));
+      console.log('[WS] Sent end-of-speech signal');
+    } else {
+      console.warn('[WS] Could not send end-of-speech signal, WebSocket state:', wsRef.current?.readyState);
     }
     
     // Update state
