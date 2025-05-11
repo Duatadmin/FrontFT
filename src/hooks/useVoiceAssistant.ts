@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
+import { useWebSocket } from './useWebSocket';
 
 // Voice Assistant API endpoints
 const VOICE_API_BASE = 'https://ftvoiceservice-production.up.railway.app';
@@ -67,7 +68,6 @@ export default function useVoiceAssistant({
   });
 
   // Refs
-  const wsRef = useRef<WebSocket | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const audioWorkletNodeRef = useRef<AudioWorkletNode | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -83,146 +83,22 @@ export default function useVoiceAssistant({
   const isAudioWorkletLoadedRef = useRef<boolean>(false);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null); // For fallback mode
 
-  // Test WebSocket connectivity on mount
-  useEffect(() => {
-    // Only run this test once on mount
-    if (features.websocketConnectable === null) {
-      testWebSocketConnection();
-    }
-  }, []);
-  
-  // Test if the WebSocket endpoint is reachable
-  const testWebSocketConnection = useCallback(async () => {
-    console.log('[WS-TEST] Testing WebSocket connectivity to:', TEST_WEBSOCKET_URL);
-    
-    try {
-      // Create a test WebSocket connection with timeout
-      const testWs = new WebSocket(TEST_WEBSOCKET_URL);
-      let connectionSuccessful = false;
-      
-      // Set up a timeout - 5 seconds should be enough to establish connection
-      const timeout = setTimeout(() => {
-        if (!connectionSuccessful) {
-          console.warn('[WS-TEST] WebSocket connection test timed out');
-          testWs.close();
-          setFeatures(prev => ({ ...prev, websocketConnectable: false }));
-        }
-      }, 5000);
-      
-      // Handle success case
-      testWs.onopen = () => {
-        console.log('[WS-TEST] ✅ Test WebSocket connected successfully');
-        connectionSuccessful = true;
-        clearTimeout(timeout);
-        setFeatures(prev => ({ ...prev, websocketConnectable: true }));
-        
-        // Send a ping and close after response
-        testWs.send(JSON.stringify({ type: 'ping' }));
-        setTimeout(() => testWs.close(), 1000);
-      };
-      
-      // Handle error case
-      testWs.onerror = (error) => {
-        console.error('[WS-TEST] ❌ Test WebSocket connection failed:', error);
-        connectionSuccessful = true; // Prevent timeout from firing
-        clearTimeout(timeout);
-        setFeatures(prev => ({ ...prev, websocketConnectable: false }));
-      };
-      
-      // Handle message (optional)
-      testWs.onmessage = (event) => {
-        console.log('[WS-TEST] Received test response:', event.data);
-      };
-    } catch (error) {
-      console.error('[WS-TEST] WebSocket connection test error:', error);
-      setFeatures(prev => ({ ...prev, websocketConnectable: false }));
-    }
-  }, []);
-
-  // Initialize the audio elements for TTS playback and mic activation sound
-  useEffect(() => {
-    // Initialize mic activation sound
-    if (!micActivationSoundRef.current) {
-      const activationSound = new Audio('/sounds/mic-activation.mp3');
-      activationSound.volume = 0.5;
-      activationSound.preload = 'auto';
-      micActivationSoundRef.current = activationSound;
-    }
-    
-    if (!audioElementRef.current) {
-      const audioEl = new Audio();
-      audioEl.addEventListener('play', () => {
-        setState(prev => ({ ...prev, isTtsPlaying: true }));
-        onTtsPlaybackStart?.();
-      });
-      audioEl.addEventListener('ended', () => {
-        setState(prev => ({ ...prev, isTtsPlaying: false }));
-        onTtsPlaybackEnd?.();
-      });
-      audioEl.addEventListener('pause', () => {
-        setState(prev => ({ ...prev, isTtsPlaying: false }));
-      });
-      audioElementRef.current = audioEl;
-    }
-
-    return () => {
-      const audioEl = audioElementRef.current;
-      if (audioEl) {
-        audioEl.pause();
-        audioEl.src = '';
-        audioEl.removeEventListener('play', () => {});
-        audioEl.removeEventListener('ended', () => {});
-        audioEl.removeEventListener('pause', () => {});
-      }
-    };
-  }, [onTtsPlaybackStart, onTtsPlaybackEnd]);
-
-  // Cleanup function for audio resources
-  const cleanupAudio = useCallback(() => {
-    // Disconnect and clean up the AudioWorkletNode
-    if (audioWorkletNodeRef.current) {
-      audioWorkletNodeRef.current.disconnect();
-      audioWorkletNodeRef.current.port.onmessage = null;
-      audioWorkletNodeRef.current = null;
-    }
-    
-    // Note: we don't disconnect the source or close the context here
-    // because we might want to reuse them for the next recording session
-  }, []);
-
-  // Setup WebSocket connection
-  const setupWebSocket = useCallback(() => {
-    console.log('[WS-DEBUG] Setting up WebSocket connection to:', ASR_WEBSOCKET_URL);
-    
-    // Close existing connection if any
-    if (wsRef.current) {
-      console.log('[WS-DEBUG] Closing existing WebSocket connection, state:', wsRef.current.readyState);
-      try {
-        wsRef.current.close();
-      } catch (error) {
-        console.warn('[WS-ERROR] Error closing existing WebSocket:', error);
-      }
-    }
-
-    // Create new WebSocket connection with timeout handling
-    try {
-      const ws = new WebSocket(ASR_WEBSOCKET_URL);
-      
-      // Set connection timeout (5 seconds)
-      const connectionTimeout = setTimeout(() => {
-        if (ws.readyState !== WebSocket.OPEN) {
-          console.error('[WS-ERROR] WebSocket connection timeout after 5 seconds');
-          ws.close();
-          setState(prev => ({ ...prev, error: 'Connection timeout. Please try again.', isBusy: false }));
-        }
-      }, 5000);
-      
-      ws.onopen = () => {
-        console.log('[WS] ✅ WebSocket connection established, readyState:', ws.readyState);
-        clearTimeout(connectionTimeout); // Clear timeout on successful connection
-      };
-    
-    ws.onmessage = (event) => {
+  // Use the WebSocket hook for ASR WebSocket connection
+  const { 
+    wsRef,
+    send: sendToAsr,
+    reconnect: reconnectAsr,
+    connect: connectAsr,
+    disconnect: disconnectAsr,
+    isConnected: isAsrConnected 
+  } = useWebSocket(ASR_WEBSOCKET_URL, {
+    immediateConnect: false, // Connect manually when needed
+    enablePing: true,        // Keep connection alive
+    pingInterval: 8000,      // Send ping every 8 seconds
+    onOpen: () => {
+      console.log('[ASR] WebSocket connection established');
+    },
+    onMessage: (event) => {
       try {
         const response = JSON.parse(event.data);
         
@@ -277,21 +153,19 @@ export default function useVoiceAssistant({
           setState(prev => ({ ...prev, error: response.message }));
         }
       } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
+        console.error('[ASR] Failed to parse WebSocket message:', error);
       }
-    };
-    
-    ws.onerror = (error) => {
-      console.error('[WS-ERROR] WebSocket error:', error);
+    },
+    onError: (error) => {
+      console.error('[ASR] WebSocket error:', error);
       setState(prev => ({ 
         ...prev, 
         error: 'Connection error. Please try again.',
         isBusy: false // Release busy state on error
       }));
-    };
-    
-    ws.onclose = (event) => {
-      console.log('[WS] WebSocket connection closed. Code:', event.code, 'Reason:', event.reason || 'No reason provided');
+    },
+    onClose: (event) => {
+      console.log('[ASR] WebSocket connection closed. Code:', event.code, 'Reason:', event.reason || 'No reason provided');
       if (state.isListening) {
         // If we were actively listening, stop listening
         stopListening();
@@ -308,20 +182,107 @@ export default function useVoiceAssistant({
           busyTimeoutRef.current = null;
         }
       }
-    };
+    }
+  });
+  
+  // Use another useWebSocket hook instance for testing connectivity
+  const { 
+    connect: connectTest,
+    disconnect: disconnectTest
+  } = useWebSocket(TEST_WEBSOCKET_URL, {
+    immediateConnect: false,
+    onOpen: () => {
+      console.log('[WS-TEST] ✅ Test WebSocket connected successfully');
+      setFeatures(prev => ({ ...prev, websocketConnectable: true }));
+      // Close test connection after confirming it works
+      setTimeout(() => disconnectTest(), 1000);
+    },
+    onError: () => {
+      console.error('[WS-TEST] ❌ Test WebSocket connection failed');
+      setFeatures(prev => ({ ...prev, websocketConnectable: false }));
+    }
+  });
+  
+  // Test if the WebSocket endpoint is reachable
+  const testWebSocketConnection = useCallback(() => {
+    console.log('[WS-TEST] Testing WebSocket connectivity to:', TEST_WEBSOCKET_URL);
+    connectTest();
     
-    wsRef.current = ws;
-    return ws; // Return the WebSocket instance for immediate use if needed
-  } catch (error) {
-    console.error('[WS-ERROR] Failed to create WebSocket:', error);
-    setState(prev => ({ 
-      ...prev, 
-      error: 'Failed to create connection. Please try again.',
-      isBusy: false // Release busy state on error 
-    }));
-    return null;
-  }
-  }, [setState]);
+    // Set a timeout to consider the connection failed if no response after 5 seconds
+    setTimeout(() => {
+      if (features.websocketConnectable === null) {
+        console.warn('[WS-TEST] WebSocket connection test timed out');
+        disconnectTest();
+        setFeatures(prev => ({ ...prev, websocketConnectable: false }));
+      }
+    }, 5000);
+  }, [connectTest, disconnectTest, features.websocketConnectable]);
+  
+  // Test WebSocket connectivity on mount
+  useEffect(() => {
+    // Only run this test once on mount
+    if (features.websocketConnectable === null) {
+      testWebSocketConnection();
+    }
+  }, [features.websocketConnectable, testWebSocketConnection]);
+
+  // Initialize the audio elements for TTS playback and mic activation sound
+  useEffect(() => {
+    // Initialize mic activation sound
+    if (!micActivationSoundRef.current) {
+      const activationSound = new Audio('/sounds/mic-activation.mp3');
+      activationSound.volume = 0.5;
+      activationSound.preload = 'auto';
+      micActivationSoundRef.current = activationSound;
+    }
+    
+    if (!audioElementRef.current) {
+      const audioEl = new Audio();
+      audioEl.addEventListener('play', () => {
+        setState(prev => ({ ...prev, isTtsPlaying: true }));
+        onTtsPlaybackStart?.();
+      });
+      audioEl.addEventListener('ended', () => {
+        setState(prev => ({ ...prev, isTtsPlaying: false }));
+        onTtsPlaybackEnd?.();
+      });
+      audioEl.addEventListener('pause', () => {
+        setState(prev => ({ ...prev, isTtsPlaying: false }));
+      });
+      audioElementRef.current = audioEl;
+    }
+
+    return () => {
+      const audioEl = audioElementRef.current;
+      if (audioEl) {
+        audioEl.pause();
+        audioEl.src = '';
+        audioEl.removeEventListener('play', () => {});
+        audioEl.removeEventListener('ended', () => {});
+        audioEl.removeEventListener('pause', () => {});
+      }
+    };
+  }, [onTtsPlaybackStart, onTtsPlaybackEnd]);
+
+  // Cleanup function for audio resources
+  const cleanupAudio = useCallback(() => {
+    // Disconnect and clean up the AudioWorkletNode
+    if (audioWorkletNodeRef.current) {
+      audioWorkletNodeRef.current.disconnect();
+      audioWorkletNodeRef.current.port.onmessage = null;
+      audioWorkletNodeRef.current = null;
+    }
+    
+    // Note: we don't disconnect the source or close the context here
+    // because we might want to reuse them for the next recording session
+  }, []);
+
+  // Setup WebSocket connection (simplified with the hook)
+  const setupWebSocket = useCallback(() => {
+    console.log('[WS-DEBUG] Setting up WebSocket connection to:', ASR_WEBSOCKET_URL);
+    connectAsr();
+    return wsRef.current;
+  }, [connectAsr]);
   
   // Initialize audio context and microphone
   const init = useCallback(async () => {
@@ -416,15 +377,19 @@ export default function useVoiceAssistant({
 
       // Wait 100ms (safety delay), then close the stream
       setTimeout(() => {
-        if (wsRef.current?.readyState === WebSocket.OPEN) {
-          // Send the required end_of_stream message that Deepgram expects
-          wsRef.current.send(JSON.stringify({ type: 'end_of_stream' }));
-          console.log('[WS] ✅ Sent end_of_stream to Deepgram');
-          
-          // Important: Don't close the WebSocket yet - we need to wait for the transcript response
-          console.log('[WS] Keeping WebSocket open to receive transcript...');
+        if (isAsrConnected) {
+          // Send end of stream marker to WebSocket to get final transcript
+          try {
+            console.log('[WS] Sending end_of_stream marker');
+            sendToAsr(JSON.stringify({ type: 'end_of_stream' }));
+            
+            // Important: Don't close the WebSocket yet - we need to wait for the transcript response
+            console.log('[WS] Keeping WebSocket open to receive transcript...');
+          } catch (e) {
+            console.warn('[WS] 🛑 Could not send end_of_stream');
+          }
         } else {
-          console.warn('[WS] 🛑 Could not send end_of_stream, WebSocket state:', wsRef.current?.readyState);
+          console.warn('[WS] 🛑 Could not send end_of_stream, WebSocket not connected');
         }
       }, 100);
     } else {
@@ -502,23 +467,20 @@ export default function useVoiceAssistant({
     }
     
     // Setup WebSocket if needed
-    if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+    if (!isAsrConnected) {
       console.log('[WS-DEBUG] WebSocket not open, setting up new connection');
-      const ws = setupWebSocket();
+      setupWebSocket();
       
-      // If we can't set up a WebSocket, abort the recording process
-      if (!ws) {
+      // If we still can't set up a WebSocket after trying, abort the recording process
+      if (!wsRef.current) {
         console.error('[WS-ERROR] Failed to set up WebSocket, aborting recording');
         throw new Error('Failed to establish a connection to the voice service');
       }
       
-      // Wait briefly for WebSocket connection to establish
-      if (ws.readyState !== WebSocket.OPEN) {
-        console.log('[WS-DEBUG] Waiting for WebSocket to connect...');
-        // We'll proceed anyway, as the WebSocket events will handle the errors if it fails to connect
-      }
+      console.log('[WS-DEBUG] Waiting for WebSocket to connect...');
+      // We'll proceed anyway, as the WebSocket events will handle the errors if it fails to connect
     } else {
-      console.log('[WS-DEBUG] Using existing WebSocket connection, state:', wsRef.current.readyState);
+      console.log('[WS-DEBUG] Using existing WebSocket connection');
     }
     
     // Start recording
@@ -570,8 +532,8 @@ export default function useVoiceAssistant({
             const { audioData, audioLevel, isSilent } = event.data;
             
             // Send audio data to WebSocket if connection is open
-            if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
-              wsRef.current.send(audioData);
+            if (!streamEndedRef.current) {
+              sendToAsr(audioData);
               console.log('[WS] Sent audio chunk as PCM Int16. Level:', audioLevel.toFixed(4));
               
               // For walkie-talkie mode, use audio level for VAD
@@ -815,14 +777,14 @@ export default function useVoiceAssistant({
       
       // Set up data handler to forward chunks to WebSocket
       recorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
+        if (event.data.size > 0 && isAsrConnected && !streamEndedRef.current) {
           // Convert Blob to ArrayBuffer for sending over WebSocket
           event.data.arrayBuffer().then(buffer => {
-            if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
-              wsRef.current.send(buffer);
+            if (!streamEndedRef.current) {
+              sendToAsr(buffer);
               console.log('[WS] Sent chunk as ArrayBuffer to backend. Size:', buffer.byteLength);
             } else {
-              console.warn('[WS] WebSocket is not open. Chunk not sent. State:', wsRef.current?.readyState);
+              console.warn('[WS] Cannot send: Stream has ended');
             }
           });
           
