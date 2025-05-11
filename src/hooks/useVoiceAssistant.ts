@@ -81,6 +81,7 @@ export default function useVoiceAssistant({
   const micActivationSoundRef = useRef<HTMLAudioElement | null>(null);
   const streamEndedRef = useRef<boolean>(false);
   const isAudioWorkletLoadedRef = useRef<boolean>(false);
+  const hasSpokenRef = useRef<boolean>(false); // Track if user has spoken during session
   const mediaRecorderRef = useRef<MediaRecorder | null>(null); // For fallback mode
 
   // Use the WebSocket hook for ASR WebSocket connection
@@ -97,6 +98,16 @@ export default function useVoiceAssistant({
     pingInterval: 8000,      // Send ping every 8 seconds
     onOpen: () => {
       console.log('[ASR] WebSocket connection established');
+      
+      // Send handshake message immediately after connection
+      sendToAsr(JSON.stringify({ 
+        type: 'handshake', 
+        format: 'audio/raw', 
+        sample_rate: AUDIO_CONFIG.sampleRate,
+        channels: AUDIO_CONFIG.channelCount
+      }));
+      
+      console.log('[ASR] Sent handshake message to server');
     },
     onMessage: (event) => {
       try {
@@ -228,11 +239,13 @@ export default function useVoiceAssistant({
 
   // Initialize the audio elements for TTS playback and mic activation sound
   useEffect(() => {
-    // Initialize mic activation sound
+    // Initialize mic activation sound with a browser-compatible format
     if (!micActivationSoundRef.current) {
-      const activationSound = new Audio('/sounds/mic_activation.aiff');
+      const activationSound = new Audio('/sounds/mic_activation.mp3');
       activationSound.volume = 0.5;
       activationSound.preload = 'auto';
+      // Force preload to ensure the sound is ready when needed
+      activationSound.load();
       micActivationSoundRef.current = activationSound;
     }
     
@@ -381,34 +394,55 @@ export default function useVoiceAssistant({
    * Sends 1 second of silence followed by the end_of_stream message to help Deepgram detect the end of speech
    */
   const sendEndOfStreamWithSilence = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
+    // Rigorously check WebSocket state before sending any data
+    if (!wsRef.current) {
+      console.warn('[WS] Cannot send end of stream: WebSocket instance does not exist');
+      return;
+    }
+    
+    if (wsRef.current.readyState !== WebSocket.OPEN) {
+      console.warn('[WS] Cannot send end of stream: WebSocket is not in OPEN state (current state:', 
+        wsRef.current.readyState === WebSocket.CONNECTING ? 'CONNECTING' :
+        wsRef.current.readyState === WebSocket.CLOSING ? 'CLOSING' : 'CLOSED', ')');
+      return;
+    }
+    
+    try {
       // 1 second of silence at 16kHz, mono, 16-bit PCM (Int16)
       const silenceSamples = 16000; // 1s × 16kHz
       const silence = new Int16Array(silenceSamples); // All zeros = silence
       
       // Send 1 second of silent audio
-      wsRef.current.send(silence.buffer);
-      console.log('[WS] 🔇 Sent 1 second of silence to Deepgram');
+      if (sendToAsr(silence.buffer)) {
+        console.log('[WS] 🔇 Sent 1 second of silence to server');
+      } else {
+        console.warn('[WS] 🛑 Failed to send silence buffer');
+        return;
+      }
 
-      // Wait 100ms (safety delay), then close the stream
+      // Wait 100ms (safety delay), then send end of stream marker
       setTimeout(() => {
-        if (isAsrConnected) {
-          // Send end of stream marker to WebSocket to get final transcript
-          try {
-            console.log('[WS] Sending end_of_stream marker');
-            sendToAsr(JSON.stringify({ type: 'end_of_stream' }));
-            
+        // Verify the connection is still open before sending
+        if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+          console.warn('[WS] 🛑 Cannot send end of stream marker: WebSocket no longer open');
+          return;
+        }
+        
+        // Send end of stream marker to WebSocket to get final transcript
+        try {
+          console.log('[WS] Sending end_of_stream marker');
+          if (sendToAsr(JSON.stringify({ type: 'end_of_stream' }))) {
             // Important: Don't close the WebSocket yet - we need to wait for the transcript response
             console.log('[WS] Keeping WebSocket open to receive transcript...');
-          } catch (e) {
-            console.warn('[WS] 🛑 Could not send end_of_stream');
+          } else {
+            console.warn('[WS] 🛑 Failed to send end_of_stream marker');
           }
-        } else {
-          console.warn('[WS] 🛑 Could not send end_of_stream, WebSocket not connected');
+        } catch (e) {
+          console.warn('[WS] 🛑 Could not send end_of_stream', e);
         }
       }, 100);
-    } else {
-      console.warn('[WS] 🛑 Could not send silence buffer, WebSocket state:', wsRef.current?.readyState);
+    } catch (error) {
+      console.error('[WS] Error in sendEndOfStreamWithSilence:', error);
     }
   }, []);
 
@@ -416,7 +450,8 @@ export default function useVoiceAssistant({
   const handleSilenceDetection = useCallback((audioLevel: number) => {
     const silenceThreshold = 0.01; // Adjust based on testing
     
-    if (audioLevel < silenceThreshold) {
+    if (audioLevel < silenceThreshold && hasSpokenRef.current) {
+      // Only start silence timer if user has actually spoken during this session
       // If we're not already tracking silence, start a timer
       if (!vadTimeoutRef.current) {
         vadTimeoutRef.current = setTimeout(() => {
@@ -428,7 +463,10 @@ export default function useVoiceAssistant({
           vadTimeoutRef.current = null;
         }, 1500); // 1.5 seconds of silence
       }
-    } else {
+    } else if (audioLevel >= silenceThreshold) {
+      // User has spoken - mark this and cancel any silence timer
+      hasSpokenRef.current = true;
+      
       // Cancel the silence timer if we hear something
       if (vadTimeoutRef.current) {
         clearTimeout(vadTimeoutRef.current);
@@ -458,8 +496,9 @@ export default function useVoiceAssistant({
       console.warn('[VOICE] Could not play mic activation sound:', error);
     }
     
-    // Reset stream ended flag
+    // Reset stream ended flag and speech detection flags
     streamEndedRef.current = false;
+    hasSpokenRef.current = false; // Reset speech detection state for new session
     
     // Set a timeout to automatically clear busy state in case of hanging
     if (busyTimeoutRef.current) {
@@ -775,9 +814,14 @@ export default function useVoiceAssistant({
         wsRef.current = null;
       }
       
-      // Close audio context
+      // Close audio context with safety wrap to prevent runtime crashes
       if (audioContextRef.current) {
-        audioContextRef.current.close().catch(err => console.error('Error closing AudioContext:', err));
+        try {
+          audioContextRef.current.close().catch(err => console.error('Error closing AudioContext:', err));
+        } catch (err) {
+          console.warn('[VOICE] AudioContext was already closed or invalid:', err);
+          // Already closed or invalid state, just continue
+        }
       }
       
       // Release microphone
