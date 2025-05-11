@@ -584,6 +584,9 @@ export default function useVoiceAssistant({
           // Connect the processing chain: mediaStream -> workletNode
           console.log('[VOICE-DEBUG] Connecting audio nodes: streamSource -> workletNode');
           try {
+            if (!streamSourceRef.current) {
+              throw new Error('Stream source is not available');
+            }
             streamSourceRef.current.connect(workletNode);
             console.log('[VOICE-DEBUG] ✅ Audio processing chain connected successfully');
           } catch (error) {
