@@ -71,6 +71,8 @@ export default function useVoiceAssistant({
   const streamEndedRef = useRef<boolean>(false);
   const busyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const micActivationSoundRef = useRef<HTMLAudioElement | null>(null);
+  // Flag to track if we've saved a debug recording in this session
+  const saveDebugRecordingRef = useRef<boolean>(false);
 
   // Initialize the audio elements for TTS playback and mic activation sound
   useEffect(() => {
@@ -353,36 +355,66 @@ export default function useVoiceAssistant({
         mimeType: mimeType
       });
       
-      console.log('[VOICE] MediaRecorder created with MIME type:', mimeType);
+      // Log the actual MIME type used (may differ from requested type)
+      console.log('[VOICE] MediaRecorder created with requested MIME type:', mimeType);
+      console.log('[VOICE] Actual MediaRecorder MIME type:', mediaRecorder.mimeType);
+      
+      // Reset debug recording flag for this session
+      saveDebugRecordingRef.current = false;
       
       // Send audio data chunks to server via WebSocket
-      mediaRecorder.ondataavailable = (event) => {
+      mediaRecorder.ondataavailable = async (event) => {
+        // Log detailed info about the media chunk
+        console.log('[VOICE] Received media chunk of type:', event.data.type, 'size:', event.data.size);
+        
         // Don't send any audio chunks if the stream has ended or WebSocket is not open
         if (streamEndedRef.current) {
           console.log('[WS] Ignoring audio chunk - stream already ended');
           return;
         }
         
-        if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
-          // Convert Blob to ArrayBuffer before sending
-          event.data.arrayBuffer().then((buffer) => {
-            // Double-check stream status before sending
-            if (!streamEndedRef.current) {
-              wsRef.current?.send(buffer);
-              console.log('[WS] Sent audio chunk of size:', buffer.byteLength);
+        // Save a test recording locally (only once per session)
+        if (event.data.size > 0 && !saveDebugRecordingRef.current) {
+          try {
+            saveDebugRecordingRef.current = true;
+            const url = URL.createObjectURL(event.data);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `test-audio-${Date.now()}.webm`;
+            a.style.display = 'none';
+            document.body.appendChild(a);
+            a.click();
+            console.log('[VOICE] Downloaded .webm for inspection');
+            setTimeout(() => {
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }, 100);
+          } catch (error) {
+            console.error('[VOICE] Failed to save debug recording:', error);
+          }
+        }
+        
+        // Process and send audio data if valid
+        if (event.data.size > 0) {
+          try {
+            // Convert to ArrayBuffer and send to WebSocket
+            const buffer = await event.data.arrayBuffer();
+            
+            if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
+              wsRef.current.send(buffer);
+              console.log('[WS] Sent chunk as ArrayBuffer to backend. Size:', buffer.byteLength);
             } else {
-              console.log('[WS] Skipping chunk send - stream ended during conversion');
+              if (streamEndedRef.current) {
+                console.log('[WS] Skipping chunk send - stream ended during conversion');
+              } else {
+                console.warn('[WS] WebSocket is not open. Chunk not sent. State:', wsRef.current?.readyState);
+              }
             }
-          }).catch(error => {
+          } catch (error) {
             console.error('[WS] Error converting audio chunk to ArrayBuffer:', error);
-          });
+          }
         } else {
-          if (event.data.size === 0) {
-            console.warn('[WS] Received empty audio chunk, not sending');
-          }
-          if (wsRef.current?.readyState !== WebSocket.OPEN) {
-            console.warn('[WS] WebSocket not open, current state:', wsRef.current?.readyState);
-          }
+          console.warn('[WS] Received empty audio chunk, not sending');
         }
       };
       
