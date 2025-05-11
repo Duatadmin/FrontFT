@@ -58,6 +58,7 @@ export default function useVoiceAssistant({
   const currentRequestIdRef = useRef<string | null>(null);
   const vadTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const streamEndedRef = useRef<boolean>(false);
 
   // Initialize the audio element for TTS playback
   useEffect(() => {
@@ -190,6 +191,9 @@ export default function useVoiceAssistant({
 
   // Start recording and sending audio
   const startListening = useCallback(async () => {
+    // Reset stream ended flag
+    streamEndedRef.current = false;
+    
     // Initialize if not already done
     if (!audioContextRef.current || !streamRef.current) {
       console.log('[VOICE] Initializing audio context and requesting microphone permissions...');
@@ -223,11 +227,22 @@ export default function useVoiceAssistant({
       
       // Send audio data chunks to server via WebSocket
       mediaRecorder.ondataavailable = (event) => {
+        // Don't send any audio chunks if the stream has ended or WebSocket is not open
+        if (streamEndedRef.current) {
+          console.log('[WS] Ignoring audio chunk - stream already ended');
+          return;
+        }
+        
         if (event.data.size > 0 && wsRef.current?.readyState === WebSocket.OPEN) {
           // Convert Blob to ArrayBuffer before sending
           event.data.arrayBuffer().then((buffer) => {
-            wsRef.current?.send(buffer);
-            console.log('[WS] Sent audio chunk of size:', buffer.byteLength);
+            // Double-check stream status before sending
+            if (!streamEndedRef.current) {
+              wsRef.current?.send(buffer);
+              console.log('[WS] Sent audio chunk of size:', buffer.byteLength);
+            } else {
+              console.log('[WS] Skipping chunk send - stream ended during conversion');
+            }
           }).catch(error => {
             console.error('[WS] Error converting audio chunk to ArrayBuffer:', error);
           });
@@ -243,6 +258,10 @@ export default function useVoiceAssistant({
       
       // Handle recording stop event
       mediaRecorder.onstop = () => {
+        // Mark stream as ended BEFORE sending end_of_stream
+        streamEndedRef.current = true;
+        console.log('[WS] Marked stream as ended, no more audio chunks will be sent');
+        
         // Send the end_of_stream message to properly close the stream
         if (wsRef.current?.readyState === WebSocket.OPEN) {
           wsRef.current.send(JSON.stringify({ type: "end_of_stream" }));
@@ -285,10 +304,13 @@ export default function useVoiceAssistant({
       vadTimeoutRef.current = null;
     }
     
+    // Mark stream as ended to prevent any more audio chunks from being sent
+    streamEndedRef.current = true;
+    console.log('[WS] Marked stream as ended in stopListening()');
+    
     // Send end_of_stream signal required by Deepgram
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       // Send the required end_of_stream message
-      // Note: we've removed end_of_speech to avoid confusion
       wsRef.current.send(JSON.stringify({ type: 'end_of_stream' }));
       console.log('[WS] ✅ Sent end_of_stream to Deepgram');
       
