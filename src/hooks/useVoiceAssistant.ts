@@ -256,13 +256,29 @@ export default function useVoiceAssistant({
       // Load the PCM processor worklet if not already loaded
       if (!isAudioWorkletLoadedRef.current) {
         try {
+          console.log('[VOICE-DEBUG] Starting AudioWorklet loading process');
+          console.log('[VOICE-DEBUG] AudioContext state:', audioContext.state);
+          console.log('[VOICE-DEBUG] AudioWorklet support check:', 'audioWorklet' in AudioContext.prototype);
+          
+          // Log the full URL we're trying to load
+          const baseUrl = window.location.origin;
+          const moduleUrl = `${baseUrl}/pcm-processor.js`;
+          console.log('[VOICE-DEBUG] Attempting to load worklet from:', moduleUrl);
+          
           await audioContext.audioWorklet.addModule('/pcm-processor.js');
           isAudioWorkletLoadedRef.current = true;
-          console.log('[VOICE] PCM processor worklet loaded successfully');
+          console.log('[VOICE] ✅ PCM processor worklet loaded successfully');
         } catch (error) {
-          console.error('[VOICE] Failed to load PCM processor worklet:', error);
+          console.error('[VOICE-ERROR] ❌ Failed to load PCM processor worklet:', error);
+          console.error('[VOICE-ERROR] Error details:', { 
+            name: error.name, 
+            message: error.message, 
+            stack: error.stack 
+          });
           throw new Error('Failed to load audio processing module');
         }
+      } else {
+        console.log('[VOICE-DEBUG] AudioWorklet already loaded, skipping initialization');
       }
       
       return true;
@@ -404,37 +420,72 @@ export default function useVoiceAssistant({
       }
       
       // Create and connect the AudioWorkletNode for PCM processing
-      const workletNode = new AudioWorkletNode(audioContext, 'pcm-processor');
-      audioWorkletNodeRef.current = workletNode;
-      
-      // Handle messages from the audio processor
-      workletNode.port.onmessage = (event) => {
-        // Skip if stream has ended
-        if (streamEndedRef.current) {
-          return;
-        }
+      console.log('[VOICE-DEBUG] Creating AudioWorkletNode with processor name: "pcm-processor"');
+      try {
+        const workletNode = new AudioWorkletNode(audioContext, 'pcm-processor');
+        audioWorkletNodeRef.current = workletNode;
+        console.log('[VOICE-DEBUG] ✅ AudioWorkletNode created successfully');
         
-        const { audioData, audioLevel, isSilent } = event.data;
-        
-        // Send audio data to WebSocket if connection is open
-        if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
-          wsRef.current.send(audioData);
-          console.log('[WS] Sent audio chunk as PCM Int16. Level:', audioLevel.toFixed(4));
-          
-          // For walkie-talkie mode, use audio level for VAD
-          if (state.mode === 'walkie' && isSilent) {
-            handleSilenceDetection(audioLevel);
+        // Handle messages from the audio processor
+        console.log('[VOICE-DEBUG] Setting up message port handler for AudioWorkletNode');
+        let messageCount = 0;
+        workletNode.port.onmessage = (event) => {
+          // Log first few messages to confirm data is flowing
+          if (messageCount < 5) {
+            console.log(`[VOICE-DEBUG] Received message #${messageCount} from AudioWorklet:`, 
+              event.data ? { hasAudioData: !!event.data.audioData } : 'No data');
+            messageCount++;
           }
+          
+          // Skip if stream has ended
+          if (streamEndedRef.current) {
+            return;
+          }
+          
+          const { audioData, audioLevel, isSilent } = event.data;
+          
+          // Send audio data to WebSocket if connection is open
+          if (wsRef.current?.readyState === WebSocket.OPEN && !streamEndedRef.current) {
+            wsRef.current.send(audioData);
+            console.log('[WS] Sent audio chunk as PCM Int16. Level:', audioLevel.toFixed(4));
+            
+            // For walkie-talkie mode, use audio level for VAD
+            if (state.mode === 'walkie' && isSilent) {
+              handleSilenceDetection(audioLevel);
+            }
+          }
+        };
+        
+        // Connect the processing chain: mediaStream -> workletNode
+        console.log('[VOICE-DEBUG] Connecting audio nodes: streamSource -> workletNode');
+        try {
+          streamSourceRef.current.connect(workletNode);
+          console.log('[VOICE-DEBUG] ✅ Audio processing chain connected successfully');
+        } catch (error) {
+          console.error('[VOICE-ERROR] ❌ Failed to connect audio processing chain:', error);
+          throw new Error('Failed to connect audio nodes: ' + error.message);
         }
-      };
+        
+        console.log('[VOICE] ✅ AudioWorklet started, streaming PCM audio data');
+        
+      } catch (error) {
+        console.error('[VOICE-ERROR] ❌ Failed to create AudioWorkletNode:', error);
+        console.error('[VOICE-ERROR] Available processors:', audioContext.audioWorklet);
+        throw new Error('Failed to create AudioWorkletNode: ' + error.message);
+      }
       
-      // Connect the processing chain: mediaStream -> workletNode
-      streamSourceRef.current.connect(workletNode);
-      
-      console.log('[VOICE] AudioWorklet started, streaming PCM audio data');
+      // Removed duplicate content that's now integrated in the workletNode creation block above
       
     } catch (error) {
-      console.error('Failed to start recording:', error);
+      console.error('[VOICE-ERROR] ❌ Failed to start recording:', error);
+      console.error('[VOICE-ERROR] Error details:', { 
+        name: error?.name, 
+        message: error?.message, 
+        stack: error?.stack,
+        audioContextState: audioContextRef.current?.state || 'no context',
+        isWorkletLoaded: isAudioWorkletLoadedRef.current
+      });
+      
       setState(prev => ({ 
         ...prev, 
         isListening: false,
