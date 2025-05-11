@@ -241,6 +241,17 @@ export default function useVoiceAssistant({
         }
       };
       
+      // Handle recording stop event
+      mediaRecorder.onstop = () => {
+        // Send the end_of_stream message to properly close the stream
+        if (wsRef.current?.readyState === WebSocket.OPEN) {
+          wsRef.current.send(JSON.stringify({ type: "end_of_stream" }));
+          console.log('[WS] Sent end_of_stream to Deepgram');
+        } else {
+          console.warn('[WS] Could not send end_of_stream, WebSocket state:', wsRef.current?.readyState);
+        }
+      };
+      
       // Set small timeslice for low-latency streaming (100ms chunks)
       mediaRecorder.start(100);
       mediaRecorderRef.current = mediaRecorder;
@@ -276,10 +287,15 @@ export default function useVoiceAssistant({
     
     // Send end-of-speech signal to server
     if (wsRef.current?.readyState === WebSocket.OPEN) {
+      // First send end-of-speech signal
       wsRef.current.send(JSON.stringify({ type: 'end_of_speech' }));
       console.log('[WS] Sent end-of-speech signal');
+      
+      // Also send the crucial end_of_stream message that Deepgram expects
+      wsRef.current.send(JSON.stringify({ type: 'end_of_stream' }));
+      console.log('[WS] Sent end_of_stream signal to Deepgram');
     } else {
-      console.warn('[WS] Could not send end-of-speech signal, WebSocket state:', wsRef.current?.readyState);
+      console.warn('[WS] Could not send end signals, WebSocket state:', wsRef.current?.readyState);
     }
     
     // Update state
