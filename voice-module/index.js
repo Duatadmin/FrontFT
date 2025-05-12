@@ -88,7 +88,7 @@ export class VoiceModule {
       });
       
       // Connect the audio graph
-      this.source.connect(this.node);
+      this.source.connect(this.node).connect(this.audioContext.destination); // ensure processor receives pull
       
       this._log('VoiceModule initialized successfully');
       
