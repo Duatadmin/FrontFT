@@ -7,7 +7,7 @@ let visualizationData: Uint8Array | null = null;
 // Create the voice module with default push-to-talk mode
 let voice = new VoiceModule({
   mode: MODES.PUSH_TO_TALK,
-  serverUrl: 'wss://ftvoiceservice-production.up.railway.app/v1/ws',
+  serverUrl: 'wss://ftvoiceservice-production.up.railway.app/v1/asr/ws',
 });
 
 // Set up initial event listeners
@@ -54,7 +54,7 @@ export async function toggleMode(walkie: boolean) {
   // Create a new instance with the desired mode
   voice = new VoiceModule({
     mode: walkie ? MODES.VOICE_ACTIVATED : MODES.PUSH_TO_TALK,
-    serverUrl: 'wss://ftvoiceservice-production.up.railway.app/v1/ws',
+    serverUrl: 'wss://ftvoiceservice-production.up.railway.app/v1/asr/ws',
   });
   
   // Initialize all event listeners
