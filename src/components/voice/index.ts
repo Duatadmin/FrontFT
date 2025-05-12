@@ -17,25 +17,45 @@ export function setTranscriptTarget(id: string) {
   currentTargetId = id;
 }
 
-export async function initVoiceModule() {
+export async function initVoiceModule(): Promise<boolean> {
+  // We don't call voice.start() here anymore - initialization happens on user interaction
+  // This just checks if we have microphone permissions
   try {
-    await voice.start();
-    console.log('Voice module initialized successfully');
+    // Check if browser supports getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Browser does not support getUserMedia');
+    }
+    
+    // Just test if we can access the microphone, but don't start anything
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Immediately stop all tracks since we're just checking permissions
+    stream.getTracks().forEach(track => track.stop());
+    
+    console.log('Microphone permission granted');
     return true;
   } catch (error) {
-    console.error('Failed to initialize voice module:', error);
+    console.error('Microphone permission denied:', error);
     return false;
   }
 }
 
-export function startRecording() {
-  voice.startRecording();
-  isRecording = true;
+export async function startRecording() {
+  try {
+    await voice.startRecording(); // This will now handle lazy initialization
+    isRecording = true;
+  } catch (error) {
+    console.error('Failed to start recording:', error);
+    isRecording = false;
+  }
 }
 
-export function stopRecording() {
-  voice.stopRecording();
-  isRecording = false;
+export async function stopRecording() {
+  try {
+    await voice.stopRecording();
+    isRecording = false;
+  } catch (error) {
+    console.error('Failed to stop recording:', error);
+  }
 }
 
 export function getIsRecording(): boolean {
@@ -46,22 +66,19 @@ export function getVisualizationData(): Uint8Array | null {
   return visualizationData;
 }
 
-// Since voice-module doesn't have a setMode method, we need to recreate the instance
 export async function toggleMode(walkie: boolean) {
-  // Stop and cleanup the current instance
-  voice.destroy();
-  
-  // Create a new instance with the desired mode
-  voice = new VoiceModule({
-    mode: walkie ? MODES.VOICE_ACTIVATED : MODES.PUSH_TO_TALK,
-    serverUrl: 'wss://ftvoiceservice-production.up.railway.app/v1/asr/ws',
-  });
-  
-  // Initialize all event listeners
-  setupEventListeners();
-  
-  // Start the new instance
-  await voice.start();
+  try {
+    // Now we can use the new setMode method which handles initialization
+    await voice.setMode(walkie ? MODES.VOICE_ACTIVATED : MODES.PUSH_TO_TALK);
+    
+    // Ensure event listeners are properly set up
+    setupEventListeners();
+    
+    return true;
+  } catch (error) {
+    console.error('Failed to toggle voice mode:', error);
+    return false;
+  }
 }
 
 // Sets up all event listeners for the voice module

@@ -131,32 +131,75 @@ export class VoiceModule {
   }
   
   /**
-   * Start recording (for push-to-talk mode)
+   * Check if the voice module has been initialized
+   * @returns {boolean} - True if the module is initialized and ready
    */
-  startRecording() {
+  isInitialized() {
+    return this.core?.isInitialized || false;
+  }
+
+  /**
+   * Start recording (for push-to-talk mode)
+   * @returns {Promise<void>}
+   */
+  async startRecording() {
     if (this.config.mode === MODES.PUSH_TO_TALK) {
-      this.core.startRecording();
+      // Lazy initialization on user gesture
+      if (!this.isInitialized()) {
+        await this.start();
+      }
+      await this.core.startRecording();
     }
   }
   
   /**
    * Stop recording (for push-to-talk mode)
+   * @returns {Promise<void>}
    */
-  stopRecording() {
-    if (this.config.mode === MODES.PUSH_TO_TALK) {
-      this.core.stopRecording();
+  async stopRecording() {
+    if (this.config.mode === MODES.PUSH_TO_TALK && this.isInitialized()) {
+      await this.core.stopRecording();
     }
   }
   
   /**
    * Toggle recording state (for push-to-talk mode)
-   * @returns {boolean} - New recording state
+   * @returns {Promise<boolean>} - New recording state
    */
-  toggleRecording() {
+  async toggleRecording() {
     if (this.config.mode === MODES.PUSH_TO_TALK) {
-      return this.core.toggleRecording();
+      // Lazy initialization on user gesture
+      if (!this.isInitialized()) {
+        await this.start();
+      }
+      return await this.core.toggleRecording();
     }
     return false;
+  }
+  
+  /**
+   * Set the input mode (push-to-talk or walkie-talkie)
+   * @param {string} mode - Mode identifier ('push' or 'walkie')
+   * @returns {Promise<void>}
+   */
+  async setMode(mode) {
+    if (mode !== MODES.PUSH_TO_TALK && mode !== MODES.VOICE_ACTIVATED) {
+      throw new Error(`Invalid mode: ${mode}. Use 'push' or 'walkie'`);
+    }
+    
+    this.config.mode = mode;
+    
+    // Lazy initialization on user gesture
+    if (!this.isInitialized()) {
+      await this.start();
+      return;
+    }
+    
+    // If already initialized, reconfigure the input mode
+    // Implementation would depend on your voice-core structure
+    // For this example, we'll assume we need to reinitialize the module
+    await this.stop();
+    await this.start();
   }
   
   /**
