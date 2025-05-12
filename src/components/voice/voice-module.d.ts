@@ -1,6 +1,32 @@
 // Type declarations for voice-module
 declare module '../../../voice-module/index.js' {
+  export const MODES: {
+    PUSH_TO_TALK: string;
+    VOICE_ACTIVATED: string;
+  };
+
+  // Transcript data interface
+  interface TranscriptData {
+    transcript?: string;
+    is_final?: boolean;
+    confidence?: number;
+    [key: string]: any;
+  }
+
   export class VoiceModule {
+    // Make config accessible for compatibility
+    config: {
+      mode: string;
+      serverUrl: string;
+      audio: {
+        sampleRate: number;
+        frameSize: number;
+      };
+      onTranscript?: (data: TranscriptData) => void;
+      onStateChange?: (state: string, error?: Error) => void;
+      debug: boolean;
+    };
+
     constructor(config?: {
       mode?: string;
       serverUrl?: string;
@@ -8,49 +34,21 @@ declare module '../../../voice-module/index.js' {
         sampleRate?: number;
         frameSize?: number;
       };
-      voice?: {
-        threshold?: number;
-        holdDuration?: number;
-      };
-      onTranscript?: (transcript: any) => void;
-      onStateChange?: (newState: string, error?: Error) => void;
+      onTranscript?: (data: TranscriptData) => void;
+      onStateChange?: (state: string, error?: Error) => void;
       debug?: boolean;
     });
 
+    // Core methods
     start(): Promise<void>;
-    stop(): void;
-    destroy(): void;
-    startRecording(): void;
-    stopRecording(): void;
-    toggleRecording(): boolean;
-    on(event: string, callback: (data: any) => void): () => void;
-    getState(): any;
-    getLatestTranscript(): any;
-    getFinalTranscripts(): any[];
-    clearTranscripts(): void;
-    getConfig(): any;
+    isInitialized(): boolean;
+    connectWebSocket(): Promise<void>;
+    startRecording(): Promise<void>;
+    stopRecording(): Promise<void>;
+    toggleRecording(): Promise<boolean>;
+    destroy(): Promise<void>;
+    
+    // Private methods
+    _log(...args: any[]): void;
   }
-
-  export const EVENTS: {
-    SESSION_STATE_CHANGED: string;
-    RECORDING_STARTED: string;
-    RECORDING_STOPPED: string;
-    TRANSCRIPT_INTERIM: string;
-    TRANSCRIPT_FINAL: string;
-    AUDIO_DATA: string;
-    ERROR: string;
-  };
-
-  export const SESSION_STATE: {
-    IDLE: string;
-    CONNECTING: string;
-    READY: string;
-    RECORDING: string;
-    ERROR: string;
-  };
-
-  export const MODES: {
-    PUSH_TO_TALK: string;
-    VOICE_ACTIVATED: string;
-  };
 }

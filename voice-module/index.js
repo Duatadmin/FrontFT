@@ -76,7 +76,7 @@ export class VoiceModule {
       // Create media stream source
       this.source = this.audioContext.createMediaStreamSource(this.mediaStream);
       
-      // Load AudioWorklet module
+      // Load AudioWorklet module - use absolute public path
       await this.audioContext.audioWorklet.addModule('/audio/worklet/pcm-processor.js');
       
       // Create and connect AudioWorkletNode
@@ -179,18 +179,31 @@ export class VoiceModule {
       
       // Set up message handler to stream audio chunks
       this.node.port.onmessage = (event) => {
-        const { type, data } = event.data;
-        
-        if (type === 'pcm' && this.isRecording && this.socket?.readyState === WebSocket.OPEN) {
-          const chunk = data;
-          
-          // Log RMS value for debug
-          if (this.config.debug && chunk.rms !== undefined) {
-            this._log(`[RMS] ${chunk.rms.toFixed(6)}`);
+        // Direct processing of AudioWorklet message, matching the successful console example
+        try {
+          if (this.isRecording && this.socket?.readyState === WebSocket.OPEN) {
+            // Check if we have direct data or data in event.data.data
+            let chunk;
+            if (event.data instanceof Int16Array) {
+              chunk = event.data;
+            } else if (event.data && event.data.type === 'pcm' && event.data.data) {
+              chunk = event.data.data;
+            } else {
+              // Try to process as new Int16Array like in console example
+              chunk = new Int16Array(event.data);
+            }
+            
+            // Calculate RMS like in the console example
+            if (this.config.debug) {
+              const rms = Math.sqrt(chunk.reduce((s, x) => s + x * x, 0) / chunk.length) / 32768;
+              this._log(`[RMS] ${rms.toFixed(4)}`);
+            }
+            
+            // Send binary buffer to WebSocket
+            this.socket.send(chunk.buffer);
           }
-          
-          // Send binary buffer to WebSocket
-          this.socket.send(chunk.buffer);
+        } catch (error) {
+          this._log('Error processing audio chunk:', error);
         }
       };
       

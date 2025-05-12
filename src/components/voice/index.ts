@@ -11,7 +11,8 @@ let voice = new VoiceModule({
   onTranscript: (data) => {
     if (!currentTargetId) return;
     
-    if (data.is_final) {
+    // Check for 'is_final' or 'isFinal' property to handle different formats
+    if (data.is_final || data.isFinal) {
       // Final transcript
       const el = document.getElementById(`${currentTargetId}-final`);
       if (el) el.textContent = data.transcript || '';
@@ -65,20 +66,24 @@ export async function initVoiceModule(): Promise<boolean> {
 
 export async function startRecording() {
   try {
+    console.log('[Voice] Starting recording...');
     await voice.startRecording(); // This will now handle lazy initialization
     isRecording = true;
+    console.log('[Voice] Recording started successfully');
   } catch (error) {
-    console.error('Failed to start recording:', error);
+    console.error('[Voice] Failed to start recording:', error);
     isRecording = false;
   }
 }
 
 export async function stopRecording() {
   try {
+    console.log('[Voice] Stopping recording...');
     await voice.stopRecording();
     isRecording = false;
+    console.log('[Voice] Recording stopped successfully');
   } catch (error) {
-    console.error('Failed to stop recording:', error);
+    console.error('[Voice] Failed to stop recording:', error);
   }
 }
 
@@ -92,19 +97,24 @@ export function getVisualizationData(): Uint8Array | null {
 
 export async function toggleMode(walkie: boolean) {
   try {
+    console.log(`[Voice] Toggling mode to ${walkie ? 'walkie-talkie' : 'push-to-talk'}...`);
+    
     // Re-create the voice module with the new mode since setMode was removed
     const mode = walkie ? MODES.VOICE_ACTIVATED : MODES.PUSH_TO_TALK;
     
     // Stop any existing recording
     if (isRecording) {
+      console.log('[Voice] Stopping existing recording before mode change');
       await voice.stopRecording();
       isRecording = false;
     }
     
     // Clean up old instance
+    console.log('[Voice] Destroying old instance');
     await voice.destroy();
     
     // Create new instance with desired mode
+    console.log('[Voice] Creating new instance with updated mode');
     voice = new VoiceModule({
       mode,
       serverUrl: import.meta.env.VITE_ASR_WS_URL,
@@ -127,12 +137,14 @@ export async function toggleMode(walkie: boolean) {
       onStateChange: (state, error) => {
         if (state === 'recording') {
           isRecording = true;
+          console.log('[Voice] State changed to recording');
         } else if (state === 'idle') {
           isRecording = false;
+          console.log('[Voice] State changed to idle');
         }
         
         if (error) {
-          console.error('Voice module error:', error);
+          console.error('[Voice] State change error:', error);
         }
       },
       debug: true
