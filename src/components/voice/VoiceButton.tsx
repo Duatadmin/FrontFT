@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Mic } from 'lucide-react';
-import { startRecording, stopRecording, setTranscriptTarget } from './index';
+import { startRecording, stopRecording, setTranscriptTarget, initVoiceModule } from './index';
 
 interface VoiceButtonProps {
   targetId: string;
@@ -12,8 +12,14 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
   disabled = false
 }) => {
   const [isPressing, setIsPressing] = useState(false);
+  const [micReady, setMicReady] = useState<boolean | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Initialize voice module and check mic permissions
+  useEffect(() => {
+    initVoiceModule().then(setMicReady);
+  }, []);
+  
   // Set the transcript target when the component mounts or targetId changes
   useEffect(() => {
     setTranscriptTarget(targetId);
@@ -110,6 +116,11 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
     ${isPressing ? 'animate-pulse-ring' : 'opacity-0'}
   `;
 
+  // Show fallback message if microphone permission is denied
+  if (micReady === false) {
+    return <div className="flex items-center justify-center p-3 text-sm text-red-500 bg-red-50 rounded-lg border border-red-200">Please enable microphone access</div>;
+  }
+
   return (
     <button
       ref={buttonRef}
@@ -118,7 +129,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
       onMouseUp={handleMouseUp}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      disabled={disabled}
+      disabled={disabled || micReady !== true}
       aria-label="Push to talk"
       title="Push to talk"
     >
