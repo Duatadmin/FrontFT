@@ -5,10 +5,10 @@
 // WebSocket endpoints
 export const WEBSOCKET = {
   // Main WebSocket endpoint for ASR (Automatic Speech Recognition)
-  ASR_ENDPOINT: 'wss://ftvoiceservice-production.up.railway.app/v1/ws',
+  ASR_ENDPOINT: import.meta.env.VITE_ASR_WS_URL,
   
   // Test endpoint for connection debugging (echoes back messages)
-  TEST_ENDPOINT: 'wss://ftvoiceservice-production.up.railway.app/v1/asr/test/ws',
+  TEST_ENDPOINT: import.meta.env.VITE_ASR_WS_URL,
 };
 
 // Audio configuration

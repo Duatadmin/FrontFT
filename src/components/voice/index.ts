@@ -7,7 +7,7 @@ let visualizationData: Uint8Array | null = null;
 // Create the voice module with default push-to-talk mode
 let voice = new VoiceModule({
   mode: MODES.PUSH_TO_TALK,
-  serverUrl: 'wss://ftvoiceservice-production.up.railway.app/v1/asr/ws',
+  serverUrl: import.meta.env.VITE_ASR_WS_URL,
 });
 
 // Set up initial event listeners
