@@ -1,27 +1,27 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Mic, MicOff } from 'lucide-react';
+import { toggleMode, setTranscriptTarget } from './index';
 
 interface WalkieToggleButtonProps {
-  isWalkieMode: boolean;
-  isListening: boolean;
-  onToggle: () => void;
+  targetId: string;
   disabled?: boolean;
 }
 
 const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
-  isWalkieMode,
-  isListening,
-  onToggle,
+  targetId,
   disabled = false
 }) => {
-  // Button appearance depends on mode and listening state
+  const [active, setActive] = useState(false);
+
+  useEffect(() => {
+    setTranscriptTarget(targetId);
+  }, [targetId]);
+  // Button appearance depends on active state
   const buttonClasses = `
     relative flex items-center justify-center p-2 rounded-lg
     transition-all duration-200 outline-none focus:ring-2 focus:ring-primary/50
-    ${isWalkieMode
-      ? isListening
-        ? 'bg-primary text-white shadow-lg'
-        : 'bg-primary/90 text-white shadow-md'
+    ${active
+      ? 'bg-primary text-white shadow-lg'
       : 'bg-input hover:bg-input/80 text-textSecondary'
     }
     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
@@ -30,21 +30,27 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
   // Animation for the pulse effect when actively listening
   const pulseClasses = `
     absolute inset-0 rounded-lg bg-primary/20
-    ${isWalkieMode && isListening ? 'animate-pulse' : 'opacity-0'}
+    ${active ? 'animate-pulse' : 'opacity-0'}
   `;
+
+  const handleClick = async () => {
+    const newState = !active;
+    setActive(newState);
+    await toggleMode(newState);
+  };
 
   return (
     <button
       className={buttonClasses}
-      onClick={onToggle}
+      onClick={handleClick}
       disabled={disabled}
-      aria-label={isWalkieMode ? "Turn off walkie-talkie mode" : "Turn on walkie-talkie mode"}
-      title={isWalkieMode ? "Walkie-talkie mode active" : "Enable walkie-talkie mode"}
+      aria-label={active ? "Turn off walkie-talkie mode" : "Turn on walkie-talkie mode"}
+      title={active ? "Walkie-talkie mode active" : "Enable walkie-talkie mode"}
     >
       <div className={pulseClasses} />
-      {isWalkieMode ? <Mic size={18} /> : <MicOff size={18} />}
+      {active ? <Mic size={18} /> : <MicOff size={18} />}
       <span className="ml-2 text-sm font-medium">
-        {isWalkieMode ? "Listening" : "Walkie-talkie"}
+        {active ? "Listening" : "Walkie-talkie"}
       </span>
     </button>
   );

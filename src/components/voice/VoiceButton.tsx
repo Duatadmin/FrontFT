@@ -1,21 +1,23 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Mic } from 'lucide-react';
+import { startRecording, stopRecording, setTranscriptTarget } from './index';
 
 interface VoiceButtonProps {
-  isListening: boolean;
-  onStartListening: () => void;
-  onStopListening: () => void;
+  targetId: string;
   disabled?: boolean;
 }
 
 const VoiceButton: React.FC<VoiceButtonProps> = ({
-  isListening,
-  onStartListening,
-  onStopListening,
+  targetId,
   disabled = false
 }) => {
   const [isPressing, setIsPressing] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Set the transcript target when the component mounts or targetId changes
+  useEffect(() => {
+    setTranscriptTarget(targetId);
+  }, [targetId]);
 
   // Handle mouse down - start listening
   const handleMouseDown = (e: React.MouseEvent) => {
@@ -23,7 +25,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
     if (disabled) return;
     
     setIsPressing(true);
-    onStartListening();
+    startRecording();
     
     // Add global event listeners to handle releasing outside the button
     document.addEventListener('mouseup', handleGlobalMouseUp);
@@ -36,7 +38,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
     if (disabled) return;
     
     setIsPressing(false);
-    onStopListening();
+    stopRecording();
     
     // Remove global event listeners
     document.removeEventListener('mouseup', handleGlobalMouseUp);
@@ -47,7 +49,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
   const handleGlobalMouseUp = () => {
     if (isPressing) {
       setIsPressing(false);
-      onStopListening();
+      stopRecording();
       
       // Clean up event listeners
       document.removeEventListener('mouseup', handleGlobalMouseUp);
@@ -61,7 +63,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
     if (disabled) return;
     
     setIsPressing(true);
-    onStartListening();
+    startRecording();
     
     // Add global event listeners
     document.addEventListener('touchend', handleGlobalTouchEnd);
@@ -73,7 +75,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
     if (disabled) return;
     
     setIsPressing(false);
-    onStopListening();
+    stopRecording();
     
     // Remove global event listeners
     document.removeEventListener('touchend', handleGlobalTouchEnd);
@@ -83,7 +85,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
   const handleGlobalTouchEnd = () => {
     if (isPressing) {
       setIsPressing(false);
-      onStopListening();
+      stopRecording();
       
       // Clean up event listeners
       document.removeEventListener('touchend', handleGlobalTouchEnd);
@@ -91,15 +93,13 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
     }
   };
 
-  // Button appearance depends on listening state
+  // Button appearance depends on pressing state
   const buttonClasses = `
     relative flex items-center justify-center p-3 rounded-full 
     transition-all duration-200 outline-none focus:ring-2 focus:ring-primary/50
-    ${isListening
+    ${isPressing
       ? 'bg-primary text-white shadow-lg scale-110'
-      : isPressing
-        ? 'bg-primary text-white shadow-md scale-105'
-        : 'bg-input hover:bg-input/80 text-textSecondary'
+      : 'bg-input hover:bg-input/80 text-textSecondary'
     }
     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
   `;
@@ -107,7 +107,7 @@ const VoiceButton: React.FC<VoiceButtonProps> = ({
   // Animation for the ripple effect when button is pressed
   const rippleClasses = `
     absolute inset-0 rounded-full bg-primary/20
-    ${isListening ? 'animate-pulse-ring' : 'opacity-0'}
+    ${isPressing ? 'animate-pulse-ring' : 'opacity-0'}
   `;
 
   return (

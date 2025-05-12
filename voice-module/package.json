@@ -1,0 +1,33 @@
+{
+  "name": "voice-module",
+  "type": "module",
+  "version": "1.0.0",
+  "description": "A self-contained, embeddable JavaScript module for microphone audio streaming via AudioWorklet and WebSocket",
+  "main": "dist/voice-module.umd.js",
+  "module": "dist/voice-module.js",
+  "exports": {
+    ".": {
+      "import": "./dist/voice-module.js",
+      "require": "./dist/voice-module.umd.js"
+    }
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint ."
+  },
+  "keywords": [
+    "audio",
+    "microphone",
+    "websocket",
+    "audioworklet",
+    "voice-recognition"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "eslint": "^8.56.0",
+    "prettier": "^3.1.0",
+    "vite": "^5.0.0"
+  }
+}

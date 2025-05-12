@@ -1,8 +1,7 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
+import { getVisualizationData, getIsRecording } from './index';
 
 interface AudioVisualizerProps {
-  getVisualizationData: () => Uint8Array | null;
-  isActive: boolean;
   width?: number;
   height?: number;
   barColor?: string;
@@ -10,13 +9,27 @@ interface AudioVisualizerProps {
 }
 
 const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
-  getVisualizationData,
-  isActive,
   width = 120,
   height = 30,
   barColor = 'var(--primary-color, #3b82f6)',
   barCount = 20
 }) => {
+  const [isActive, setIsActive] = useState(false);
+  
+  // Check recording status on an interval
+  useEffect(() => {
+    const checkRecordingStatus = () => {
+      setIsActive(getIsRecording());
+    };
+    
+    // Check initially
+    checkRecordingStatus();
+    
+    // Set up interval to check every 100ms
+    const intervalId = setInterval(checkRecordingStatus, 100);
+    
+    return () => clearInterval(intervalId);
+  }, []);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number | null>(null);
 
@@ -37,7 +50,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     // Draw visualization only when active
     if (isActive) {
       const drawVisualizer = () => {
-        // Get data from the hook
+        // Get data from our voice module
         const dataArray = getVisualizationData();
         if (!dataArray) {
           // If no data, schedule next frame and return
