@@ -1,142 +1,86 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { Mic } from 'lucide-react';
 import { startRecording, stopRecording, setTranscriptTarget, initVoiceModule } from './index';
+import { clsx as cx } from 'clsx';
 
-interface VoiceButtonProps {
-  targetId: string;
+const HOLD_MS  = 200;  // min press to start
+const GRACE_PX = 8;    // leeway radius
+const COOLDOWN = 300;  // stop → next start delay
+
+export interface VoiceButtonProps {
   disabled?: boolean;
 }
 
-const VoiceButton: React.FC<VoiceButtonProps> = ({
-  targetId,
-  disabled = false
-}) => {
-  const [isPressing, setIsPressing] = useState(false);
-  const [micReady, setMicReady] = useState<boolean | null>(null);
-  const buttonRef = useRef<HTMLButtonElement>(null);
+export default function VoiceButton({ disabled = false }: VoiceButtonProps) {
+  const [state, setState] = useState<'idle' | 'arming' | 'recording'>('idle');
+  const holdTimer = useRef<number | null>(null);
+  const lastStop  = useRef<number>(0);
+  const btnRef    = useRef<HTMLButtonElement>(null);
 
-  // Initialize voice module and check mic permissions
-  useEffect(() => {
-    initVoiceModule().then(setMicReady);
-  }, []);
-  
-  // Set the transcript target when the component mounts or targetId changes
-  useEffect(() => {
-    setTranscriptTarget(targetId);
-  }, [targetId]);
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (disabled || state !== 'idle' || e.button !== 0) return;
+    btnRef.current?.setPointerCapture(e.pointerId);
 
-  // Handle mouse down - start listening
-  const handleMouseDown = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-    
-    setIsPressing(true);
-    startRecording();
-    
-    // Add global event listeners to handle releasing outside the button
-    document.addEventListener('mouseup', handleGlobalMouseUp);
-    document.addEventListener('mouseleave', handleGlobalMouseUp);
+    setState('arming');
+    holdTimer.current = window.setTimeout(() => {
+      if (Date.now() - lastStop.current < COOLDOWN) return;
+      startRecording();                      // 🔴 mic ON
+      // navigator.vibrate?.(20);            // optional haptic
+      setState('recording');
+    }, HOLD_MS);
   };
 
-  // Handle mouse up - stop listening
-  const handleMouseUp = (e: React.MouseEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-    
-    setIsPressing(false);
-    stopRecording();
-    
-    // Remove global event listeners
-    document.removeEventListener('mouseup', handleGlobalMouseUp);
-    document.removeEventListener('mouseleave', handleGlobalMouseUp);
-  };
-
-  // Handle global mouse up (when released outside the button)
-  const handleGlobalMouseUp = () => {
-    if (isPressing) {
-      setIsPressing(false);
-      stopRecording();
-      
-      // Clean up event listeners
-      document.removeEventListener('mouseup', handleGlobalMouseUp);
-      document.removeEventListener('mouseleave', handleGlobalMouseUp);
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (state === 'arming' || state === 'recording') {
+      const rect = btnRef.current!.getBoundingClientRect();
+      const inside =
+        e.clientX >= rect.left  - GRACE_PX &&
+        e.clientX <= rect.right + GRACE_PX &&
+        e.clientY >= rect.top   - GRACE_PX &&
+        e.clientY <= rect.bottom+ GRACE_PX;
+      if (!inside && state === 'arming') cancelArming();
     }
   };
 
-  // Add touch handlers for mobile devices
-  const handleTouchStart = (e: React.TouchEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-    
-    setIsPressing(true);
-    startRecording();
-    
-    // Add global event listeners
-    document.addEventListener('touchend', handleGlobalTouchEnd);
-    document.addEventListener('touchcancel', handleGlobalTouchEnd);
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    e.preventDefault();
-    if (disabled) return;
-    
-    setIsPressing(false);
-    stopRecording();
-    
-    // Remove global event listeners
-    document.removeEventListener('touchend', handleGlobalTouchEnd);
-    document.removeEventListener('touchcancel', handleGlobalTouchEnd);
-  };
-
-  const handleGlobalTouchEnd = () => {
-    if (isPressing) {
-      setIsPressing(false);
-      stopRecording();
-      
-      // Clean up event listeners
-      document.removeEventListener('touchend', handleGlobalTouchEnd);
-      document.removeEventListener('touchcancel', handleGlobalTouchEnd);
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (state === 'arming') {
+      cancelArming();
+    } else if (state === 'recording') {
+      stopRecording();                       // ⚫ mic OFF
+      lastStop.current = Date.now();
+      setState('idle');
+      // navigator.vibrate?.(30);            // optional haptic
     }
+    btnRef.current?.releasePointerCapture(e.pointerId);
   };
 
-  // Button appearance depends on pressing state
-  const buttonClasses = `
-    relative flex items-center justify-center p-3 rounded-full 
-    transition-all duration-200 outline-none focus:ring-2 focus:ring-primary/50
-    ${isPressing
-      ? 'bg-primary text-white shadow-lg scale-110'
-      : 'bg-input hover:bg-input/80 text-textSecondary'
+  const cancelArming = () => {
+    if (holdTimer.current !== null) {
+      clearTimeout(holdTimer.current);
+      holdTimer.current = null;     // 
     }
-    ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer active:scale-95'}
-  `;
-
-  // Animation for the ripple effect when button is pressed
-  const rippleClasses = `
-    absolute inset-0 rounded-full bg-primary/20
-    ${isPressing ? 'animate-pulse-ring' : 'opacity-0'}
-  `;
-
-  // Show fallback message if microphone permission is denied
-  if (micReady === false) {
-    return <div className="flex items-center justify-center p-3 text-sm text-red-500 bg-red-50 rounded-lg border border-red-200">Please enable microphone access</div>;
-  }
+    setState('idle');
+  };
 
   return (
     <button
-      ref={buttonRef}
-      className={buttonClasses}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
-      onTouchStart={handleTouchStart}
-      onTouchEnd={handleTouchEnd}
-      disabled={disabled || micReady !== true}
-      aria-label="Push to talk"
-      title="Push to talk"
+      ref={btnRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      disabled={disabled}
+      className={cx(
+        'p-3 rounded-full transition-all select-none',
+        state === 'recording'
+          ? 'bg-primary text-white scale-110'
+          : state === 'arming'
+          ? 'bg-primary/20'
+          : 'bg-input hover:bg-input/80'
+      )}
+      aria-label="Push-to-talk"
     >
-      <div className={rippleClasses} />
       <Mic size={22} />
     </button>
   );
-};
-
-export default VoiceButton;
+}
