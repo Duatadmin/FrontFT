@@ -9,7 +9,7 @@ export class PCMWorkletNodeController {
   }
 
   async init() {
-    await this.audioContext.audioWorklet.addModule('/voice-module/audio/worklet/pcm-processor.js');
+    await this.audioContext.audioWorklet.addModule('/audio/worklet/pcm-processor.js');
     const stream = await getMicrophoneStream();
     const source = this.audioContext.createMediaStreamSource(stream);
 
