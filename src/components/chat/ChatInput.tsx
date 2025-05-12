@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { SendHorizonal } from 'lucide-react'; // Using lucide-react for icons
-import useVoiceAssistant from '../../hooks/useVoiceAssistant';
-import { VoiceButton, WalkieToggleButton, AudioVisualizer } from '../voice';
+import { VoiceButton, WalkieToggleButton, AudioVisualizer, initVoiceModule } from '../voice';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -19,23 +18,64 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  // Initialize voice assistant
-  const voiceAssistant = useVoiceAssistant({
-    onTranscriptComplete: (transcript) => {
-      if (transcript.trim()) {
-        onSendMessage(transcript.trim());
-      }
-    },
-    onTtsPlaybackStart,
-    onTtsPlaybackEnd,
-    initialMode: 'ptt',
-    vadSensitivity: 0.7
-  });
+  // Unique ID for transcript targeting
+  const chatInputId = 'chat-input';
   
-  // Initialize voice assistant on component mount
+  // Initialize voice module on component mount
   useEffect(() => {
-    voiceAssistant.init();
+    const initVoice = async () => {
+      try {
+        await initVoiceModule();
+        console.log('Voice module initialized in chat input');
+      } catch (error) {
+        console.error('Failed to initialize voice module in chat input:', error);
+      }
+    };
+    
+    initVoice();
   }, []);
+  
+  // Handle final transcript
+  useEffect(() => {
+    const handleFinalTranscript = () => {
+      const finalTranscript = document.getElementById(`${chatInputId}-final`);
+      if (finalTranscript && finalTranscript.textContent) {
+        const transcript = finalTranscript.textContent.trim();
+        if (transcript) {
+          onSendMessage(transcript);
+          // Clear the transcript
+          finalTranscript.textContent = '';
+        }
+      }
+    };
+    
+    // Listen for mutations to the final transcript element
+    const observer = new MutationObserver(handleFinalTranscript);
+    const finalTranscriptEl = document.getElementById(`${chatInputId}-final`);
+    
+    if (finalTranscriptEl) {
+      observer.observe(finalTranscriptEl, { childList: true, characterData: true, subtree: true });
+    } else {
+      // Create the transcript containers if they don't exist yet
+      const transcriptContainer = document.createElement('div');
+      transcriptContainer.style.display = 'none';
+      
+      const interimEl = document.createElement('div');
+      interimEl.id = `${chatInputId}-interim`;
+      
+      const finalEl = document.createElement('div');
+      finalEl.id = `${chatInputId}-final`;
+      
+      transcriptContainer.appendChild(interimEl);
+      transcriptContainer.appendChild(finalEl);
+      document.body.appendChild(transcriptContainer);
+      
+      // Now observe the final element
+      observer.observe(finalEl, { childList: true, characterData: true, subtree: true });
+    }
+    
+    return () => observer.disconnect();
+  }, [onSendMessage]);
 
   // Auto-resize textarea height
   useEffect(() => {
@@ -84,21 +124,18 @@ const ChatInput: React.FC<ChatInputProps> = ({
         {/* Input field container */}
         <div className="relative flex items-end bg-input rounded-xl border border-border shadow-sm transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/30">
         {/* Visualization display */}
-        {voiceAssistant.isListening && (
-          <div className="absolute -top-12 left-0 right-0 flex justify-center items-center h-10">
-            <div className="flex items-center justify-center px-3 py-1 rounded-full bg-black/60 backdrop-blur-md">
-              <AudioVisualizer 
-                getVisualizationData={voiceAssistant.getVisualizationData} 
-                isActive={voiceAssistant.isListening} 
-                width={120} 
-                height={24}
-              />
-              <span className="ml-2 text-xs text-white/80">
-                {voiceAssistant.transcript || 'Listening...'}
-              </span>
-            </div>
+        <div className="absolute -top-12 left-0 right-0 flex justify-center items-center h-10">
+          <div className="flex items-center justify-center px-3 py-1 rounded-full bg-black/60 backdrop-blur-md">
+            <AudioVisualizer 
+              width={120} 
+              height={24}
+            />
+            <span className="ml-2 text-xs text-white/80">
+              <span id={`${chatInputId}-interim`}></span>
+              Listening...
+            </span>
           </div>
-        )}
+        </div>
           <textarea
             ref={textareaRef}
             value={inputValue}
@@ -114,20 +151,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
           {/* Voice & Send buttons */}
           <div className="absolute right-2 bottom-2 flex items-center space-x-2">
             {/* Push-to-talk button */}
-            {voiceAssistant.mode === 'ptt' && (
-              <VoiceButton 
-                isListening={voiceAssistant.isListening}
-                onStartListening={voiceAssistant.startListening}
-                onStopListening={voiceAssistant.stopListening}
-                disabled={isLoading}
-              />
-            )}
+            <VoiceButton 
+              targetId={chatInputId}
+              disabled={isLoading}
+            />
             
             {/* Walkie-talkie toggle button */}
             <WalkieToggleButton 
-              isWalkieMode={voiceAssistant.mode === 'walkie'}
-              isListening={voiceAssistant.isListening}
-              onToggle={voiceAssistant.toggleWalkieMode}
+              targetId={chatInputId}
               disabled={isLoading}
             />
             
