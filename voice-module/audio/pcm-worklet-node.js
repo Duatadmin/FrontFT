@@ -29,7 +29,9 @@ export class PCMWorkletNodeController {
       }
     };
 
-    source.connect(this.node).connect(this.audioContext.destination);
+    const muteGain = new GainNode(this.audioContext, { gain: 0 });
+    source.connect(this.node).connect(muteGain);   // ← no feedback
+    
     this._stream = stream;
     
     console.log('[AUDIO]', this.audioContext.state);

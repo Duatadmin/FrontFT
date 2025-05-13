@@ -336,4 +336,29 @@ export class VoiceCore {
       console.log(`[VoiceCore] ${message}`);
     }
   }
+  
+  /**
+   * Get the current state of the voice module
+   * @returns {string} - Current state (idle, recording, etc.)
+   */
+  getState() {
+    if (!this.isInitialized) return 'uninitialized';
+    if (this.isRecording) return 'recording';
+    return 'idle';
+  }
+  
+  /**
+   * Get all transcripts
+   * @returns {Array} - List of transcripts
+   */
+  getTranscripts() {
+    return [...this.transcripts];
+  }
+  
+  /**
+   * For compatibility with the old API, to handle destroy method
+   */
+  destroy() {
+    this.cleanup();
+  }
 }
