@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 import { setTranscriptTarget } from './index';
-import { getVoiceModule, onVoiceState } from '../../voice/singleton';
+import { 
+  getVoiceModule, 
+  onVoiceState,
+  toggleVoiceRecording
+} from '../../voice/singleton';
 
 interface WalkieToggleButtonProps {
   targetId: string;
@@ -57,11 +61,8 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
     const newState = !active;
     
     try {
-      // Use the singleton instance
-      const voice = getVoiceModule();
-      
-      // Toggle between modes - use proper arrow function to preserve context
-      await (async () => voice.toggleRecording())();
+      // Use the wrapper function
+      await toggleVoiceRecording();
       setActive(newState);
     } catch (error) {
       console.error('Failed to toggle mode', error);

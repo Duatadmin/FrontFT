@@ -14,7 +14,8 @@ type VoiceModuleType = {
 
 let instance: VoiceModule | null = null;
 
-export function getVoiceModule(): VoiceModule {
+// Create a new instance if needed
+function createInstanceIfNeeded(): VoiceModule {
   if (!instance) {
     // Create a new instance
     instance = new VoiceModule({ 
@@ -23,15 +24,31 @@ export function getVoiceModule(): VoiceModule {
       serverUrl: import.meta.env.VITE_ASR_WS_URL,
     });
     
-    // Ensure methods are bound to the instance
-    instance.startRecording = instance.startRecording.bind(instance);
-    instance.stopRecording = instance.stopRecording.bind(instance);
-    instance.toggleRecording = instance.toggleRecording.bind(instance);
-    
     console.log(`[Voice] ✅ Created instance`);
     void instance.start();  // pre-loads AudioContext and WS
   }
   return instance;
+}
+
+// Safe wrapper for getting the module instance
+export function getVoiceModule(): VoiceModule {
+  return createInstanceIfNeeded();
+}
+
+// Safe wrapper methods for common operations
+export async function startVoiceRecording(): Promise<void> {
+  const voice = createInstanceIfNeeded();
+  return voice.startRecording();
+}
+
+export async function stopVoiceRecording(): Promise<void> {
+  const voice = createInstanceIfNeeded();
+  return voice.stopRecording();
+}
+
+export async function toggleVoiceRecording(): Promise<boolean> {
+  const voice = createInstanceIfNeeded();
+  return voice.toggleRecording();
 }
 
 export function destroyVoiceModule(): void {

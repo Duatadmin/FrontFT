@@ -1,7 +1,13 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Mic } from 'lucide-react';
 import { setTranscriptTarget } from './index';
-import { getVoiceModule, onVoiceState, destroyVoiceModule } from '../../voice/singleton';
+import { 
+  getVoiceModule, 
+  onVoiceState, 
+  destroyVoiceModule,
+  startVoiceRecording,
+  stopVoiceRecording
+} from '../../voice/singleton';
 import { clsx as cx } from 'clsx';
 
 const HOLD_MS  = 200;  // min press to start
@@ -51,8 +57,10 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
     setState('arming');
     holdTimer.current = window.setTimeout(() => {
       if (Date.now() - lastStop.current < COOLDOWN) return;
-      const voice = getVoiceModule();
-      (() => voice.startRecording())();
+      
+      // Use the wrapper function instead of direct method call
+      startVoiceRecording();
+      
       // navigator.vibrate?.(20);            // optional haptic
       setState('recording');
     }, HOLD_MS);
@@ -74,8 +82,9 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
     if (state === 'arming') {
       cancelArming();
     } else if (state === 'recording') {
-      const voice = getVoiceModule();
-      (() => voice.stopRecording())();
+      // Use the wrapper function instead of direct method call
+      stopVoiceRecording();
+      
       lastStop.current = Date.now();
       setState('idle');
       // navigator.vibrate?.(30);            // optional haptic
