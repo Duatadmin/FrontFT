@@ -30,7 +30,8 @@ export class PCMWorkletNodeController {
     };
 
     const muteGain = new GainNode(this.audioContext, { gain: 0 });
-    source.connect(this.node).connect(muteGain);   // ← no feedback
+    source.connect(this.node).connect(muteGain);  
+    muteGain.connect(this.audioContext.destination); // ← no feedback
     
     this._stream = stream;
     
