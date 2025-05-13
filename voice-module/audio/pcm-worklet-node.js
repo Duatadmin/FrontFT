@@ -9,8 +9,14 @@ export class PCMWorkletNodeController {
   }
 
   async init() {
-    const workletURL = '/worklet/pcm-processor.js';   // served from public/
-    await this.audioContext.audioWorklet.addModule(workletURL);
+    const workletURL = import.meta.env.BASE_URL + 'worklet/pcm-processor.js';
+    try {
+      await this.audioContext.audioWorklet.addModule(workletURL);
+      console.log('[WORKLET] module loaded', workletURL);
+    } catch (err) {
+      console.error('[WORKLET] addModule failed', err);
+      throw err;
+    }
     const stream = await getMicrophoneStream();
     
     console.log('[MEDIA]', stream.getAudioTracks()[0].label,
