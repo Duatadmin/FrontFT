@@ -1,9 +1,15 @@
 const { defineConfig } = require('vite');
 const react = require('@vitejs/plugin-react');
 const { VitePWA } = require('vite-plugin-pwa');
+const path = require('node:path');
 
 // https://vitejs.dev/config/
 module.exports = defineConfig({
+  resolve: {
+    alias: {
+      'voice-module': path.resolve(__dirname, 'voice-module'), // alias root
+    },
+  },
   plugins: [
     react(),
     VitePWA({
