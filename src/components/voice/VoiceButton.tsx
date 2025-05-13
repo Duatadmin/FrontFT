@@ -1,6 +1,7 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Mic } from 'lucide-react';
-import { startRecording, stopRecording, setTranscriptTarget, initVoiceModule } from './index';
+import { setTranscriptTarget } from './index';
+import { getVoiceModule, onVoiceState, destroyVoiceModule } from '../../voice/singleton';
 import { clsx as cx } from 'clsx';
 
 const HOLD_MS  = 200;  // min press to start
@@ -9,13 +10,39 @@ const COOLDOWN = 300;  // stop → next start delay
 
 export interface VoiceButtonProps {
   disabled?: boolean;
+  targetId?: string;
 }
 
-export default function VoiceButton({ disabled = false }: VoiceButtonProps) {
+export default function VoiceButton({ disabled = false, targetId }: VoiceButtonProps) {
   const [state, setState] = useState<'idle' | 'arming' | 'recording'>('idle');
   const holdTimer = useRef<number | null>(null);
   const lastStop  = useRef<number>(0);
   const btnRef    = useRef<HTMLButtonElement>(null);
+
+  // Set up transcript target if provided
+  useEffect(() => {
+    if (targetId) {
+      setTranscriptTarget(targetId);
+    }
+    
+    // Listen for voice state changes
+    onVoiceState((s) => {
+      if (s === 'recording') {
+        setState('recording');
+      } else if (s === 'idle' && state === 'recording') {
+        setState('idle');
+      }
+    });
+    
+    // Make sure voice module is initialized
+    getVoiceModule();
+    
+    return () => {
+      // Only destroy if this is the last component using it
+      // In a real app, you might want to track reference counts
+      destroyVoiceModule();
+    };
+  }, [targetId]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (disabled || state !== 'idle' || e.button !== 0) return;
@@ -24,7 +51,8 @@ export default function VoiceButton({ disabled = false }: VoiceButtonProps) {
     setState('arming');
     holdTimer.current = window.setTimeout(() => {
       if (Date.now() - lastStop.current < COOLDOWN) return;
-      startRecording();                      // 🔴 mic ON
+      const voice = getVoiceModule();
+      voice.startRecording();                // 🔴 mic ON
       // navigator.vibrate?.(20);            // optional haptic
       setState('recording');
     }, HOLD_MS);
@@ -46,7 +74,8 @@ export default function VoiceButton({ disabled = false }: VoiceButtonProps) {
     if (state === 'arming') {
       cancelArming();
     } else if (state === 'recording') {
-      stopRecording();                       // ⚫ mic OFF
+      const voice = getVoiceModule();
+      voice.stopRecording();                 // ⚫ mic OFF
       lastStop.current = Date.now();
       setState('idle');
       // navigator.vibrate?.(30);            // optional haptic

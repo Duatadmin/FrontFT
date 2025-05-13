@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff } from 'lucide-react';
-import { toggleMode, setTranscriptTarget, initVoiceModule } from './index';
+import { setTranscriptTarget } from './index';
+import { getVoiceModule, onVoiceState } from '../../voice/singleton';
 
 interface WalkieToggleButtonProps {
   targetId: string;
@@ -16,12 +17,25 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
 
   // Initialize voice module and check mic permissions
   useEffect(() => {
-    initVoiceModule().then(setMicReady);
-  }, []);
-
-  useEffect(() => {
+    // Set transcript target
     setTranscriptTarget(targetId);
+    
+    // Initialize voice module
+    try {
+      const voice = getVoiceModule();
+      setMicReady(true);
+      
+      // Listen for state changes
+      onVoiceState((state) => {
+        setActive(state === 'recording');
+      });
+      
+    } catch (error) {
+      console.error('Failed to initialize voice module', error);
+      setMicReady(false);
+    }
   }, [targetId]);
+
   // Button appearance depends on active state
   const buttonClasses = `
     relative flex items-center justify-center p-2 rounded-lg
@@ -41,8 +55,17 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
 
   const handleClick = async () => {
     const newState = !active;
-    setActive(newState);
-    await toggleMode(newState);
+    
+    try {
+      // Use the singleton instance
+      const voice = getVoiceModule();
+      
+      // Toggle between modes
+      await voice.toggleRecording();
+      setActive(newState);
+    } catch (error) {
+      console.error('Failed to toggle mode', error);
+    }
   };
 
   // Show fallback message if microphone permission is denied
