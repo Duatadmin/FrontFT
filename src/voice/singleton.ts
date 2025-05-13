@@ -10,6 +10,7 @@ type VoiceModuleType = {
   destroy: () => Promise<void>;
   getState: () => string;
   getTranscripts: () => any[];
+  isRecording?: () => boolean; // Optional method that might be missing in some versions
 };
 
 let instance: VoiceModule | null = null;
@@ -23,6 +24,15 @@ function createInstanceIfNeeded(): VoiceModule {
       debug: true,
       serverUrl: import.meta.env.VITE_ASR_WS_URL,
     });
+    
+    // 💉 Hot-patch for isRecording() method
+    const moduleInstance = instance as any;
+    if (typeof moduleInstance.isRecording !== 'function') {
+      console.warn('[Voice] 🩹 Applying patch for missing isRecording() method');
+      moduleInstance.isRecording = function() {
+        return this.getState() === 'recording';
+      };
+    }
     
     console.log(`[Voice] ✅ Created instance`);
     void instance.start();  // pre-loads AudioContext and WS
