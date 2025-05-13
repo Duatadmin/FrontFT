@@ -80,8 +80,14 @@ export class WebSocketClient {
 
     if (this.isConnected()) {
       try {
-        // Send the buffer directly (transferable)
-        this.socket.send(chunk.buffer);
+        // Check readyState again as an extra precaution
+        if (this.socket.readyState === WebSocket.OPEN) {
+          // Log diagnostic info before sending
+          console.log('[SEND]', chunk.byteLength, 'bytes');
+          this.socket.send(chunk.buffer);
+        } else {
+          console.debug('[WS] Socket not in OPEN state:', this.socket.readyState);
+        }
       } catch (error) {
         console.error('[WS] Error sending data:', error);
       }
@@ -121,6 +127,40 @@ export class WebSocketClient {
            this.connected;
   }
 
+  /**
+   * Returns a promise that resolves when the socket is ready
+   * @returns {Promise<void>}
+   */
+  socketReady() {
+    return new Promise((resolve, reject) => {
+      if (this.isConnected()) {
+        resolve();
+        return;
+      }
+      
+      const checkInterval = 100; // ms
+      const maxWait = 5000; // 5 seconds timeout
+      let waited = 0;
+      
+      const checkLoop = () => {
+        if (this.isConnected()) {
+          resolve();
+          return;
+        }
+        
+        waited += checkInterval;
+        if (waited >= maxWait) {
+          reject(new Error('Timed out waiting for WebSocket to be ready'));
+          return;
+        }
+        
+        setTimeout(checkLoop, checkInterval);
+      };
+      
+      checkLoop();
+    });
+  }
+
   // Private handlers
 
   /**
@@ -128,7 +168,7 @@ export class WebSocketClient {
    * @private
    */
   _handleOpen(event) {
-    console.log('[WS] Connection established');
+    console.log('[WS] ✅ open');
     this.connected = true;
     this._notifyStatusChange(true);
   }
@@ -139,15 +179,28 @@ export class WebSocketClient {
    */
   _handleMessage(event) {
     try {
-      // Parse the JSON message
-      const json = JSON.parse(event.data);
+      console.log('[RX]', typeof event.data === 'string' ? event.data.slice(0, 80) : 'Binary data received');
       
-      // Check if it's a valid transcript response
-      if (json.text !== undefined) {
+      // Parse the JSON message
+      const msg = JSON.parse(event.data);
+      
+      // Check if it's a valid transcript response in standard format
+      if (msg.text !== undefined) {
         this.onTranscript({
-          text: json.text,
-          is_final: json.is_final === true
+          text: msg.text,
+          is_final: msg.is_final === true
         });
+      } 
+      // Check for Deepgram format
+      else if (msg.channel?.alternatives?.length) {
+        const txt = msg.channel.alternatives[0].transcript;
+        if (txt && txt.trim()) {
+          console.log('[TRANSCRIPT]', txt, 'final:', msg.is_final);
+          this.onTranscript({
+            text: txt,
+            is_final: msg.is_final === true
+          });
+        }
       }
     } catch (error) {
       console.warn('[WS] Failed to parse message:', error);
@@ -167,7 +220,7 @@ export class WebSocketClient {
    * @private
    */
   _handleClose(event) {
-    console.log(`[WS] Connection closed: ${event.code} ${event.reason}`);
+    console.log(`[WS] ❌ close ${event.code} ${event.reason}`);
     this.connected = false;
     this.socket = null;
     this._notifyStatusChange(false);

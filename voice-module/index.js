@@ -329,3 +329,6 @@ export { MODES };
 
 // Export as default
 export default VoiceModule;
+
+// Export the bus from voice-core
+export { bus } from './core/voice-core.js';

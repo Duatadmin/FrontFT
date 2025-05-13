@@ -10,6 +10,10 @@ import { PCMWorkletNodeController } from '../audio/pcm-worklet-node.js';
 import { WebSocketClient } from '../streaming/ws-client.js';
 import { PushToTalkMode } from '../modes/mode-push.js';
 import { WalkieTalkieMode } from '../modes/mode-walkie.js';
+import { EventBus, EVENTS } from './event-bus.js';
+
+// Create a global bus instance
+export const bus = new EventBus();
 
 /**
  * Main VoiceModule class that integrates all voice input functionality
@@ -107,7 +111,12 @@ export class VoiceCore {
     try {
       // Resume audio context if suspended
       if (this.audioContext?.state === 'suspended') {
-        await this.audioContext.resume();
+        try {
+          await this.audioContext.resume();
+          console.log('[AUDIO] after resume:', this.audioContext.state);
+        } catch (resumeError) {
+          console.error('Failed to resume AudioContext:', resumeError);
+        }
       }
       
       // Initialize audio worklet if not already done
@@ -248,8 +257,22 @@ export class VoiceCore {
     }
     
     // Send to WebSocket if recording is active
-    if (this.isRecording && this.wsClient && this.wsClient.isConnected()) {
-      this.wsClient.send(chunk);
+    if (this.isRecording && this.wsClient) {
+      // Make sure we're connected before sending
+      if (this.wsClient.isConnected()) {
+        this.wsClient.send(chunk);
+      } else {
+        // Try to use socketReady in a non-blocking way
+        this._log('WebSocket not ready, waiting...');
+        this.wsClient.socketReady()
+          .then(() => {
+            this._log('WebSocket now ready, sending audio');
+            this.wsClient.send(chunk);
+          })
+          .catch(err => {
+            this._log(`Failed to connect WebSocket: ${err.message}`);
+          });
+      }
     }
   }
   
@@ -260,6 +283,9 @@ export class VoiceCore {
    */
   _handleActiveStateChange(isActive) {
     this.isRecording = isActive;
+    
+    // Emit event to the bus
+    bus.emit(isActive ? EVENTS.RECORDING_STARTED : EVENTS.RECORDING_STOPPED);
     
     // Notify state change if callback provided
     if (typeof this.config.onStateChange === 'function') {
@@ -288,6 +314,11 @@ export class VoiceCore {
     if (this.transcripts.length > 10) {
       this.transcripts.shift();
     }
+    
+    // Emit event to the bus
+    const eventType = transcript.is_final ? EVENTS.TRANSCRIPT_FINAL : EVENTS.TRANSCRIPT_INTERIM;
+    bus.emit(eventType, timestampedTranscript);
+    bus.emit('transcript:partial', transcript.text);
     
     // Forward to callback if provided
     if (typeof this.config.onTranscript === 'function') {
