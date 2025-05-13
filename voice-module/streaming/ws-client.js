@@ -161,6 +161,30 @@ export class WebSocketClient {
     });
   }
 
+  /**
+   * Close the WebSocket connection with optional code and reason
+   * 
+   * @param {number} [code=1000] - Status code
+   * @param {string} [reason='Normal closure'] - Close reason
+   */
+  close(code = 1000, reason = 'Normal closure') {
+    if (this.socket) {
+      try {
+        // Only attempt to close if the connection is open
+        if (this.socket.readyState === WebSocket.OPEN) {
+          console.log(`[WS] Closing with code=${code}, reason="${reason}"`);
+          this.socket.close(code, reason);
+        }
+      } catch (error) {
+        console.error('[WS] Error during close:', error);
+      } finally {
+        this.socket = null;
+        this.connected = false;
+        this._notifyStatusChange(false);
+      }
+    }
+  }
+
   // Private handlers
 
   /**

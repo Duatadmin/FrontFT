@@ -11,6 +11,7 @@ import { WebSocketClient } from '../streaming/ws-client.js';
 import { PushToTalkMode } from '../modes/mode-push.js';
 import { WalkieTalkieMode } from '../modes/mode-walkie.js';
 import { EventBus, EVENTS } from './event-bus.js';
+import { SessionState } from './session-state.js';
 
 // Create a global bus instance
 export const bus = new EventBus();
@@ -36,6 +37,16 @@ export class VoiceCore {
     // Merge default config with user-provided config
     this.config = { ...DEFAULTS, ...config };
     
+    // Create session state
+    this.session = new SessionState({
+      onStateChange: (state) => {
+        this._log(`Session state changed: ${state}`);
+      }
+    });
+    
+    // Reference to the event bus
+    this.bus = bus;
+    
     // Tracking state
     this.isInitialized = false;
     this.isRecording = false;
@@ -46,6 +57,11 @@ export class VoiceCore {
     this.workletController = null;
     this.wsClient = null;
     this.inputMode = null;
+    
+    // Audio graph nodes
+    this.node = null;
+    this.source = null;
+    this.muteGain = null;
     
     // Bind methods to preserve 'this' context
     this._handleAudioChunk = this._handleAudioChunk.bind(this);
@@ -122,6 +138,13 @@ export class VoiceCore {
       // Initialize audio worklet if not already done
       if (!this.workletController.node) {
         await this.workletController.init();
+        
+        // Store references to audio nodes for later use
+        this.node = this.workletController.node;
+        this.source = this.workletController.source;
+        
+        // Create a mute gain node to prevent feedback
+        this.muteGain = new GainNode(this.audioContext, { gain: 0 });
       }
       
       // Connect to WebSocket server
@@ -187,19 +210,47 @@ export class VoiceCore {
   /**
    * Manually start recording (primarily for push-to-talk mode)
    */
-  startRecording() {
+  async startRecording() {
+    if (this.session?.isRecording()) return;
+
+    // если контекст был приостановлен, вернём его
+    if (this.audioContext.state === 'suspended') {
+      await this.audioContext.resume();
+      // подключаем граф заново
+      this.source.connect(this.node).connect(this.muteGain);
+    }
+
     if (this.config.mode === MODES.PUSH_TO_TALK && this.inputMode) {
       this.inputMode.start();
     }
+    
+    this.session.setRecording(true);
+    this.bus.emit(EVENTS.STATE, 'recording');
   }
   
   /**
    * Manually stop recording (primarily for push-to-talk mode)
    */
-  stopRecording() {
+  async stopRecording() {
+    if (!this.session?.isRecording()) return;
+
+    // 1) Прерываем поток в аудиографе
+    if (this.node)   this.node.disconnect();
+    if (this.source) this.source.disconnect();
+    // 2) Останавливаем обработку CPU
+    if (this.audioContext.state === 'running') {
+      await this.audioContext.suspend();   // мгновенно
+    }
+
     if (this.config.mode === MODES.PUSH_TO_TALK && this.inputMode) {
       this.inputMode.stop();
     }
+   
+    this.session.setRecording(false);
+    this.bus.emit(EVENTS.STATE, 'idle');
+
+    // Осознанно завершаем WS
+    this.wsClient.close(1000, 'done');  // чтобы Deepgram не ждал таймаута
   }
   
   /**

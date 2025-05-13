@@ -32,6 +32,7 @@ export class PCMWorkletNodeController {
                 'rate', this.audioContext.sampleRate);
                 
     const source = this.audioContext.createMediaStreamSource(stream);
+    this.source = source; // Expose source for external access
 
     this.node.port.onmessage = (e) => {
       if (e.data?.type === 'log') {
