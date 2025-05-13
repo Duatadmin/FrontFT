@@ -19,14 +19,13 @@ export class PCMWorkletNodeController {
 
     this.node = new AudioWorkletNode(this.audioContext, 'pcm-processor');
     this.node.port.onmessage = (e) => {
-      // Check if it's a log message or audio data
-      if (e.data instanceof ArrayBuffer) {
-        const chunk = new Int16Array(e.data);
-        console.log('[WORKLET] samples', chunk.length);
-        this.onChunk(chunk);
-      } else if (e.data?.type === 'log') {
-        console.log('[WORKLET]', e.data.message);
-      }
+       if (e.data?.type === 'pcm') {
+            const chunk = new Int16Array(e.data.data);
+           console.log('[WORKLET] samples', chunk.length);
+           this.onChunk(chunk);
+         } else if (e.data?.type === 'log') {
+           console.log('[WORKLET]', e.data.message);
+          }
     };
 
     const muteGain = new GainNode(this.audioContext, { gain: 0 });

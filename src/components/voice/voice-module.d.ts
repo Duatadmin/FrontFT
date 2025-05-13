@@ -1,5 +1,5 @@
 // Type declarations for voice-module
-declare module '../../../voice-module/index.js' {
+declare module 'voice-module/index.js' {
   export const MODES: {
     PUSH_TO_TALK: string;
     VOICE_ACTIVATED: string;

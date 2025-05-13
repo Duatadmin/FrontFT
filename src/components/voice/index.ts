@@ -1,6 +1,6 @@
 /// <reference types="vite/client" />
 
-import { VoiceModule, MODES } from '../../../voice-module/index.js';
+import { VoiceModule, MODES } from 'voice-module/index.js';
 
 let currentTargetId: string | null = null;
 let isRecording = false;
