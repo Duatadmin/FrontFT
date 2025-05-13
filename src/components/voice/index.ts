@@ -46,22 +46,26 @@ export function setTranscriptTarget(id: string) {
 }
 
 export async function initVoiceModule(): Promise<boolean> {
-  // We don't call voice.start() here anymore - initialization happens on user interaction
   try {
     // Check if browser supports getUserMedia
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
       throw new Error('Browser does not support getUserMedia');
     }
     
-    // Just test if we can access the microphone, but don't start anything
+    // Just test if we can access the microphone
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     // Immediately stop all tracks since we're just checking permissions
     stream.getTracks().forEach(track => track.stop());
     
     console.log('Microphone permission granted');
+    
+    // Pre-initialize the worklet and WebSocket
+    await voice.start();
+    console.log('Voice module initialized');
+    
     return true;
   } catch (error) {
-    console.error('Microphone permission denied:', error);
+    console.error('Microphone permission denied or initialization failed:', error);
     return false;
   }
 }

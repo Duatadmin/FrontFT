@@ -12,11 +12,20 @@ export class PCMWorkletNodeController {
     const workletURL = import.meta.env.BASE_URL + 'worklet/pcm-processor.js';
     try {
       await this.audioContext.audioWorklet.addModule(workletURL);
-      console.log('[WORKLET] module loaded', workletURL);
+      console.log('[WORKLET] ✅ module loaded', workletURL);
     } catch (err) {
-      console.error('[WORKLET] addModule failed', err);
+      console.error('[WORKLET] ❌ addModule failed', err);
       throw err;
     }
+    
+    try {
+      this.node = new AudioWorkletNode(this.audioContext, 'pcm-processor');
+      console.log('[WORKLET] ✅ node constructed');
+    } catch (err) {
+      console.error('[WORKLET] ❌ node construct failed', err);
+      throw err;
+    }
+
     const stream = await getMicrophoneStream();
     
     console.log('[MEDIA]', stream.getAudioTracks()[0].label,
@@ -24,9 +33,8 @@ export class PCMWorkletNodeController {
                 
     const source = this.audioContext.createMediaStreamSource(stream);
 
-    this.node = new AudioWorkletNode(this.audioContext, 'pcm-processor');
     this.node.port.onmessage = (e) => {
-       if (e.data?.type === 'pcm') {
+       if (e.data?.type === 'pcm' && e.data.data) {
             const chunk = new Int16Array(e.data.data);
            console.log('[WORKLET] samples', chunk.length);
            this.onChunk(chunk);

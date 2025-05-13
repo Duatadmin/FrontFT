@@ -5,7 +5,7 @@ class PCMProcessor extends AudioWorkletProcessor {
     this.lastLogTime = 0;
   }
   
-  process(inputs) {
+  process(inputs, outputs, parameters) {
     const channel = inputs[0][0]; // mono
     if (!channel) return true;
 
@@ -26,8 +26,8 @@ class PCMProcessor extends AudioWorkletProcessor {
     }
 
     // Send the buffer as transferable to avoid copies
-    this.port.postMessage(pcm.buffer, [pcm.buffer]);
-    return true;
+    this.port.postMessage({ type: 'pcm', data: pcm.buffer }, [pcm.buffer]);
+    return true;  // ✅ must return true to keep processing
   }
 }
 
