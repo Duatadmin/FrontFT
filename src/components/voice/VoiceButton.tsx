@@ -52,7 +52,7 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
     holdTimer.current = window.setTimeout(() => {
       if (Date.now() - lastStop.current < COOLDOWN) return;
       const voice = getVoiceModule();
-      voice.startRecording();
+      (() => voice.startRecording())();
       // navigator.vibrate?.(20);            // optional haptic
       setState('recording');
     }, HOLD_MS);
@@ -75,7 +75,7 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
       cancelArming();
     } else if (state === 'recording') {
       const voice = getVoiceModule();
-      voice.stopRecording();
+      (() => voice.stopRecording())();
       lastStop.current = Date.now();
       setState('idle');
       // navigator.vibrate?.(30);            // optional haptic

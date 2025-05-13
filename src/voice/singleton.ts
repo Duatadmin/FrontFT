@@ -23,6 +23,11 @@ export function getVoiceModule(): VoiceModule {
       serverUrl: import.meta.env.VITE_ASR_WS_URL,
     });
     
+    // Ensure methods are bound to the instance
+    instance.startRecording = instance.startRecording.bind(instance);
+    instance.stopRecording = instance.stopRecording.bind(instance);
+    instance.toggleRecording = instance.toggleRecording.bind(instance);
+    
     console.log(`[Voice] ✅ Created instance`);
     void instance.start();  // pre-loads AudioContext and WS
   }

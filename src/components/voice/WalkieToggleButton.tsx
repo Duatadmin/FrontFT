@@ -60,8 +60,8 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
       // Use the singleton instance
       const voice = getVoiceModule();
       
-      // Toggle between modes
-      await voice.toggleRecording();
+      // Toggle between modes - use proper arrow function to preserve context
+      await (async () => voice.toggleRecording())();
       setActive(newState);
     } catch (error) {
       console.error('Failed to toggle mode', error);
