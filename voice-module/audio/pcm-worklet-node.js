@@ -34,13 +34,28 @@ export class PCMWorkletNodeController {
     const source = this.audioContext.createMediaStreamSource(stream);
 
     this.node.port.onmessage = (e) => {
-       if (e.data?.type === 'pcm' && e.data.data) {
-            const chunk = new Int16Array(e.data.data);
-           console.log('[WORKLET] samples', chunk.length);
-           this.onChunk(chunk);
-         } else if (e.data?.type === 'log') {
-           console.log('[WORKLET]', e.data.message);
-          }
+      if (e.data?.type === 'log') {
+        console.log('[WORKLET]', e.data.message);
+        return;
+      }
+      if (e.data?.type !== 'pcm' || !e.data.data) return;
+      const chunk = new Int16Array(e.data.data);
+
+      // ─── Buffer to 320-sample frames (20 ms) ───
+      if (!this.cache) this.cache = new Int16Array(0);
+      const combined = new Int16Array(this.cache.length + chunk.length);
+      combined.set(this.cache);
+      combined.set(chunk, this.cache.length);
+
+      const FRAME = 320;
+      const frames = Math.floor(combined.length / FRAME);
+      if (frames > 0) {
+        const sendBuf = combined.subarray(0, frames * FRAME);
+        this.onChunk(sendBuf);                     // send to WS
+        this.cache = combined.subarray(frames * FRAME); // tail
+      } else {
+        this.cache = combined;
+      }
     };
 
     const muteGain = new GainNode(this.audioContext, { gain: 0 });
