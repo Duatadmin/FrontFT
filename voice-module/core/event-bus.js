@@ -24,9 +24,10 @@ export const EVENTS = {
   // Transcript events
   TRANSCRIPT_INTERIM: 'transcript:interim',
   TRANSCRIPT_FINAL: 'transcript:final',
-  
+
   // Session events
   SESSION_STATE_CHANGED: 'session:stateChanged',
+  STATE: 'state',
   ERROR: 'error'
 };
 
