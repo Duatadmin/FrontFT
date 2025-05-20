@@ -277,6 +277,19 @@ export class VoiceCore {
     }
     return false;
   }
+
+  /**
+   * Change input mode at runtime
+   * @param {'push' | 'walkie'} mode
+   */
+  setMode(mode) {
+    if (this.config.mode === mode) return;
+    if (this.isRecording) {
+      this.stopRecording();
+    }
+    this.config.mode = mode;
+    this._initializeInputMode();
+  }
   
   /**
    * Get latest transcript

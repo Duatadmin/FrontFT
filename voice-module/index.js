@@ -27,6 +27,8 @@ export class VoiceModule {
   startRecording() { return this.core.startRecording(); }
   stopRecording() { return this.core.stopRecording(); }
   toggleRecording() { return this.core.toggleRecording(); }
+  stop() { return this.core.stop(); }
+  setMode(mode) { return this.core.setMode(mode); }
   destroy() { return this.core.destroy(); }
 
   /* helpers */

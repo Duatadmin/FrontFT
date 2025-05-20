@@ -62,6 +62,16 @@ export async function toggleVoiceRecording(): Promise<boolean> {
   return voice.toggleRecording();
 }
 
+export function setVoiceMode(mode: 'push' | 'walkie'): void {
+  const voice = createInstanceIfNeeded();
+  voice.setMode(mode);
+}
+
+export function stopVoice(): void {
+  const voice = createInstanceIfNeeded();
+  voice.stop();
+}
+
 export function destroyVoiceModule(): void {
   if (instance) {
     console.log(`[Voice] ❌ Destroying instance`);
