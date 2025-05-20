@@ -176,6 +176,14 @@ export class SessionState {
   isInState(stateToCheck) {
     return this.state === stateToCheck;
   }
+
+  /**
+   * Check if the session is currently recording
+   * @returns {boolean}
+   */
+  isRecording() {
+    return this.state === SESSION_STATE.RECORDING;
+  }
   
   /**
    * Get summary of current session state

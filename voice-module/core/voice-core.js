@@ -36,6 +36,11 @@ export class VoiceCore {
   constructor(config = {}) {
     // Merge default config with user-provided config
     this.config = { ...DEFAULTS, ...config };
+
+    // Support legacy `serverUrl` option used in docs
+    if (!this.config.websocketUrl && this.config.serverUrl) {
+      this.config.websocketUrl = this.config.serverUrl;
+    }
     
     // Create session state
     this.session = new SessionState({
@@ -212,6 +217,15 @@ export class VoiceCore {
    */
   async startRecording() {
     if (this.session?.isRecording()) return;
+
+    // Reconnect WebSocket if it was closed in a previous session
+    if (this.wsClient && !this.wsClient.isConnected()) {
+      try {
+        await this.wsClient.connect();
+      } catch (err) {
+        console.error('Failed to reconnect WebSocket:', err);
+      }
+    }
 
     // если контекст был приостановлен, вернём его
     if (this.audioContext.state === 'suspended') {
