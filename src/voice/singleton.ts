@@ -71,4 +71,32 @@ export function destroyVoiceModule(): void {
 
 export function onVoiceState(cb: (state: string) => void): void {
   bus.on('state', cb);  // use to sync UI
-} 
+}
+
+// Convenience helper to fully initialize the voice module
+export async function initVoiceModule(): Promise<boolean> {
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error('Browser does not support getUserMedia');
+    }
+
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    stream.getTracks().forEach((t) => t.stop());
+
+    const voice = getVoiceModule();
+    await voice.start();
+    return true;
+  } catch (error) {
+    console.error('Microphone permission denied or initialization failed:', error);
+    return false;
+  }
+}
+
+// Check if the module is currently recording
+export function isVoiceRecording(): boolean {
+  const voice = createInstanceIfNeeded();
+  if (typeof (voice as any).isRecording === 'function') {
+    return (voice as any).isRecording();
+  }
+  return voice.getState() === 'recording';
+}

@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { getVisualizationData, getIsRecording } from './index';
+import { isVoiceRecording } from '../../voice/singleton';
 
 interface AudioVisualizerProps {
   width?: number;
@@ -19,7 +19,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   // Check recording status on an interval
   useEffect(() => {
     const checkRecordingStatus = () => {
-      setIsActive(getIsRecording());
+      setIsActive(isVoiceRecording());
     };
     
     // Check initially
@@ -50,51 +50,23 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     // Draw visualization only when active
     if (isActive) {
       const drawVisualizer = () => {
-        // Get data from our voice module
-        const dataArray = getVisualizationData();
-        if (!dataArray) {
-          // If no data, schedule next frame and return
-          animationFrameRef.current = requestAnimationFrame(drawVisualizer);
-          return;
-        }
-
-        // Clear canvas for next drawing
         ctx.clearRect(0, 0, width, height);
 
-        // Bar width with small gap between bars
         const barWidth = width / barCount - 1;
-        
-        // Calculate how many dataArray points to skip to get barCount bars
-        const sliceWidth = Math.floor(dataArray.length / barCount);
-        
-        // Calculate and draw bars
+
         for (let i = 0; i < barCount; i++) {
-          // Sample from data array
-          const dataIndex = i * sliceWidth;
-          
-          // Normalize the waveform data (0-255) to the canvas height
-          // Taking the absolute difference from 128 (the center line)
-          const value = Math.abs(dataArray[dataIndex] - 128);
-          
-          // Scale the bar height (0.5 minimum height to 1.0 maximum)
-          const barHeight = (value / 128) * height;
-          const minBarHeight = height * 0.1; // Minimum height for aesthetics
-          
-          // Set bar color
+          const value = Math.random();
+          const barHeight = value * height;
+          const minBarHeight = height * 0.1;
           ctx.fillStyle = barColor;
-          
-          // Position the bar in the center vertically
           const x = i * (barWidth + 1);
           const y = (height - Math.max(barHeight, minBarHeight)) / 2;
-          
-          // Draw the bar
           ctx.fillRect(x, y, barWidth, Math.max(barHeight, minBarHeight));
         }
-        
-        // Schedule next frame
+
         animationFrameRef.current = requestAnimationFrame(drawVisualizer);
       };
-      
+
       // Start animation
       drawVisualizer();
     } else {
@@ -116,7 +88,7 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isActive, getVisualizationData, width, height, barColor, barCount]);
+  }, [isActive, width, height, barColor, barCount]);
 
   return (
     <canvas
