@@ -35,7 +35,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       if (finalTranscript && finalTranscript.textContent) {
         const transcript = finalTranscript.textContent.trim();
         if (transcript) {
-          onSendMessage(transcript);
+          setInputValue(transcript);
           // Clear the transcript
           finalTranscript.textContent = '';
         }
