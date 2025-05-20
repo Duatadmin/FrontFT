@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { SendHorizonal } from 'lucide-react'; // Using lucide-react for icons
-import { VoiceButton, WalkieToggleButton, AudioVisualizer } from '../voice';
+import { VoiceButton, WalkieToggleButton, AudioVisualizer, onVoiceState, onVoiceTranscriptFinal } from '../voice';
 import { getVoiceModule } from '../../voice/singleton';
 
 interface ChatInputProps {
@@ -28,47 +28,44 @@ const ChatInput: React.FC<ChatInputProps> = ({
     getVoiceModule();
   }, []);
   
-  // Handle final transcript
+  // Collect transcripts while recording and apply when recording stops
   useEffect(() => {
-    const handleFinalTranscript = () => {
-      const finalTranscript = document.getElementById(`${chatInputId}-final`);
-      if (finalTranscript && finalTranscript.textContent) {
-        const transcript = finalTranscript.textContent.trim();
-        if (transcript) {
-          setInputValue(transcript);
-          // Clear the transcript
-          finalTranscript.textContent = '';
-        }
+    let pending = '';
+
+    const offFinal = onVoiceTranscriptFinal((data) => {
+      if (data?.text) {
+        pending = pending ? `${pending} ${data.text}` : data.text;
       }
-    };
-    
-    // Listen for mutations to the final transcript element
-    const observer = new MutationObserver(handleFinalTranscript);
-    const finalTranscriptEl = document.getElementById(`${chatInputId}-final`);
-    
-    if (finalTranscriptEl) {
-      observer.observe(finalTranscriptEl, { childList: true, characterData: true, subtree: true });
-    } else {
-      // Create the transcript containers if they don't exist yet
-      const transcriptContainer = document.createElement('div');
-      transcriptContainer.style.display = 'none';
-      
+    });
+
+    const offState = onVoiceState((state) => {
+      if (state === 'recording') {
+        pending = '';
+      } else if (state === 'idle' && pending) {
+        setInputValue(pending.trim());
+        pending = '';
+      }
+    });
+
+    // Ensure transcript DOM targets exist for interim display
+    const container = document.getElementById(`${chatInputId}-final`);
+    if (!container) {
+      const wrap = document.createElement('div');
+      wrap.style.display = 'none';
       const interimEl = document.createElement('div');
       interimEl.id = `${chatInputId}-interim`;
-      
       const finalEl = document.createElement('div');
       finalEl.id = `${chatInputId}-final`;
-      
-      transcriptContainer.appendChild(interimEl);
-      transcriptContainer.appendChild(finalEl);
-      document.body.appendChild(transcriptContainer);
-      
-      // Now observe the final element
-      observer.observe(finalEl, { childList: true, characterData: true, subtree: true });
+      wrap.appendChild(interimEl);
+      wrap.appendChild(finalEl);
+      document.body.appendChild(wrap);
     }
-    
-    return () => observer.disconnect();
-  }, [onSendMessage]);
+
+    return () => {
+      offFinal();
+      offState();
+    };
+  }, []);
 
   // Auto-resize textarea height
   useEffect(() => {
