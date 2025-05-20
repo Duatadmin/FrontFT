@@ -81,7 +81,7 @@ const voice = new VoiceModule({
 });
 
 await voice.setMode('walkie');  // or 'push'
-voice.start();
+voice.start();  // you can switch modes later with voice.setMode()
 🕹 API Reference
 new VoiceModule(options)
 Options:
@@ -101,6 +101,8 @@ Stops the audio stream and closes WebSocket.
 
 voice.setMode(mode: 'push' | 'walkie')
 Switches between manual and voice-activated input.
+You can call this at runtime to seamlessly change modes; any active
+recording will be stopped automatically and the new mode will take effect.
 
 voice.destroy()
 Cleans up all resources. Call this when unmounting component/page.

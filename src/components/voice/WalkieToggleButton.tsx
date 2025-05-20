@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 import { setTranscriptTarget } from './index';
-import { 
-  getVoiceModule, 
+import {
+  getVoiceModule,
   onVoiceState,
-  toggleVoiceRecording
+  setVoiceMode,
+  stopVoice
 } from '../../voice/singleton';
+import { MODES } from 'voice-module/index.js';
 
 interface WalkieToggleButtonProps {
   targetId: string;
@@ -21,19 +23,17 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
 
   // Initialize voice module and check mic permissions
   useEffect(() => {
-    // Set transcript target
     setTranscriptTarget(targetId);
-    
-    // Initialize voice module
+
     try {
       const voice = getVoiceModule();
       setMicReady(true);
-      
-      // Listen for state changes
+
       onVoiceState((state) => {
-        setActive(state === 'recording');
+        if (voice.core.config.mode === MODES.VOICE_ACTIVATED) {
+          setActive(state === 'recording');
+        }
       });
-      
     } catch (error) {
       console.error('Failed to initialize voice module', error);
       setMicReady(false);
@@ -58,14 +58,24 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
   `;
 
   const handleClick = async () => {
-    const newState = !active;
-    
-    try {
-      // Use the wrapper function
-      await toggleVoiceRecording();
-      setActive(newState);
-    } catch (error) {
-      console.error('Failed to toggle mode', error);
+    const voice = getVoiceModule();
+
+    if (!active) {
+      try {
+        setVoiceMode(MODES.VOICE_ACTIVATED);
+        await voice.start();
+        setActive(true);
+      } catch (error) {
+        console.error('Failed to enable walkie mode', error);
+      }
+    } else {
+      try {
+        stopVoice();
+        setVoiceMode(MODES.PUSH_TO_TALK);
+        setActive(false);
+      } catch (error) {
+        console.error('Failed to disable walkie mode', error);
+      }
     }
   };
 
