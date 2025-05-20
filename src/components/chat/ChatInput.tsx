@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 import { SendHorizonal } from 'lucide-react'; // Using lucide-react for icons
-import { VoiceButton, WalkieToggleButton, AudioVisualizer, initVoiceModule } from '../voice';
+import { VoiceButton, WalkieToggleButton, AudioVisualizer } from '../voice';
+import { getVoiceModule } from '../../voice/singleton';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -23,16 +24,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   
   // Initialize voice module on component mount
   useEffect(() => {
-    const initVoice = async () => {
-      try {
-        await initVoiceModule();
-        console.log('Voice module initialized in chat input');
-      } catch (error) {
-        console.error('Failed to initialize voice module in chat input:', error);
-      }
-    };
-    
-    initVoice();
+    // Ensure a single voice module instance is created
+    getVoiceModule();
   }, []);
   
   // Handle final transcript
