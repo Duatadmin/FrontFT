@@ -69,6 +69,6 @@ export function destroyVoiceModule(): void {
   }
 }
 
-export function onVoiceState(cb: (state: string) => void): void {
-  bus.on('state', cb);  // use to sync UI
-} 
+export function onVoiceState(cb: (state: string) => void): () => void {
+  return bus.on('state', cb);  // use to sync UI
+}

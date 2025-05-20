@@ -30,7 +30,7 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
       setMicReady(true);
       
       // Listen for state changes
-      onVoiceState((state) => {
+      const off = onVoiceState((state) => {
         setActive(state === 'recording');
       });
       
@@ -38,6 +38,10 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
       console.error('Failed to initialize voice module', error);
       setMicReady(false);
     }
+
+    return () => {
+      off?.();
+    };
   }, [targetId]);
 
   // Button appearance depends on active state

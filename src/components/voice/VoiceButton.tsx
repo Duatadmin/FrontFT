@@ -32,7 +32,7 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
     }
     
     // Listen for voice state changes
-    onVoiceState((s) => {
+    const off = onVoiceState((s) => {
       if (s === 'recording') {
         setState('recording');
       } else if (s === 'idle' && state === 'recording') {
@@ -44,6 +44,7 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
     getVoiceModule();
     
     return () => {
+      off();
       // Only destroy if this is the last component using it
       // In a real app, you might want to track reference counts
       destroyVoiceModule();
