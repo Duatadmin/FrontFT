@@ -33,11 +33,7 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
     
     // Listen for voice state changes
     onVoiceState((s) => {
-      if (s === 'recording') {
-        setState('recording');
-      } else if (s === 'idle' && state === 'recording') {
-        setState('idle');
-      }
+      setState(s === 'recording' ? 'recording' : 'idle');
     });
     
     // Make sure voice module is initialized
