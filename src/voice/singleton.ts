@@ -35,7 +35,6 @@ function createInstanceIfNeeded(): VoiceModule {
     }
     
     console.log(`[Voice] ✅ Created instance`);
-    void instance.start();  // pre-loads AudioContext and WS
   }
   return instance;
 }
@@ -48,6 +47,7 @@ export function getVoiceModule(): VoiceModule {
 // Safe wrapper methods for common operations
 export async function startVoiceRecording(): Promise<void> {
   const voice = createInstanceIfNeeded();
+  await voice.start();
   return voice.startRecording();
 }
 
@@ -58,6 +58,7 @@ export async function stopVoiceRecording(): Promise<void> {
 
 export async function toggleVoiceRecording(): Promise<boolean> {
   const voice = createInstanceIfNeeded();
+  await voice.start();
   return voice.toggleRecording();
 }
 
