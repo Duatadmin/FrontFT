@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create, StateCreator } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import supabase, { WorkoutSession, TrainingPlan } from '../lib/supabaseClient';
 // Import mock data generators for development
@@ -208,10 +208,7 @@ const getTodayWorkout = (plan: TrainingPlan | null): any | null => {
 };
 
 // Create the store
-const useDiaryStore = create<DiaryState>()(
-  devtools(
-    persist<DiaryState>(
-      (set, get) => ({
+const diaryStoreCreator: StateCreator<DiaryState> = (set, get) => ({
         // Initial state
         sessions: [],
         currentPlan: null,
@@ -267,7 +264,7 @@ const useDiaryStore = create<DiaryState>()(
       // Core diary actions
       fetchSessions: async (userId: string, filters?: Partial<DiaryFilters>) => {
         try {
-          set(state => ({
+          set((state: DiaryState) => ({
             loading: { ...state.loading, sessions: true },
             error: { ...state.error, sessions: null }
           }));
@@ -348,7 +345,7 @@ const useDiaryStore = create<DiaryState>()(
           });
         } catch (error) {
           console.error('Error fetching workout sessions:', error);
-          set(state => ({
+          set((state: DiaryState) => ({
             loading: { ...state.loading, sessions: false },
             error: { ...state.error, sessions: error instanceof Error ? error.message : 'Failed to fetch sessions' }
           }));
@@ -357,7 +354,7 @@ const useDiaryStore = create<DiaryState>()(
       
       fetchCurrentPlan: async (userId: string) => {
         try {
-          set(state => ({
+          set((state: DiaryState) => ({
             loading: { ...state.loading, currentPlan: true },
             error: { ...state.error, currentPlan: null }
           }));
@@ -399,15 +396,15 @@ const useDiaryStore = create<DiaryState>()(
           });
         } catch (error) {
           console.error('Error fetching current plan:', error);
-          set(state => ({
+          set((state: DiaryState) => ({
             loading: { ...state.loading, currentPlan: false },
             error: { ...state.error, currentPlan: error instanceof Error ? error.message : 'Failed to fetch training plan' }
           }));
         }
       },
       
-      setFilters: (filters) => {
-        set(state => ({
+      setFilters: (filters: Partial<DiaryFilters>): void => {
+        set((state: DiaryState) => ({
           filters: { ...state.filters, ...filters }
         }));
         // Automatically refetch with new filters if we have a userId
@@ -416,11 +413,11 @@ const useDiaryStore = create<DiaryState>()(
         get().fetchSessions(mockUserId);
       },
       
-      setActiveTab: (tab) => {
+      setActiveTab: (tab: DiaryTab): void => {
         set({ activeTab: tab });
       },
       
-      selectSession: (session) => {
+      selectSession: (session: WorkoutSession | null): void => {
         set({ selectedSession: session });
       },
       
@@ -437,8 +434,11 @@ const useDiaryStore = create<DiaryState>()(
       
       // Add all enhanced diary actions 
       ...createEnhancedDiaryActions(set, get)
-    }),
-    {
+    });
+
+const useDiaryStore = create<DiaryState>()(
+  devtools(
+    persist<DiaryState>(diaryStoreCreator, {
       name: 'diary-store',
       // Only persist certain parts of the state
       partialize: (state) => ({

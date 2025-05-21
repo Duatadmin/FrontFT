@@ -81,15 +81,15 @@ export function destroyVoiceModule(): void {
 }
 
 export function onVoiceState(cb: (state: string) => void): () => void {
-  return bus.on('state', cb);  // use to sync UI
+  return bus.on('state', cb).off;  // use to sync UI
 }
 
 export function onVoiceTranscriptFinal(cb: (data: any) => void): () => void {
-  return bus.on('transcript:final', cb);
+  return bus.on('transcript:final', cb).off;
 }
 
 export function onVoiceTranscriptInterim(cb: (data: any) => void): () => void {
-  return bus.on('transcript:interim', cb);
+  return bus.on('transcript:interim', cb).off;
 }
 
 // Convenience helper to fully initialize the voice module
