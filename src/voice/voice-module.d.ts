@@ -4,17 +4,20 @@ declare module 'voice-module/index.js' {
     VOICE_ACTIVATED: 'walkie';
   };
 
-  export class VoiceModule {
-    constructor(config: any);
-    core: any;
-    start(): Promise<void>;
-    startRecording(): Promise<void>;
-    stopRecording(): Promise<void>;
-    toggleRecording(): Promise<boolean>;
-    destroy(): Promise<void>;
-    getState(): string;
-    getTranscripts(): any[];
-  }
+    export class VoiceModule {
+      constructor(config: any);
+      core: any;
+      start(): Promise<void>;
+      startRecording(): Promise<void>;
+      stopRecording(): Promise<void>;
+      toggleRecording(): Promise<boolean>;
+      stop(): Promise<void>;
+      setMode(mode: 'push' | 'walkie'): void;
+      destroy(): Promise<void>;
+      getState(): string;
+      getTranscripts(): any[];
+      isRecording?(): boolean;
+    }
 
   export default VoiceModule;
 }
