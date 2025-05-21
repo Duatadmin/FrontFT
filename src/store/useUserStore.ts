@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create, StateCreator } from 'zustand';
 import { devtools } from 'zustand/middleware';
 
 interface User {
@@ -17,9 +17,7 @@ interface UserState {
   getCurrentUser: () => User | null;
 }
 
-const useUserStore = create<UserState>()(
-  devtools(
-    (set, get) => ({
+const userStoreCreator: StateCreator<UserState> = (set, get) => ({
       user: {
         id: 'mock-user-id',
         nickname: 'FitUser',
@@ -29,7 +27,7 @@ const useUserStore = create<UserState>()(
       isLoading: false,
       error: null,
       
-      login: async (email, password) => {
+      login: async (_email: string, _password: string): Promise<void> => {
         set({ isLoading: true, error: null });
         
         try {
@@ -61,12 +59,13 @@ const useUserStore = create<UserState>()(
         });
       },
       
-      getCurrentUser: () => {
+      getCurrentUser: (): User | null => {
         return get().user;
       }
-    }),
-    { name: 'user-store' }
-  )
+    });
+
+const useUserStore = create<UserState>()(
+  devtools(userStoreCreator, { name: 'user-store' })
 );
 
 export default useUserStore;

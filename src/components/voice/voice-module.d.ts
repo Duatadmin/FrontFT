@@ -26,6 +26,7 @@ declare module 'voice-module/index.js' {
       onStateChange?: (state: string, error?: Error) => void;
       debug: boolean;
     };
+    core: any;
 
     constructor(config?: {
       mode?: string;
@@ -46,9 +47,26 @@ declare module 'voice-module/index.js' {
     startRecording(): Promise<void>;
     stopRecording(): Promise<void>;
     toggleRecording(): Promise<boolean>;
+    stop(): Promise<void>;
+    setMode(mode: 'push' | 'walkie'): void;
     destroy(): Promise<void>;
+    getState(): string;
+    getTranscripts(): any[];
+    isRecording?(): boolean;
     
     // Private methods
     _log(...args: any[]): void;
   }
+
+  export default VoiceModule;
+}
+
+declare module 'voice-module/core/voice-core.js' {
+  export class EventBus {
+    on(event: string, callback: (data: any) => void): { off: () => void };
+    off(event: string, callback: (data: any) => void): void;
+    emit(event: string, data?: any): void;
+  }
+
+  export const bus: EventBus;
 }

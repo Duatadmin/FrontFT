@@ -20,6 +20,7 @@
       "voice-module/*": ["voice-module/*"]
     }
   },
-  "include": ["src"],
+  "include": ["src/store", "src/voice", "src/types"],
+  "exclude": ["src/lib"],
   "references": [{ "path": "./tsconfig.node.json" }]
 } 

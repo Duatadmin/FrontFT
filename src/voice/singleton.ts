@@ -1,18 +1,6 @@
 import VoiceModule, { MODES } from 'voice-module/index.js';
 import { bus } from 'voice-module/core/voice-core.js';
 
-// Define a type for our VoiceModule instance
-type VoiceModuleType = {
-  start: () => Promise<void>;
-  startRecording: () => Promise<void>;
-  stopRecording: () => Promise<void>;
-  toggleRecording: () => Promise<boolean>;
-  destroy: () => Promise<void>;
-  getState: () => string;
-  getTranscripts: () => any[];
-  isRecording?: () => boolean; // Optional method that might be missing in some versions
-};
-
 let instance: VoiceModule | null = null;
 
 // Create a new instance if needed
@@ -81,15 +69,15 @@ export function destroyVoiceModule(): void {
 }
 
 export function onVoiceState(cb: (state: string) => void): () => void {
-  return bus.on('state', cb);  // use to sync UI
+  return bus.on('state', cb).off;  // use to sync UI
 }
 
 export function onVoiceTranscriptFinal(cb: (data: any) => void): () => void {
-  return bus.on('transcript:final', cb);
+  return bus.on('transcript:final', cb).off;
 }
 
 export function onVoiceTranscriptInterim(cb: (data: any) => void): () => void {
-  return bus.on('transcript:interim', cb);
+  return bus.on('transcript:interim', cb).off;
 }
 
 // Convenience helper to fully initialize the voice module

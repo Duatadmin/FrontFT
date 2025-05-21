@@ -1,6 +1,7 @@
 import { StateCreator } from 'zustand';
 import supabase from '../lib/supabaseClient';
 import type { FitnessGoal, WeeklyReflection, ProgressPhoto, DiaryTab } from './useDiaryStore';
+import type { WorkoutSession } from '../lib/supabaseClient';
 
 // Define the DiaryState type locally to avoid circular dependency
 interface DiaryState {
@@ -37,7 +38,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
   // Goals actions
   fetchGoals: async (userId: string) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, goals: true },
         error: { ...state.error, goals: null }
       }));
@@ -72,16 +73,16 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       });
     } catch (error) {
       console.error('Error fetching goals:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, goals: false },
         error: { ...state.error, goals: error instanceof Error ? error.message : 'Failed to fetch goals' }
       }));
     }
   },
   
-  addGoal: async (userId: string, goal) => {
+  addGoal: async (userId: string, goal: FitnessGoal) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, goals: true },
         error: { ...state.error, goals: null }
       }));
@@ -111,7 +112,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
           id: `goal-${Date.now()}`
         };
         
-        set(state => ({ 
+        set((state: DiaryState) => ({ 
           goals: [mockGoal, ...state.goals],
           loading: { ...state.loading, goals: false }
         }));
@@ -127,22 +128,22 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       
       if (error) throw error;
       
-      set(state => ({ 
+      set((state: DiaryState) => ({ 
         goals: [data as FitnessGoal, ...state.goals],
         loading: { ...state.loading, goals: false }
       }));
     } catch (error) {
       console.error('Error adding goal:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, goals: false },
         error: { ...state.error, goals: error instanceof Error ? error.message : 'Failed to add goal' }
       }));
     }
   },
   
-  updateGoal: async (goalId: string, updates) => {
+  updateGoal: async (goalId: string, updates: Partial<FitnessGoal>) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, goals: true },
         error: { ...state.error, goals: null }
       }));
@@ -153,7 +154,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Update the goal in the state
-        set(state => ({ 
+        set((state: DiaryState) => ({ 
           goals: state.goals.map(goal => 
             goal.id === goalId ? { ...goal, ...updates } : goal
           ),
@@ -171,7 +172,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       if (error) throw error;
       
       // Update the goal in the state
-      set(state => ({ 
+      set((state: DiaryState) => ({ 
         goals: state.goals.map(goal => 
           goal.id === goalId ? { ...goal, ...updates } : goal
         ),
@@ -179,7 +180,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       }));
     } catch (error) {
       console.error('Error updating goal:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, goals: false },
         error: { ...state.error, goals: error instanceof Error ? error.message : 'Failed to update goal' }
       }));
@@ -188,7 +189,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
   
   deleteGoal: async (goalId: string) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, goals: true },
         error: { ...state.error, goals: null }
       }));
@@ -199,7 +200,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Remove the goal from the state
-        set(state => ({ 
+        set((state: DiaryState) => ({ 
           goals: state.goals.filter(goal => goal.id !== goalId),
           loading: { ...state.loading, goals: false }
         }));
@@ -215,13 +216,13 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       if (error) throw error;
       
       // Remove the goal from the state
-      set(state => ({ 
+      set((state: DiaryState) => ({ 
         goals: state.goals.filter(goal => goal.id !== goalId),
         loading: { ...state.loading, goals: false }
       }));
     } catch (error) {
       console.error('Error deleting goal:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, goals: false },
         error: { ...state.error, goals: error instanceof Error ? error.message : 'Failed to delete goal' }
       }));
@@ -231,7 +232,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
   // Weekly reflection actions
   fetchCurrentWeekReflection: async (userId: string) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, weeklyReflection: true },
         error: { ...state.error, weeklyReflection: null }
       }));
@@ -296,16 +297,16 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       });
     } catch (error) {
       console.error('Error fetching weekly reflection:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, weeklyReflection: false },
         error: { ...state.error, weeklyReflection: error instanceof Error ? error.message : 'Failed to fetch weekly reflection' }
       }));
     }
   },
   
-  saveWeeklyReflection: async (userId: string, reflection) => {
+  saveWeeklyReflection: async (userId: string, reflection: Partial<WeeklyReflection>) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, weeklyReflection: true },
         error: { ...state.error, weeklyReflection: null }
       }));
@@ -345,6 +346,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
           challenges: reflection.challenges || [],
           wins: reflection.wins || [],
           next_week_focus: reflection.next_week_focus || '',
+          next_week_session_target: reflection.next_week_session_target || 0,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         };
@@ -360,7 +362,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
             id: `reflection-${Date.now()}`
           };
           
-          set(state => ({ 
+          set((state: DiaryState) => ({ 
             currentWeekReflection: mockReflection,
             weeklyReflections: [mockReflection, ...state.weeklyReflections],
             loading: { ...state.loading, weeklyReflection: false }
@@ -377,7 +379,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
         
         if (newError) throw newError;
         
-        set(state => ({ 
+        set((state: DiaryState) => ({ 
           currentWeekReflection: newData as WeeklyReflection,
           weeklyReflections: [newData as WeeklyReflection, ...state.weeklyReflections],
           loading: { ...state.loading, weeklyReflection: false }
@@ -397,7 +399,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
           // Update the reflection in the state
           const updated = { ...currentReflection, ...updatedReflection };
           
-          set(state => ({ 
+          set((state: DiaryState) => ({ 
             currentWeekReflection: updated,
             weeklyReflections: state.weeklyReflections.map(r => 
               r.id === currentReflection.id ? updated : r
@@ -418,7 +420,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
         // Update the reflection in the state
         const updated = { ...currentReflection, ...updatedReflection };
         
-        set(state => ({ 
+        set((state: DiaryState) => ({ 
           currentWeekReflection: updated,
           weeklyReflections: state.weeklyReflections.map(r => 
             r.id === currentReflection.id ? updated : r
@@ -428,7 +430,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       }
     } catch (error) {
       console.error('Error saving weekly reflection:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, weeklyReflection: false },
         error: { ...state.error, weeklyReflection: error instanceof Error ? error.message : 'Failed to save weekly reflection' }
       }));
@@ -438,7 +440,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
   // Progress photos actions
   fetchProgressPhotos: async (userId: string) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, progressPhotos: true },
         error: { ...state.error, progressPhotos: null }
       }));
@@ -473,16 +475,16 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       });
     } catch (error) {
       console.error('Error fetching progress photos:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, progressPhotos: false },
         error: { ...state.error, progressPhotos: error instanceof Error ? error.message : 'Failed to fetch progress photos' }
       }));
     }
   },
   
-  addProgressPhoto: async (userId: string, photo) => {
+  addProgressPhoto: async (userId: string, photo: ProgressPhoto) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, progressPhotos: true },
         error: { ...state.error, progressPhotos: null }
       }));
@@ -505,7 +507,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
           id: `photo-${Date.now()}`
         };
         
-        set(state => ({ 
+        set((state: DiaryState) => ({ 
           progressPhotos: [mockPhoto, ...state.progressPhotos],
           loading: { ...state.loading, progressPhotos: false }
         }));
@@ -521,13 +523,13 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       
       if (error) throw error;
       
-      set(state => ({ 
+      set((state: DiaryState) => ({ 
         progressPhotos: [data as ProgressPhoto, ...state.progressPhotos],
         loading: { ...state.loading, progressPhotos: false }
       }));
     } catch (error) {
       console.error('Error adding progress photo:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, progressPhotos: false },
         error: { ...state.error, progressPhotos: error instanceof Error ? error.message : 'Failed to add progress photo' }
       }));
@@ -536,7 +538,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
   
   deleteProgressPhoto: async (photoId: string) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, progressPhotos: true },
         error: { ...state.error, progressPhotos: null }
       }));
@@ -547,7 +549,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
         await new Promise(resolve => setTimeout(resolve, 500));
         
         // Remove the photo from the state
-        set(state => ({ 
+        set((state: DiaryState) => ({ 
           progressPhotos: state.progressPhotos.filter(photo => photo.id !== photoId),
           loading: { ...state.loading, progressPhotos: false }
         }));
@@ -563,13 +565,13 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       if (error) throw error;
       
       // Remove the photo from the state
-      set(state => ({ 
+      set((state: DiaryState) => ({ 
         progressPhotos: state.progressPhotos.filter(photo => photo.id !== photoId),
         loading: { ...state.loading, progressPhotos: false }
       }));
     } catch (error) {
       console.error('Error deleting progress photo:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, progressPhotos: false },
         error: { ...state.error, progressPhotos: error instanceof Error ? error.message : 'Failed to delete progress photo' }
       }));
@@ -657,9 +659,9 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
   },
   
   // Session actions
-  markSessionCompleted: async (userId: string, sessionData) => {
+  markSessionCompleted: async (userId: string, sessionData: Partial<WorkoutSession>) => {
     try {
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, sessions: true },
         error: { ...state.error, sessions: null }
       }));
@@ -681,7 +683,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
           id: `session-${Date.now()}`
         };
         
-        set(state => ({ 
+        set((state: DiaryState) => ({ 
           sessions: [mockSession, ...state.sessions],
           loading: { ...state.loading, sessions: false }
         }));
@@ -701,7 +703,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       
       if (error) throw error;
       
-      set(state => ({ 
+      set((state: DiaryState) => ({ 
         sessions: [data, ...state.sessions],
         loading: { ...state.loading, sessions: false }
       }));
@@ -710,7 +712,7 @@ export const createEnhancedDiaryActions: StateCreator<DiaryState, [], [], Partia
       get().calculateStreak(userId);
     } catch (error) {
       console.error('Error marking session as completed:', error);
-      set(state => ({
+      set((state: DiaryState) => ({
         loading: { ...state.loading, sessions: false },
         error: { ...state.error, sessions: error instanceof Error ? error.message : 'Failed to mark session as completed' }
       }));
