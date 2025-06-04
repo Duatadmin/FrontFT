@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BarChart3, ChevronRight } from 'lucide-react';
+import { VoiceToggle } from './VoiceToggle';
+import { NowSpeakingBadge } from './NowSpeakingBadge';
 // @ts-ignore
 import Logo from '../../../Logo.svg';
 
@@ -15,7 +17,10 @@ const ChatHeader: React.FC = () => {
         height: 'calc(env(safe-area-inset-top) + 64px)'
       }}
     >
-      <div className="flex-1"></div>
+      <div className="flex-1 flex items-center gap-2">
+        <VoiceToggle />
+        <NowSpeakingBadge />
+      </div>
       <div className="flex justify-center flex-1">
         <img src={Logo} alt="Jarvis Logo" className="h-8 w-auto filter invert" />
       </div>

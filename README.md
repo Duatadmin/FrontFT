@@ -107,6 +107,7 @@ A modern Progressive Web Application (PWA) built with **React + Vite** that comb
 | **State Management** | Global app state handled by **Zustand**; data fetching & caching with **SWR**. |
 | **Type Safety** | Strict TypeScript everywhere (typed hooks, components, API clients). |
 | **API Ready** | Seamless integration with the Jarvis backend (FastAPI) for chat and workout data. |
+| **Voice Mode** | Enables TTS playback for bot messages. See [TTS Voice Mode Docs](./docs/TTS_VOICE_MODE.md). |
 
 ---
 

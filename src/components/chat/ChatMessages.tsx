@@ -1,6 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Message } from '../../types';
 import MessageBubble from './MessageBubble';
+import { useVoice } from '../../hooks/VoiceContext';
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -8,6 +9,7 @@ interface ChatMessagesProps {
 }
 
 const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
+  const { enqueueBotUtterance } = useVoice();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -19,6 +21,14 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    messages.forEach(msg => {
+      if (msg.role === 'assistant' && msg.content) {
+        enqueueBotUtterance(msg.content, msg.id);
+      }
+    });
+  }, [messages, enqueueBotUtterance]);
 
   return (
     // Apply background, overflow, and smooth scroll

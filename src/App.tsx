@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import ChatLayout from './components/chat/ChatLayout';
+import { VoiceProvider } from './hooks/VoiceContext';
 import { Message } from './types';
 import chatService from './services/chatService';
 import { checkApiStatus } from './services/apiService';
@@ -15,14 +16,13 @@ function App() {
   ]);
   
   const [isLoading, setIsLoading] = useState(false);
-  const [isConnected, setIsConnected] = useState<boolean | null>(null);
   const [showSupabaseTest, setShowSupabaseTest] = useState(false);
 
   // Check API connection on component mount
   useEffect(() => {
     const verifyApiConnection = async () => {
       const status = await checkApiStatus();
-      setIsConnected(status);
+      // setIsConnected(status); // Removed as isConnected is no longer used
       
       // Add a system message if connection fails
       if (!status) {
@@ -106,11 +106,13 @@ function App() {
       {showSupabaseTest ? (
         <SupabaseTest />
       ) : (
-        <ChatLayout
-          messages={messages}
-          isLoading={isLoading}
-          onSendMessage={handleSendMessage}
-        />
+        <VoiceProvider>
+          <ChatLayout
+            messages={messages}
+            isLoading={isLoading}
+            onSendMessage={handleSendMessage}
+          />
+        </VoiceProvider>
       )}
     </div>
   );
