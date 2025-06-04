@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 
-const TTS_BASE_URL = 'http://ft_voice_service.railway.internal/v1/tts';
+const TTS_BASE_URL = 'https://ftvoiceservice-production-6960.up.railway.app/tts/v1/tts';
 
 interface UseVoicePlayback {
   voiceEnabled: boolean;
@@ -115,26 +115,31 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           } catch (err) {
             console.error('Error during MediaSource stream processing:', err);
             if (mediaSourceRef.current?.readyState === 'open') {
-                mediaSourceRef.current.endOfStream();
+                try { mediaSourceRef.current.endOfStream(); } catch (e) { console.warn('Error ending MediaSource stream in catch:', e); }
             }
-            setQueue(prev => prev.slice(1)); // Consume item from queue
-            playNext(); // Attempt next item
+            setIsPlaying(false);
+            setCurrentRequestId(null);
+            setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
           }
         }, { once: true });
 
         audio.onended = () => {
-          setQueue(prev => prev.slice(1)); // Consume item from queue
-          playNext();
+          // Item finished playing successfully
+          // setIsPlaying(false); // playNext will set it true if it starts a new item
+          // setCurrentRequestId(null); // playNext will set a new one
+          setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
         };
         audio.onerror = (e) => {
           console.error('Audio playback error:', e);
-          setQueue(prev => prev.slice(1)); // Consume item from queue
-          playNext(); // Attempt next item
+          setIsPlaying(false);
+          setCurrentRequestId(null);
+          setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
         };
         await audio.play().catch(e => {
             console.error('Error playing audio:', e);
-            setQueue(prev => prev.slice(1));
-            playNext();
+            setIsPlaying(false);
+            setCurrentRequestId(null);
+            setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
         });
 
       } else { // Fallback for non-Opus browsers (e.g., Mobile Safari)
@@ -143,33 +148,42 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         audio.onloadeddata = () => {
             audio.play().catch(e => {
                 console.error('Error playing audio blob:', e);
-                setQueue(prev => prev.slice(1));
-                playNext();
+                setIsPlaying(false);
+                setCurrentRequestId(null);
+                setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
             });
         };
         audio.onended = () => {
-          setQueue(prev => prev.slice(1));
-          playNext();
+          // Item finished playing successfully (fallback path)
+          setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
         };
         audio.onerror = (e) => {
           console.error('Audio blob playback error:', e);
-          setQueue(prev => prev.slice(1));
-          playNext();
+          setIsPlaying(false);
+          setCurrentRequestId(null);
+          setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
         };
       }
 
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         console.log('TTS fetch aborted for request ID:', newRequestId);
+        // Abort is usually intentional. Ensure state reflects not playing.
+        // stopCurrentPlayback should handle resetting isPlaying and currentRequestId.
+        // If abortControllerRef.current.abort() was called directly without stopCurrentPlayback,
+        // ensure isPlaying is false.
+        setIsPlaying(false); 
+        setCurrentRequestId(null);
       } else {
-        console.error('Error in playNext:', error);
+        // For other errors (like failed to fetch or processing errors)
+        console.error(`Error in playNext for text "${textToPlay}":`, error);
+        setIsPlaying(false);
+        setCurrentRequestId(null);
+        // Remove the failed item from the queue.
+        // The useEffect hook watching 'queue', 'isPlaying', 'voiceEnabled'
+        // will determine if playNext should be called for the subsequent item.
+        setQueue(prev => prev.slice(1));
       }
-      // If not an abort, or if an abort happened but we still want to clear and move on
-      // This ensures that an error in one playback doesn't stall the queue indefinitely.
-      setQueue(prev => prev.slice(1)); // Consume item from queue
-      setIsPlaying(false); // Ensure isPlaying is reset
-      setCurrentRequestId(null);
-      playNext(); // Attempt to play the next item in the queue
     }
   }, [queue, voiceEnabled, supportsOpus]);
 
