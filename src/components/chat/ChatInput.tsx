@@ -1,6 +1,13 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { SendHorizonal } from 'lucide-react'; // Using lucide-react for icons
-import { VoiceButton, WalkieToggleButton, AudioVisualizer, initVoiceModule } from '../voice';
+import { initVoiceModule } from '../voice'; 
+
+import { DashboardButton } from '../chat/DashboardButton'; // Adjusted path
+import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
+import { WalkieTalkieButton } from '../chat/WalkieTalkieButton';// Adjusted path
+import { SendButton } from '../chat/SendButton';         // Adjusted path
+
+import { useVoicePlayback } from '../../hooks/useVoicePlayback';
+import { useWalkie } from '../../hooks/useWalkie'; 
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -12,21 +19,25 @@ interface ChatInputProps {
 const ChatInput: React.FC<ChatInputProps> = ({ 
   onSendMessage, 
   isLoading,
-  onTtsPlaybackStart,
-  onTtsPlaybackEnd 
 }) => {
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const chatInputId = 'chat-input'; 
+
+  const { voiceEnabled, toggleVoice } = useVoicePlayback();
   
-  // Unique ID for transcript targeting
-  const chatInputId = 'chat-input';
+  const { isWalkieActive, toggleWalkie, transcript, isListening } = useWalkie(chatInputId);
+
+  useEffect(() => {
+    if (transcript) {
+      setInputValue(prev => prev + transcript); 
+    }
+  }, [transcript]);
   
-  // Initialize voice module on component mount
   useEffect(() => {
     const initVoice = async () => {
       try {
         await initVoiceModule();
-        console.log('Voice module initialized in chat input');
       } catch (error) {
         console.error('Failed to initialize voice module in chat input:', error);
       }
@@ -35,30 +46,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
     initVoice();
   }, []);
   
-  // Handle final transcript
   useEffect(() => {
-    const handleFinalTranscript = () => {
-      const finalTranscript = document.getElementById(`${chatInputId}-final`);
-      if (finalTranscript && finalTranscript.textContent) {
-        const transcript = finalTranscript.textContent.trim();
-        if (transcript) {
-          onSendMessage(transcript);
-          // Clear the transcript
-          finalTranscript.textContent = '';
-        }
-      }
-    };
-    
-    // Listen for mutations to the final transcript element
-    const observer = new MutationObserver(handleFinalTranscript);
     const finalTranscriptEl = document.getElementById(`${chatInputId}-final`);
-    
-    if (finalTranscriptEl) {
-      observer.observe(finalTranscriptEl, { childList: true, characterData: true, subtree: true });
-    } else {
-      // Create the transcript containers if they don't exist yet
+    const interimTranscriptEl = document.getElementById(`${chatInputId}-interim`);
+
+    if (!finalTranscriptEl || !interimTranscriptEl) {
       const transcriptContainer = document.createElement('div');
       transcriptContainer.style.display = 'none';
+      transcriptContainer.id = `${chatInputId}-transcript-container`;
       
       const interimEl = document.createElement('div');
       interimEl.id = `${chatInputId}-interim`;
@@ -68,24 +63,21 @@ const ChatInput: React.FC<ChatInputProps> = ({
       
       transcriptContainer.appendChild(interimEl);
       transcriptContainer.appendChild(finalEl);
-      document.body.appendChild(transcriptContainer);
-      
-      // Now observe the final element
-      observer.observe(finalEl, { childList: true, characterData: true, subtree: true });
+      if (!document.getElementById(transcriptContainer.id)) {
+        document.body.appendChild(transcriptContainer);
+      }
     }
     
-    return () => observer.disconnect();
+    return () => {}; 
   }, [onSendMessage]);
 
-  // Auto-resize textarea height
   useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = 'auto'; // Reset height
+      textarea.style.height = 'auto'; 
       const scrollHeight = textarea.scrollHeight;
-      const maxHeight = 128; // Max height ~ 5 rows
+      const maxHeight = 128; 
       textarea.style.height = `${Math.min(scrollHeight, maxHeight)}px`;
-      // Show scrollbar if content exceeds max height
       textarea.style.overflowY = scrollHeight > maxHeight ? 'auto' : 'hidden';
     }
   }, [inputValue]);
@@ -98,7 +90,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
       if (textareaRef.current) {
         textareaRef.current.style.height = 'auto';
         textareaRef.current.style.overflowY = 'hidden';
-        // Briefly delay focus to allow potential layout shifts
         setTimeout(() => textareaRef.current?.focus(), 0);
       }
     }
@@ -106,75 +97,55 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault(); // Prevent default newline on Enter
+      event.preventDefault(); 
       handleSend();
     }
-    // Shift+Enter will create a newline by default
   };
 
   return (
-    // Sticky container with background and safe area padding
     <div 
-      className="sticky bottom-0 z-10 bg-gradient-to-t from-background via-background/95 to-background/0 pt-2 pb-2"
-      // Apply safe area padding only to the bottom
+      className="sticky bottom-0 z-10 pt-2 pb-2"
       style={{ paddingBottom: `calc(0.5rem + var(--safe-area-inset-bottom))` }}
     >
-      {/* Centering container */}
-      <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Input field container */}
-        <div className="relative flex items-end bg-input rounded-xl border border-border shadow-sm transition-all duration-200 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/30">
-        {/* Visualization display */}
-        <div className="absolute -top-12 left-0 right-0 flex justify-center items-center h-10">
-          <div className="flex items-center justify-center px-3 py-1 rounded-full bg-black/60 backdrop-blur-md">
-            <AudioVisualizer 
-              width={120} 
-              height={24}
-            />
-            <span className="ml-2 text-xs text-white/80">
-              <span id={`${chatInputId}-interim`}></span>
-              Listening...
-            </span>
-          </div>
-        </div>
+      {/* Further reduced height container */}
+      <div className="w-[min(95vw,525px)] min-w-[min(95vw,525px)] bg-botBubble shadow-2xl rounded-3xl px-4 py-1.5 mx-auto flex flex-col gap-1.5">
+        {/* Input area with SendButton - Corrected Alignment */}
+        <div className="relative flex items-center w-full">
           <textarea
             ref={textareaRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Send a message..."
-            className="flex-1 bg-transparent resize-none border-none focus:ring-0 outline-none py-3 pl-4 pr-12 text-text placeholder-textSecondary/70 text-base max-h-[128px] font-normal"
+            placeholder="Ask anything..."
+            className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-12 py-1.5 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
             rows={1}
             disabled={isLoading}
             autoComplete="off"
-            style={{ scrollbarWidth: 'thin' }}
+            style={{ scrollbarWidth: 'none' }}
           />
-          {/* Voice & Send buttons */}
-          <div className="absolute right-2 bottom-2 flex items-center space-x-2">
-            {/* Push-to-talk button */}
-            <VoiceButton 
-              targetId={chatInputId}
-              disabled={isLoading}
-            />
-            
-            {/* Walkie-talkie toggle button */}
-            <WalkieToggleButton 
-              targetId={chatInputId}
-              disabled={isLoading}
-            />
-            
-            {/* Send Button */}
-            <button
-              onClick={handleSend}
-              className={`flex items-center justify-center p-2 rounded-lg transition-all duration-200 
-                      ${inputValue.trim() && !isLoading 
-                        ? 'bg-primary text-white hover:opacity-80 active:scale-95' 
-                        : 'bg-input text-textSecondary cursor-not-allowed opacity-60'}`}
-              disabled={!inputValue.trim() || isLoading}
-              aria-label="Send message"
-            >
-              <SendHorizonal size={18} />
-            </button>
-          </div>
+          <SendButton 
+            onClick={handleSend} 
+            disabled={!inputValue.trim() || isLoading} 
+            className="absolute right-0 top-1/2 -translate-y-1/2 h-[38px] w-[38px]"
+          />
+        </div>
+
+        {/* Lower row for other action buttons */}
+        <div className="flex items-center justify-start gap-2 pt-2">
+          <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
+          <VoiceModeToggle 
+            isVoiceEnabled={voiceEnabled} 
+            toggleVoiceEnabled={toggleVoice} 
+            disabled={isLoading} 
+            className="p-1.5" /* Compact styling */
+          />
+          <WalkieTalkieButton 
+            isVoiceEnabled={voiceEnabled} 
+            isWalkieActive={isWalkieActive} 
+            onClick={toggleWalkie} 
+            disabled={isLoading} 
+            className="p-1.5" /* Compact styling */
+          />
         </div>
       </div>
     </div>

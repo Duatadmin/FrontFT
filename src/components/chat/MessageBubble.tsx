@@ -38,8 +38,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLoading = fals
           <TypingIndicator />
         ) : (
           // Apply whitespace-pre-wrap to render newlines
-          <div className="prose prose-sm prose-chat max-w-none whitespace-pre-wrap">
-            {message.content}
+          <div className="font-sans text-sm leading-relaxed text-inherit whitespace-pre-wrap">
+            {message.role === 'assistant' && message.content.includes("I'm Isinka") 
+              ? message.content.replace("I'm Isinka", "I'm Jarvis")
+              : message.content}
           </div>
         )}
       </div>
