@@ -32,7 +32,9 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   }, [voiceEnabled]);
 
   const playNext = useCallback(async () => {
+    console.log('[TTS] playNext called. Queue length:', queue.length, 'Voice enabled:', voiceEnabled);
     if (queue.length === 0 || !voiceEnabled) {
+      console.log('[TTS] No items in queue or voice disabled. Stopping playback.');
       setIsPlaying(false);
       setCurrentRequestId(null);
       if (audioPlayerRef.current) {
@@ -45,6 +47,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     const textToPlay = queue[0]; // Peek at the next item
     const newRequestId = crypto.randomUUID();
     setCurrentRequestId(newRequestId);
+    console.log('[TTS] Starting playback for text:', textToPlay.substring(0, 50) + (textToPlay.length > 50 ? '...' : ''), 'Request ID:', newRequestId);
 
     abortControllerRef.current = new AbortController();
     const { signal } = abortControllerRef.current;
@@ -124,10 +127,14 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         }, { once: true });
 
         audio.onended = () => {
+          console.log('[TTS] Audio playback ended successfully');
           // Item finished playing successfully
           // setIsPlaying(false); // playNext will set it true if it starts a new item
           // setCurrentRequestId(null); // playNext will set a new one
-          setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
+          setQueue(prev => {
+            console.log('[TTS] Removing item from queue. Queue length before:', prev.length);
+            return prev.slice(1); // Consume item from queue, useEffect will handle next
+          });
         };
         audio.onerror = (e) => {
           console.error('Audio playback error:', e);
@@ -254,8 +261,12 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   }, [voiceEnabled, playedIds]);
 
   useEffect(() => {
+    console.log('[TTS] Queue effect triggered. Queue length:', queue.length, 'Voice enabled:', voiceEnabled, 'Is playing:', isPlaying);
     if (voiceEnabled && queue.length > 0 && !isPlaying) {
+      console.log('[TTS] Conditions met to play next item from queue');
       playNext();
+    } else {
+      console.log('[TTS] Conditions not met to play next. Voice:', voiceEnabled, 'Queue length:', queue.length, 'Is playing:', isPlaying);
     }
   }, [queue, voiceEnabled, isPlaying, playNext]);
 

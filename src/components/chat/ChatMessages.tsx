@@ -22,12 +22,21 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
     scrollToBottom();
   }, [messages, isLoading]);
 
+  const lastEnqueuedMessageIdRef = useRef<string | null>(null);
+
   useEffect(() => {
-    messages.forEach(msg => {
-      if (msg.role === 'assistant' && msg.content) {
-        enqueueBotUtterance(msg.content, msg.id);
+    if (messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (
+        lastMessage.role === 'assistant' &&
+        lastMessage.content &&
+        lastMessage.id !== lastEnqueuedMessageIdRef.current
+      ) {
+        console.log('[ChatMessages] Enqueueing new assistant message:', lastMessage.id, lastMessage.content.substring(0,30));
+        enqueueBotUtterance(lastMessage.content, lastMessage.id);
+        lastEnqueuedMessageIdRef.current = lastMessage.id;
       }
-    });
+    }
   }, [messages, enqueueBotUtterance]);
 
   return (
