@@ -129,13 +129,12 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         }, { once: true });
 
         audio.onended = () => {
-          console.log('[TTS] Audio playback ended successfully');
-          // Item finished playing successfully
-          // setIsPlaying(false); // playNext will set it true if it starts a new item
-          // setCurrentRequestId(null); // playNext will set a new one
+          console.log('[TTS] Audio playback ended successfully (MediaSource path)');
+          setIsPlaying(false);
+          setCurrentRequestId(null);
           setQueue(prev => {
             console.log('[TTS] Removing item from queue. Queue length before:', prev.length);
-            return prev.slice(1); // Consume item from queue, useEffect will handle next
+            return prev.slice(1);
           });
         };
         audio.onerror = (e) => {
@@ -163,8 +162,10 @@ export const useVoicePlayback = (): UseVoicePlayback => {
             });
         };
         audio.onended = () => {
-          // Item finished playing successfully (fallback path)
-          setQueue(prev => prev.slice(1)); // Consume item from queue, useEffect will handle next
+          console.log('[TTS] Audio playback ended successfully (Blob fallback path)');
+          setIsPlaying(false);
+          setCurrentRequestId(null);
+          setQueue(prev => prev.slice(1));
         };
         audio.onerror = (e) => {
           console.error('Audio blob playback error:', e);
