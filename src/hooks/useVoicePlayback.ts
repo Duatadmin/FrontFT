@@ -2,6 +2,7 @@ console.log('[TTS Module] useVoicePlayback.ts module loaded');
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 const TTS_BASE_URL = 'https://ftvoiceservice-production-6960.up.railway.app/tts/v1/tts';
+const VOICE_ENABLED_KEY = 'voiceEnabled';
 
 interface UseVoicePlayback {
   voiceEnabled: boolean;
@@ -13,8 +14,8 @@ interface UseVoicePlayback {
 
 export const useVoicePlayback = (): UseVoicePlayback => {
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
-    const saved = localStorage.getItem('voiceEnabled');
-    return saved !== null ? JSON.parse(saved) : false;
+    const initialVoiceEnabled = localStorage.getItem(VOICE_ENABLED_KEY);
+    return initialVoiceEnabled !== null ? JSON.parse(initialVoiceEnabled) : false;
   });
   const [queue, setQueue] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -242,14 +243,42 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const toggleVoice = useCallback(() => {
     const newVoiceEnabled = !voiceEnabled;
     setVoiceEnabled(newVoiceEnabled);
-    if (!newVoiceEnabled) {
+    localStorage.setItem(VOICE_ENABLED_KEY, JSON.stringify(newVoiceEnabled));
+
+    if (newVoiceEnabled) {
+      // Attempt to unlock audio when voice is enabled
+      if (audioPlayerRef.current) {
+        const playPromise = audioPlayerRef.current.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            audioPlayerRef.current?.pause(); // Pause immediately after unlocking
+            console.log('[TTS] Audio context likely unlocked by toggle.');
+            // If queue has items and not already playing, start
+            if (queue.length > 0 && !isPlaying) {
+              console.log('[TTS] Voice toggled on, queue has items, starting playNext after unlock attempt.');
+              playNext();
+            }
+          }).catch(err => {
+            console.warn('[TTS] Failed to unlock audio via toggle, play will be attempted by playNext:', err);
+            // Proceed, playNext will attempt to play anyway
+            if (queue.length > 0 && !isPlaying) {
+              playNext();
+            }
+          });
+        } else {
+          // Fallback if play() doesn't return a promise (older browsers)
+           if (queue.length > 0 && !isPlaying) {
+             playNext();
+           }
+        }
+      } else if (queue.length > 0 && !isPlaying) {
+        // Audio player not yet available, but queue has items. playNext will be called by useEffect.
+        console.log('[TTS] Voice toggled on, audio player not ready yet, but queue has items. Effect will call playNext.');
+        // playNext(); // Or let the useEffect for queue changes handle it
+      }
+    } else { // Voice is being disabled
       stopCurrentPlayback(true); // Pass true to indicate it's due to toggle off
       setQueue([]); // Clear queue when disabling voice
-    } else {
-      // If enabling and queue has items, start playing
-      if (queue.length > 0 && !isPlaying) {
-        playNext();
-      }
     }
   }, [voiceEnabled, stopCurrentPlayback, queue, isPlaying, playNext]);
 
