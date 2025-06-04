@@ -1,3 +1,4 @@
+console.log('[TTS Module] useVoicePlayback.ts module loaded');
 import { useState, useEffect, useCallback, useRef } from 'react';
 
 const TTS_BASE_URL = 'https://ftvoiceservice-production-6960.up.railway.app/tts/v1/tts';
