@@ -26,10 +26,10 @@ const SplashScreen = () => (
 
 import { Auth } from '@supabase/auth-ui-react';
 import { customAuthUITheme } from './auth-theme';
-import logoUrl from '../Logo.svg?url'; // Temporarily import as URL
+import Logo from '../assets/Logo.svg?react';
 
 const LoginPage = () => {
-  console.log('Logo URL:', logoUrl);
+  // console.log('Logo URL:', logoUrl); // No longer needed
   return (
   <div className="relative grid h-screen place-items-center overflow-hidden bg-[#121212]">
     {/* radial glow */}
@@ -37,8 +37,7 @@ const LoginPage = () => {
     {/* auth card container - apply width and other container styles here */}
     <div className="relative z-10 w-[384px] rounded-[14px] border border-white/5 bg-[#1e1e1e]/90 p-8 shadow-[0_28px_68px_-10px_rgba(0,0,0,0.6)] backdrop-blur">
       <div className="mb-4 flex items-center justify-center space-x-3">
-        {/* <Logo className="h-8 w-8 text-[#ff7a00]" /> */}
-        <span className="text-xl font-semibold text-[#eaeaea]">Acne Corp</span>
+        <Logo />
       </div>
       <Auth
         supabaseClient={supabase}
