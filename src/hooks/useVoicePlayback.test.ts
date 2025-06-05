@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useVoicePlayback } from './useVoicePlayback';
 
@@ -72,7 +72,7 @@ beforeEach(() => {
     key: (index: number) => Object.keys(mockLocalStorage)[index] || null,
     length: Object.keys(mockLocalStorage).length,
   };
-  (global.fetch as jest.Mock).mockClear();
+  (global.fetch as Mock).mockClear();
   // Reset Audio mock calls if necessary, e.g., MockAudio.play.mockClear();
 });
 
@@ -135,11 +135,11 @@ describe('useVoicePlayback', () => {
     localStorage.setItem('voiceEnabled', 'true');
     const { result } = renderHook(() => useVoicePlayback());
     
-    (global.fetch as jest.Mock).mockResolvedValueOnce({
+    (global.fetch as Mock).mockResolvedValueOnce({
         ok: true,
         body: {
             getReader: () => ({
-                read: jest.fn()
+                read: vi.fn()
                     .mockResolvedValueOnce({ done: false, value: new Uint8Array([1,2,3]) })
                     .mockResolvedValueOnce({ done: true }),
             }),
@@ -175,7 +175,7 @@ describe('useVoicePlayback', () => {
     localStorage.setItem('voiceEnabled', 'true');
     const { result } = renderHook(() => useVoicePlayback());
 
-    (global.fetch as jest.Mock).mockResolvedValueOnce({ /* ... mock successful fetch ... */ ok: true, body: { getReader: () => ({ read: jest.fn().mockResolvedValue({done: true}) }) } });
+    (global.fetch as Mock).mockResolvedValueOnce({ /* ... mock successful fetch ... */ ok: true, body: { getReader: () => ({ read: vi.fn().mockResolvedValue({done: true}) }) } });
 
     act(() => {
       result.current.enqueueBotUtterance('First message', 'msg3');

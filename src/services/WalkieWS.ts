@@ -1,5 +1,5 @@
 // src/services/WalkieWS.ts
-const DEFAULT_HOST = 'voiceservicev2-production.up.railway.app';
+const DEFAULT_HOST = import.meta.env.VITE_WALKIE_WS_HOST || 'voiceservicev2-production.up.railway.app';
 const KEEP_ALIVE_INTERVAL_MS = 1500;
 
 // Define message types that can be received from the server
