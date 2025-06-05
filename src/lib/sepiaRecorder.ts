@@ -55,6 +55,26 @@ function initializeSepiaGlobalHandlers() {
   };
 
   SepiaVoiceRecorder.onProcessorInitError = (err: any) => {
+    console.error('[sepiaRecorder] Raw onProcessorInitError object:', err);
+    if (err && typeof err === 'object') {
+      // Attempt to log common error properties
+      for (const key in err) {
+        if (Object.prototype.hasOwnProperty.call(err, key)) {
+          try {
+            console.error(`[sepiaRecorder] Raw error detail - ${key}:`, err[key]);
+          } catch (e) {
+            console.error(`[sepiaRecorder] Raw error detail - ${key}: (could not stringify property)`);
+          }
+        }
+      }
+      if (err.name && err.message) {
+        console.error(`[sepiaRecorder] Error name: ${err.name}, message: ${err.message}`);
+      }
+      if (err instanceof Event) {
+        console.error('[sepiaRecorder] Error is an Event of type:', err.type);
+      }
+    }
+
     internalIsRecorderReady = false;
     if (internalOnReadyReject) {
       internalOnReadyReject(err);
@@ -62,7 +82,8 @@ function initializeSepiaGlobalHandlers() {
     if (activeErrorCallback) {
       activeErrorCallback(err);
     } else {
-      console.error('SEPIA Voice Processor initialization error:', err);
+      // This fallback console.error might be redundant now but is harmless
+      console.error('[sepiaRecorder] SEPIA Voice Processor initialization error (default console):', err);
     }
   };
 
