@@ -3,14 +3,11 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class', // Keep class-based dark mode
-  content: [
-    "./index.html",
-    "./src/**/*.{js,ts,jsx,tsx}",
-  ],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}", "./node_modules/@supabase/**/**.{js,ts,jsx,tsx}"],
   presets: [require('./tailwind.preset.ts')],
   theme: {
     extend: {
-      // ChatGPT Inspired Palette
+      // ChatGPT Inspired Palette & Custom Brand Colors
       colors: {
         primary: '#10a37f',      // Accent Green (used for user bubble, focus rings)
         background: '#202123', // Main dark background
@@ -21,13 +18,25 @@ module.exports = {
         textSecondary: '#A9A9B3', // Secondary muted text
         userBubble: '#10a37f',  // Explicit user bubble color
         botBubble: '#343541',   // Explicit bot bubble color
+        brand: { 
+          50:  "#fef3ec", // Lighter shade for new brand
+          100: "#fde7d8", // Lighter shade for new brand
+          200: "#fbd4ba", // Lighter shade for new brand
+          300: "#fac09c", // Lighter shade for new brand
+          400: "#f7ab7e", // Lighter shade for new brand
+          500: '#f45d09', // Your specified brand color
+          600: '#ff8a1f', // Your specified brand accent
+          700: '#d95008', // Darker shade for new brand
+          800: '#bf4607', // Darker shade for new brand
+          900: '#a43d06'  // Darker shade for new brand
+        }
       },
       borderRadius: {
         sm: '0.25rem',
         md: '0.375rem',
         lg: '0.5rem',
         xl: '0.75rem', // Main rounding
-        '2xl': '1rem', 
+        '2xl': '1.5rem', 
         full: '9999px',
       },
       boxShadow: {

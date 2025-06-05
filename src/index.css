@@ -20,6 +20,7 @@
   }
 
   body {
+  font-family: 'Inter', system-ui, sans-serif;
     /* Use new background color */
     @apply bg-background text-text;
     /* Prevent text selection */
@@ -76,8 +77,27 @@
   .prose-chat code {
      @apply text-xs px-1 py-0.5 bg-black/20 rounded;
   }
+
+  /* Custom Supabase Social Button Styles for Dark Theme */
+  /* Apply to buttons used for social providers in @supabase/auth-ui-react */
+  /* Note: Specificity might be needed if theme styles are strong. */
+  /* It's best to verify these selectors against your rendered HTML. */
+  button[class*="sbui-btn"][class*="sbui-btn-provider"] {
+    @apply bg-gray-700 hover:bg-gray-600 text-white;
+    @apply border border-gray-600 hover:border-gray-500;
+    /* Theme should handle padding, font-size, and other base styles. */
+    /* These @apply rules override color and border for a dark theme. */
+  }
+
+  button[class*="sbui-btn"][class*="sbui-btn-provider"]:focus {
+    @apply ring-2 ring-brand-500 ring-offset-2 ring-offset-black; /* Using 'brand' color and 'black' offset */
+  }
+
+  button[class*="sbui-btn"][class*="sbui-btn-provider"] svg {
+    @apply text-white; /* Ensures icons are white if they use currentColor */
+  }
 }
 
 /* Keyframes are now defined in tailwind.config.js */
 /* @keyframes fade-in { ... } */
-/* @keyframes bounce { ... } */ 
+/* @keyframes bounce { ... } */
