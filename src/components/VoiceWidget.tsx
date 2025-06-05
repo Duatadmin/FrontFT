@@ -9,9 +9,11 @@ import { Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 // Props for VoiceWidget, if any are needed in the future (e.g., config overrides)
-// interface VoiceWidgetProps {}
+interface VoiceWidgetProps {
+  onFinalTranscriptCommitted?: (transcript: string) => void;
+}
 
-const VoiceWidget: React.FC = () => {
+const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted }) => {
   const walkie = useWalkie({
     wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
     recorderConfig: { // Maps to CreateRecorderOptions from sepiaRecorder.ts
@@ -25,6 +27,9 @@ const VoiceWidget: React.FC = () => {
     },
     onTranscription: (transcript: { text: string; final: boolean; type: string }) => {
       console.log('VoiceWidget received transcript:', transcript);
+      if (transcript.final && transcript.text.trim() && onFinalTranscriptCommitted) {
+        onFinalTranscriptCommitted(transcript.text);
+      }
       // You can add logic here, e.g., display transcript or send to another component
     },
     // onError: (error) => {
