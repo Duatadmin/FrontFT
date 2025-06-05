@@ -55,22 +55,44 @@ export function useWalkie(options: UseWalkieOptions): {
     }
   }, [onError]);
 
-  const handleWalkieWSMessage = useCallback((message: WalkieMessage, _channel: 'audio' | 'ctrl') => {
+  const handleWalkieWSMessage = useCallback((message: WalkieMessage, channel: 'audio' | 'ctrl') => {
     // Assuming WalkieMessage is a more specific type like: 
     // { type: 'transcription', text: string, final: boolean } | { type: 'vad_status', speaking: boolean } | { cmd: 'mute' | 'unmute' }
     if (typeof message === 'object' && message !== null) {
-      if ('cmd' in message && message.cmd === 'mute') {
-        micLocked.current = true;
-      } else if ('cmd' in message && message.cmd === 'unmute') {
-        micLocked.current = false;
-      } else if ('type' in message && message.type === 'transcription' && onTranscription) {
-        console.log('[useWalkie] Processing transcription message:', message);
-onTranscription(message as { text: string; final: boolean; type: 'transcription' });
-        if (message.final) micLocked.current = false; // Example: unmute on final transcription
-      } else if ('type' in message && message.type === 'vad_status' && onVadStatusChange) {
-        onVadStatusChange((message as { speaking: boolean; type: 'vad_status' }).speaking);
+      if (channel === 'audio') {
+        // Messages from audio channel are expected to be transcripts: {text: string, final: boolean}
+        if ('text' in message && typeof message.text === 'string' && 'final' in message && typeof message.final === 'boolean') {
+          const transcriptMessage = {
+            text: message.text,
+            final: message.final,
+            type: 'transcription' // Add type for consistent handling by onTranscription callback
+          };
+          console.log('[useWalkie] Processing AUDIO channel transcript:', transcriptMessage);
+          if (onTranscription) {
+            onTranscription(transcriptMessage);
+          }
+          if (transcriptMessage.final) {
+            console.log('[useWalkie] Final transcript received, unmuting mic.');
+            micLocked.current = false;
+          }
+        } else {
+          console.warn('[useWalkie] Received unexpected message on AUDIO channel:', message);
+        }
+      } else if (channel === 'ctrl') {
+        // Messages from control channel
+        if ('cmd' in message && message.cmd === 'mute') {
+          console.log('[useWalkie] Processing CTRL channel MUTE command:', message);
+          micLocked.current = true;
+        } else if ('cmd' in message && message.cmd === 'unmute') {
+          console.log('[useWalkie] Processing CTRL channel UNMUTE command:', message);
+          micLocked.current = false;
+        } else if ('type' in message && message.type === 'vad_status' && onVadStatusChange) {
+          console.log('[useWalkie] Processing CTRL channel VAD status:', message);
+          onVadStatusChange((message as { speaking: boolean; type: 'vad_status' }).speaking);
+        } else {
+          console.warn('[useWalkie] Received unexpected message on CTRL channel:', message);
+        }
       }
-      // Handle other message types or structures as needed
     }
   }, [onTranscription, onVadStatusChange]);
 
