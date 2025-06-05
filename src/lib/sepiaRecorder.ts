@@ -151,10 +151,17 @@ export async function createRecorder(options: CreateRecorderOptions): Promise<Re
       SepiaVoiceRecorder.stop(); // Ensure stopped
       activePcmDataCallback = null; // Clear callback
       activeErrorCallback = null; // Clear error callback
-      // Note: We don't destroy the global SepiaVoiceRecorder or its handlers here,
-      // as it's a global object. This 'close' is for this handle's usage.
-      // If SepiaVoiceRecorder had an instance-specific destroy, it would be called here.
-      console.log('RecorderHandle closed.');
+
+      // Reset module-level state to allow for re-initialization
+      internalIsRecorderReady = false;
+      internalOnReadyPromise = null;
+      internalOnReadyResolve = null;
+      internalOnReadyReject = null;
+      // isSepiaInitialized can remain true as global handlers are set once.
+
+      // If SepiaVoiceRecorder had an instance-specific destroy or reset method, it would be called here.
+      // For example: if (SepiaVoiceRecorder.destroy) SepiaVoiceRecorder.destroy();
+      console.log('RecorderHandle closed and internal state reset.');
     },
   };
 }

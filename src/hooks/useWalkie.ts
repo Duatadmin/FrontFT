@@ -140,39 +140,21 @@ export function useWalkie(options: UseWalkieOptions): {
     frameCount.current = 0;
 
     try {
-      let hostname = '';
-      try {
-        const parsedUrl = new URL(wsUrl);
-        hostname = parsedUrl.hostname;
-        if (parsedUrl.port) {
-          hostname += ':' + parsedUrl.port; // Include port if specified in wsUrl, WalkieWS might not need it if it assumes standard ports
+      let effectiveHost = wsUrl;
+      if (effectiveHost.includes('://')) {
+        try {
+          effectiveHost = new URL(effectiveHost).host; // .host includes hostname and port
+        } catch (e) {
+          console.error(`Failed to parse wsUrl '${wsUrl}' even with a scheme. Using as is. Error: ${e}`);
+          // Keep effectiveHost as wsUrl if parsing fails unexpectedly (e.g. malformed scheme part)
         }
-      } catch (e) {
-        // If wsUrl is not a full URL but just a host, or parsing fails, use it directly
-        // This might happen if wsUrl is like 'localhost:8000' without scheme
-        // However, WalkieWS prepends 'wss://', so wsUrl should ideally be just the host or host:port
-        // For now, let's assume wsUrl might sometimes be just 'host:port' if not a full URL
-        console.warn(`Could not parse wsUrl '${wsUrl}' as a full URL, attempting to use as host. Error: ${e}`);
-        // Fallback: if wsUrl itself is 'voiceservicev2-production.up.railway.app', this direct assignment is fine.
-        // If wsUrl includes 'wss://' or 'ws://', WalkieWS will prepend another 'wss://', which is wrong.
-        // The most robust solution is for WalkieWS to accept the full URL.
-        // Given WalkieWS current structure, it expects ONLY the host (and optionally port).
-        // So, if wsUrl = 'wss://myhost.com/path', we need 'myhost.com'.
-        // If wsUrl = 'myhost.com:1234', we need 'myhost.com:1234'.
-        // The URL constructor handles this well for valid URLs.
-        // If wsUrl is 'myhost.com', new URL('myhost.com') fails. new URL('//myhost.com', 'wss:') works.
-        // Let's simplify assuming wsUrl is a valid http/https/ws/wss URL string for parsing.
-        // If not, WalkieWS needs to be more flexible or wsUrl needs to be pre-cleaned.
-        if (wsUrl.includes('://')) {
-            hostname = new URL(wsUrl).host; // host includes hostname and port if present
-        } else {
-            hostname = wsUrl; // Assume it's already host or host:port
-        }
-      }
+      } 
+      // At this point, effectiveHost should be 'hostname' or 'hostname:port'
+      // WalkieWS will prepend 'wss://'
 
       const wsOptions: WalkieWSOptions = {
         sid: sessionId,
-        host: hostname, 
+        host: effectiveHost, 
         onMessage: handleWalkieWSMessage,
         onError: (err) => {
           if (err instanceof Error) {
