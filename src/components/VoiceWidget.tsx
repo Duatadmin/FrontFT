@@ -1,7 +1,6 @@
 // src/components/VoiceWidget.tsx
 import React, { useRef, useState, Fragment, useEffect } from 'react';
 import { useWalkie } from '../hooks/useWalkie'; 
-import type { WalkieState } from '../hooks/useWalkie'; // Ensure WalkieState is exported from useWalkie.ts
 import { v4 as uuid } from 'uuid';
 import PTTButton from './PTTButton';
 import type { PTTButtonState } from './PTTButton'; 
@@ -14,17 +13,17 @@ import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 const VoiceWidget: React.FC = () => {
   const walkie = useWalkie({
-    wsUrl: 'ws://localhost:8080/ws', // TODO: Make this configurable (e.g., via props or env var)
+    wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
     recorderConfig: { // Maps to CreateRecorderOptions from sepiaRecorder.ts
       targetSampleRate: 16000,
       mono: true,
       // sepiaModulesPath: '/custom-sepia-modules/' // Optional: if you need to override default path
     },
-    onVadStatusChange: (isSpeaking) => {
+    onVadStatusChange: (isSpeaking: boolean) => {
       console.log('VAD Status changed:', isSpeaking);
       // You can add logic here if the VoiceWidget needs to react directly to VAD status
     },
-    onTranscription: (transcript) => {
+    onTranscription: (transcript: { text: string; final: boolean; type: string }) => {
       console.log('VoiceWidget received transcript:', transcript);
       // You can add logic here, e.g., display transcript or send to another component
     },

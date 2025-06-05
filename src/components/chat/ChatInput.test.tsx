@@ -59,14 +59,14 @@ describe('ChatInput Component', () => {
 
   test('input field updates value on change', () => {
     render(<ChatInput {...defaultProps} />);
-    const textarea = screen.getByPlaceholderText('Спросите что-нибудь...') as HTMLTextAreaElement;
+    const textarea = screen.getByPlaceholderText('Ask anything...') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: 'Hello there' } });
     expect(textarea.value).toBe('Hello there');
   });
 
   test('calls onSendMessage when SendButton is clicked with input', () => {
     render(<ChatInput {...defaultProps} />);
-    const textarea = screen.getByPlaceholderText('Спросите что-нибудь...');
+    const textarea = screen.getByPlaceholderText('Ask anything...') as HTMLTextAreaElement;
     const sendButton = screen.getByLabelText('Send message');
 
     fireEvent.change(textarea, { target: { value: 'Test message' } });
@@ -84,7 +84,7 @@ describe('ChatInput Component', () => {
 
   test('SendButton is enabled when input is not empty', () => {
     render(<ChatInput {...defaultProps} />);
-    const textarea = screen.getByPlaceholderText('Спросите что-нибудь...');
+    const textarea = screen.getByPlaceholderText('Ask anything...') as HTMLTextAreaElement;
     fireEvent.change(textarea, { target: { value: 'Not empty' } });
     const sendButton = screen.getByLabelText('Send message');
     expect(sendButton).not.toBeDisabled();
