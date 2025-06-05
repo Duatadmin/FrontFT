@@ -16,7 +16,8 @@ declare const SepiaVoiceRecorder: {
   create: (options: any) => void;
   start: () => void;
   stop: () => void;
-  // Assuming there's no explicit 'destroy' or 'release' for an instance
+  release?: () => void; // Optional release method
+  destroy?: () => void; // Optional destroy method
 };
 
 export type ErrorCallback = (error: any) => void;
@@ -180,8 +181,27 @@ export async function createRecorder(options: CreateRecorderOptions): Promise<Re
       internalOnReadyReject = null;
       isSepiaInitialized = false; // Allow global handlers to be re-assigned on next create
 
-      // If SepiaVoiceRecorder had an instance-specific destroy or reset method, it would be called here.
-      // For example: if (SepiaVoiceRecorder.destroy) SepiaVoiceRecorder.destroy();
+      // Attempt to call a release or destroy method on the SepiaVoiceRecorder global object
+      if (typeof SepiaVoiceRecorder.release === 'function') {
+        console.log('[sepiaRecorder] Attempting SepiaVoiceRecorder.release()...');
+        try {
+          SepiaVoiceRecorder.release();
+          console.log('[sepiaRecorder] SepiaVoiceRecorder.release() called.');
+        } catch (e) {
+          console.error('[sepiaRecorder] Error calling SepiaVoiceRecorder.release():', e);
+        }
+      } else if (typeof SepiaVoiceRecorder.destroy === 'function') {
+        console.log('[sepiaRecorder] Attempting SepiaVoiceRecorder.destroy()...');
+        try {
+          SepiaVoiceRecorder.destroy();
+          console.log('[sepiaRecorder] SepiaVoiceRecorder.destroy() called.');
+        } catch (e) {
+          console.error('[sepiaRecorder] Error calling SepiaVoiceRecorder.destroy():', e);
+        }
+      } else {
+        console.warn('[sepiaRecorder] Neither SepiaVoiceRecorder.release() nor .destroy() method found.');
+      }
+
       console.log('RecorderHandle closed and internal state reset.');
     },
   };
