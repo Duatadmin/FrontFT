@@ -17,7 +17,7 @@ const VoiceWidget: React.FC = () => {
     recorderConfig: { // Maps to CreateRecorderOptions from sepiaRecorder.ts
       targetSampleRate: 16000,
       mono: true,
-      // sepiaModulesPath: '/custom-sepia-modules/' // Optional: if you need to override default path
+      sepiaModulesPath: '/sepia/modules/' // Path to Sepia engine modules
     },
     onVadStatusChange: (isSpeaking: boolean) => {
       console.log('VAD Status changed:', isSpeaking);

@@ -11,6 +11,30 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.webmanifest">
     <title>Jarvis Chat</title>
+    <!-- Load Sepia Libraries -->
+    <script type="text/javascript" src="/sepia/sepia-web-audio.min.js"></script>
+    <script type="text/javascript" src="/sepia/sepia-recorder.min.js"></script>
+    <script>
+      // Make sure SepiaFW is defined before trying to set moduleFolder
+      // This might need to be more robust if script loading is slow
+      if (typeof SepiaFW !== 'undefined' && SepiaFW.webAudio && SepiaFW.webAudio.defaultProcessorOptions) {
+        SepiaFW.webAudio.defaultProcessorOptions.moduleFolder = "/sepia/modules/";
+      } else {
+        // Fallback or defer if SepiaFW is not immediately available
+        // For now, we'll assume it loads synchronously before this inline script runs.
+        // A more robust solution might involve an event listener or a check within the app.
+        console.warn('SepiaFW not immediately available to set moduleFolder. This might be an issue.');
+        // Attempt to set it on window load as a fallback, though this is not ideal.
+        window.addEventListener('load', function() {
+          if (typeof SepiaFW !== 'undefined' && SepiaFW.webAudio && SepiaFW.webAudio.defaultProcessorOptions) {
+            SepiaFW.webAudio.defaultProcessorOptions.moduleFolder = "/sepia/modules/";
+            console.log('SepiaFW.webAudio.defaultProcessorOptions.moduleFolder set on window load.');
+          } else {
+            console.error('SepiaFW still not available on window load.');
+          }
+        });
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>
