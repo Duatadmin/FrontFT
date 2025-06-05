@@ -157,7 +157,7 @@ export async function createRecorder(options: CreateRecorderOptions): Promise<Re
       internalOnReadyPromise = null;
       internalOnReadyResolve = null;
       internalOnReadyReject = null;
-      // isSepiaInitialized can remain true as global handlers are set once.
+      isSepiaInitialized = false; // Allow global handlers to be re-assigned on next create
 
       // If SepiaVoiceRecorder had an instance-specific destroy or reset method, it would be called here.
       // For example: if (SepiaVoiceRecorder.destroy) SepiaVoiceRecorder.destroy();
