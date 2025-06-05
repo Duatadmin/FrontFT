@@ -1,20 +1,21 @@
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import ChatInput from './ChatInput'; // Adjusted import path assuming test is in same dir
 
 // Mock hooks
-const mockToggleVoice = jest.fn();
-const mockToggleWalkie = jest.fn();
+const mockToggleVoice = vi.fn();
+const mockToggleWalkie = vi.fn();
 
-jest.mock('../../hooks/useVoicePlayback', () => ({
+vi.mock('../../hooks/useVoicePlayback', () => ({
   useVoicePlayback: () => ({
     voiceEnabled: false,
     toggleVoice: mockToggleVoice,
   }),
 }));
 
-jest.mock('../../hooks/useWalkie', () => ({
+vi.mock('../../hooks/useWalkie', () => ({
   useWalkie: () => ({
     isWalkieActive: false,
     isListening: false,
@@ -29,26 +30,26 @@ jest.mock('../../hooks/useWalkie', () => ({
 // and voice is in src/components/voice/
 // so the relative path from ChatInput.test.tsx (in src/components/chat/)
 // to src/components/voice/ would be '../voice'
-jest.mock('../voice', () => ({
-  initVoiceModule: jest.fn(() => Promise.resolve()),
+vi.mock('../voice', () => ({
+  initVoiceModule: vi.fn(() => Promise.resolve()),
 }));
 
 // Mock react-router-dom for the Link component in DashboardButton
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'), // import and retain default behavior
+vi.mock('react-router-dom', () => ({
+  ...vi.importActual('react-router-dom'), // import and retain default behavior
   Link: ({ children, to }: { children: React.ReactNode, to: string }) => <a href={to}>{children}</a>,
 }));
 
 
 describe('ChatInput Component', () => {
-  const mockOnSendMessage = jest.fn();
+  const mockOnSendMessage = vi.fn();
   const defaultProps = {
     onSendMessage: mockOnSendMessage,
     isLoading: false,
   };
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   test('renders correctly and matches snapshot', () => {

@@ -1,14 +1,16 @@
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useVoicePlayback } from './useVoicePlayback';
 
 // Mock crypto.randomUUID
-global.crypto = {
-  ...global.crypto,
-  randomUUID: () => 'mocked-uuid',
-} as any;
+Object.defineProperty(globalThis, 'crypto', {
+  value: { randomUUID: vi.fn(() => 'mocked-uuid') },
+  writable: true,
+  configurable: true,
+});
 
 // Mock fetch and Audio
-global.fetch = jest.fn();
+global.fetch = vi.fn();
 
 class MockAudio {
   src: string = '';
@@ -20,35 +22,35 @@ class MockAudio {
   onerror: ((e: any) => void) | null = null;
   onloadeddata: (() => void) | null = null;
 
-  play = jest.fn(() => {
+  play = vi.fn(() => {
     this.paused = false;
     return Promise.resolve();
   });
-  pause = jest.fn(() => {
+  pause = vi.fn(() => {
     this.paused = true;
   });
-  addEventListener = jest.fn();
-  removeEventListener = jest.fn();
-  addSourceBuffer = jest.fn();
-  appendBuffer = jest.fn();
-  endOfStream = jest.fn();
+  addEventListener = vi.fn();
+  removeEventListener = vi.fn();
+  addSourceBuffer = vi.fn();
+  appendBuffer = vi.fn();
+  endOfStream = vi.fn();
   // Mock MediaSource related properties if needed by your tests
-  static isTypeSupported = jest.fn(() => true); // Assume Opus is supported by default
+  static isTypeSupported = vi.fn(() => true); // Assume Opus is supported by default
 }
 
 (global as any).Audio = MockAudio;
 (global as any).MediaSource = {
-    isTypeSupported: jest.fn(() => true), // Mock for MediaSource.isTypeSupported
+    isTypeSupported: vi.fn(() => true), // Mock for MediaSource.isTypeSupported
     prototype: {
-        addSourceBuffer: jest.fn(),
-        endOfStream: jest.fn(),
-        addEventListener: jest.fn(),
-        removeEventListener: jest.fn(),
+        addSourceBuffer: vi.fn(),
+        endOfStream: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
         readyState: 'closed' // or 'open' as needed
     }
 };
-URL.createObjectURL = jest.fn((obj: any) => `blob:${obj ? obj.toString() : 'mockURL'}`);
-URL.revokeObjectURL = jest.fn();
+URL.createObjectURL = vi.fn((obj: any) => `blob:${obj ? obj.toString() : 'mockURL'}`);
+URL.revokeObjectURL = vi.fn();
 
 
 // Mock localStorage

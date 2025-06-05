@@ -5,6 +5,7 @@ import { Message } from './types';
 import chatService from './services/chatService';
 import { checkApiStatus } from './services/apiService';
 import SupabaseTest from './SupabaseTest';
+import VoiceWidget from './components/VoiceWidget';
 
 function App() {
   const [messages, setMessages] = useState<Message[]>([
@@ -22,7 +23,6 @@ function App() {
   useEffect(() => {
     const verifyApiConnection = async () => {
       const status = await checkApiStatus();
-      // setIsConnected(status); // Removed as isConnected is no longer used
       
       // Add a system message if connection fails
       if (!status) {
@@ -30,8 +30,8 @@ function App() {
           ...prevMessages,
           {
             id: `error-${Date.now()}`,
-            content: "⚠️ Cannot connect to the backend service. Some features might not work properly.",
-            role: 'assistant'
+            content: 'Failed to connect to the API. Please check your connection and try again.',
+            role: 'system'
           }
         ]);
       }
@@ -40,81 +40,61 @@ function App() {
     verifyApiConnection();
   }, []);
 
-  // Handle keyboard visibility
-  useEffect(() => {
-    function handleResize() {
-      // Force repainting to prevent stuck layouts
-      document.documentElement.style.height = `${window.innerHeight}px`;
-    }
-
-    window.addEventListener('resize', handleResize);
-    
-    // Initial call
-    handleResize();
-    
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const handleSendMessage = async (text: string) => {
-    // Create and add user message
-    const newUserMessage: Message = {
+  const handleSendMessage = async (content: string) => {
+    const userMessage: Message = {
       id: `user-${Date.now()}`,
-      content: text,
+      content,
       role: 'user'
     };
-    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
-    
-    // Show loading state
+    setMessages(prevMessages => [...prevMessages, userMessage]);
     setIsLoading(true);
-    
+
     try {
-      // Send message to API and get response
-      const responseText = await chatService.sendMessage(text);
-      
-      // Create and add bot message with response
-      const newBotMessage: Message = {
+      const assistantMessageContent = await chatService.sendMessage(content);
+      const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
-        content: responseText,
+        content: assistantMessageContent,
         role: 'assistant'
       };
-      setMessages((prevMessages) => [...prevMessages, newBotMessage]);
+      setMessages(prevMessages => [...prevMessages, assistantMessage]);
     } catch (error) {
-      console.error('Error handling message:', error);
-      // Add error message if request fails
+      console.error('Failed to send message:', error);
       const errorMessage: Message = {
         id: `error-${Date.now()}`,
         content: 'Sorry, I encountered an error. Please try again.',
-        role: 'assistant'
+        role: 'system'
       };
-      setMessages((prevMessages) => [...prevMessages, errorMessage]);
-    } finally {
-      setIsLoading(false);
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
     }
+    setIsLoading(false);
   };
 
   return (
-    <div>
-      <div className="fixed top-0 right-0 z-50 p-2">
+    <VoiceProvider>
+      <div className="flex flex-col h-screen bg-background text-foreground">
+        {/* Button to toggle SupabaseTest component */} 
         <button 
           onClick={() => setShowSupabaseTest(!showSupabaseTest)}
-          className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+          className="absolute top-4 right-4 bg-primary text-primary-foreground p-2 rounded z-20"
         >
-          {showSupabaseTest ? 'Show Chat App' : 'Test Supabase'}
+          {showSupabaseTest ? 'Hide' : 'Show'} Supabase Test
         </button>
+
+        {showSupabaseTest && <SupabaseTest />}
+        
+        <ChatLayout 
+          messages={messages} 
+          onSendMessage={handleSendMessage} 
+          isLoading={isLoading} 
+        />
+        
+        {/* Voice Widget Integration */}
+        <div className="fixed bottom-10 right-10 z-10">
+            <VoiceWidget />
+        </div>
+
       </div>
-      
-      {showSupabaseTest ? (
-        <SupabaseTest />
-      ) : (
-        <VoiceProvider>
-          <ChatLayout
-            messages={messages}
-            isLoading={isLoading}
-            onSendMessage={handleSendMessage}
-          />
-        </VoiceProvider>
-      )}
-    </div>
+    </VoiceProvider>
   );
 }
 
