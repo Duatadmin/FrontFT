@@ -64,7 +64,8 @@ export function useWalkie(options: UseWalkieOptions): {
       } else if ('cmd' in message && message.cmd === 'unmute') {
         micLocked.current = false;
       } else if ('type' in message && message.type === 'transcription' && onTranscription) {
-        onTranscription(message as { text: string; final: boolean; type: 'transcription' });
+        console.log('[useWalkie] Processing transcription message:', message);
+onTranscription(message as { text: string; final: boolean; type: 'transcription' });
         if (message.final) micLocked.current = false; // Example: unmute on final transcription
       } else if ('type' in message && message.type === 'vad_status' && onVadStatusChange) {
         onVadStatusChange((message as { speaking: boolean; type: 'vad_status' }).speaking);

@@ -41,6 +41,11 @@ function App() {
   }, []);
 
   const handleSendMessage = async (content: string) => {
+    console.log('[App.tsx] handleSendMessage called with content:', content);
+    // Check if the content is likely from voice (non-empty and not just whitespace)
+    if (content && content.trim().length > 0) {
+        console.log('[App.tsx] Content appears valid for new message.');
+    }
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       content,

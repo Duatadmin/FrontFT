@@ -113,6 +113,13 @@ export class WalkieWS {
       if (this.onMessage) {
         try {
           const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+          if (channel === 'ctrl') {
+            console.log('[WalkieWS] Received on CTRL channel:', JSON.stringify(data));
+          } else if (channel === 'audio') {
+            console.log('[WalkieWS] Received on AUDIO channel:', JSON.stringify(data));
+          } else {
+            console.log('[WalkieWS] Received on UNKNOWN channel (' + channel + '):', JSON.stringify(data));
+          }
           this.onMessage(data, channel);
         } catch (e) {
           // If JSON.parse fails for string data, pass raw string data
