@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { getVisualizationData, getIsRecording } from './index';
+// TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+// import { getVisualizationData, getIsRecording } from './index';
 
 interface AudioVisualizerProps {
   width?: number;
@@ -19,7 +20,10 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
   // Check recording status on an interval
   useEffect(() => {
     const checkRecordingStatus = () => {
-      setIsActive(getIsRecording());
+      // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+      // setIsActive(getIsRecording());
+      console.warn('AudioVisualizer: getIsRecording is deprecated.');
+      setIsActive(false); // Force inactive state
     };
     
     // Check initially
@@ -50,8 +54,11 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
     // Draw visualization only when active
     if (isActive) {
       const drawVisualizer = () => {
-        // Get data from our voice module
-        const dataArray = getVisualizationData();
+        // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+        // // Get data from our voice module
+        // const dataArray = getVisualizationData();
+        console.warn('AudioVisualizer: getVisualizationData is deprecated.');
+        const dataArray: Uint8Array | null = null; // Force null data, explicitly typed
         if (!dataArray) {
           // If no data, schedule next frame and return
           animationFrameRef.current = requestAnimationFrame(drawVisualizer);
@@ -116,7 +123,8 @@ const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [isActive, getVisualizationData, width, height, barColor, barCount]);
+  // TODO(legacy-voice): getVisualizationData removed from dependencies as it's deprecated
+  }, [isActive, width, height, barColor, barCount]);
 
   return (
     <canvas

@@ -1,13 +1,15 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { Mic } from 'lucide-react';
-import { setTranscriptTarget } from './index';
-import { 
-  getVoiceModule, 
-  onVoiceState, 
-  destroyVoiceModule,
-  startVoiceRecording,
-  stopVoiceRecording
-} from '../../voice/singleton';
+// TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+// import { setTranscriptTarget } from './index';
+// TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+// import { 
+//   getVoiceModule, 
+//   onVoiceState, 
+//   destroyVoiceModule,
+//   startVoiceRecording,
+//   stopVoiceRecording
+// } from '../../voice/singleton';
 import { clsx as cx } from 'clsx';
 
 const HOLD_MS  = 200;  // min press to start
@@ -28,25 +30,33 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
   // Set up transcript target if provided
   useEffect(() => {
     if (targetId) {
-      setTranscriptTarget(targetId);
+      // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+      // setTranscriptTarget(targetId);
+      console.warn('VoiceButton: setTranscriptTarget is deprecated.');
     }
     
-    // Listen for voice state changes
-    onVoiceState((s) => {
-      if (s === 'recording') {
-        setState('recording');
-      } else if (s === 'idle' && state === 'recording') {
-        setState('idle');
-      }
-    });
+    // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+    // // Listen for voice state changes
+    // onVoiceState((s) => {
+    //   if (s === 'recording') {
+    //     setState('recording');
+    //   } else if (s === 'idle' && state === 'recording') {
+    //     setState('idle');
+    //   }
+    // });
+    console.warn('VoiceButton: onVoiceState is deprecated.');
     
-    // Make sure voice module is initialized
-    getVoiceModule();
+    // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+    // // Make sure voice module is initialized
+    // getVoiceModule();
+    console.warn('VoiceButton: getVoiceModule is deprecated.');
     
     return () => {
-      // Only destroy if this is the last component using it
-      // In a real app, you might want to track reference counts
-      destroyVoiceModule();
+      // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+      // // Only destroy if this is the last component using it
+      // // In a real app, you might want to track reference counts
+      // destroyVoiceModule();
+      console.warn('VoiceButton: destroyVoiceModule is deprecated.');
     };
   }, [targetId]);
 
@@ -58,8 +68,12 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
     holdTimer.current = window.setTimeout(() => {
       if (Date.now() - lastStop.current < COOLDOWN) return;
       
-      // Use the wrapper function instead of direct method call
-      startVoiceRecording();
+      // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+      // // Use the wrapper function instead of direct method call
+      // startVoiceRecording();
+      console.error('VoiceButton: startVoiceRecording functionality is deprecated and removed.');
+      // Simulate recording state for UI purposes if needed, or remove state transition
+      // setState('recording'); // This would be a fake state
       
       // navigator.vibrate?.(20);            // optional haptic
       setState('recording');
@@ -82,8 +96,10 @@ export default function VoiceButton({ disabled = false, targetId }: VoiceButtonP
     if (state === 'arming') {
       cancelArming();
     } else if (state === 'recording') {
-      // Use the wrapper function instead of direct method call
-      stopVoiceRecording();
+      // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+      // // Use the wrapper function instead of direct method call
+      // stopVoiceRecording();
+      console.error('VoiceButton: stopVoiceRecording functionality is deprecated and removed.');
       
       lastStop.current = Date.now();
       setState('idle');

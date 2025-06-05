@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Mic, MicOff } from 'lucide-react';
-import { setTranscriptTarget } from './index';
-import { 
-  getVoiceModule, 
-  onVoiceState,
-  toggleVoiceRecording
-} from '../../voice/singleton';
+// TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+// import { setTranscriptTarget } from './index';
+// TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+// import { 
+//   getVoiceModule, 
+//   onVoiceState,
+//   toggleVoiceRecording
+// } from '../../voice/singleton';
 
 interface WalkieToggleButtonProps {
   targetId: string;
@@ -21,23 +23,28 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
 
   // Initialize voice module and check mic permissions
   useEffect(() => {
-    // Set transcript target
-    setTranscriptTarget(targetId);
+    // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+    // // Set transcript target
+    // setTranscriptTarget(targetId);
+    console.warn('WalkieToggleButton: setTranscriptTarget is deprecated.');
     
-    // Initialize voice module
-    try {
-      const voice = getVoiceModule();
-      setMicReady(true);
+    // // Initialize voice module
+    // try {
+    //   const voice = getVoiceModule();
+    //   setMicReady(true);
       
-      // Listen for state changes
-      onVoiceState((state) => {
-        setActive(state === 'recording');
-      });
+    //   // Listen for state changes
+    //   onVoiceState((state) => {
+    //     setActive(state === 'recording');
+    //   });
       
-    } catch (error) {
-      console.error('Failed to initialize voice module', error);
-      setMicReady(false);
-    }
+    // } catch (error) {
+    //   console.error('Failed to initialize voice module', error);
+    //   setMicReady(false);
+    // }
+    console.error('WalkieToggleButton: Voice module functionality is deprecated.');
+    setMicReady(false); // Indicate feature is not available
+    setActive(false);
   }, [targetId]);
 
   // Button appearance depends on active state
@@ -60,13 +67,16 @@ const WalkieToggleButton: React.FC<WalkieToggleButtonProps> = ({
   const handleClick = async () => {
     const newState = !active;
     
-    try {
-      // Use the wrapper function
-      await toggleVoiceRecording();
-      setActive(newState);
-    } catch (error) {
-      console.error('Failed to toggle mode', error);
-    }
+    // TODO(legacy-voice): VoiceModule is deprecated. Remove or replace.
+    console.error('WalkieToggleButton: toggleVoiceRecording functionality is deprecated and removed.');
+    // try {
+    //   // Use the wrapper function
+    //   await toggleVoiceRecording();
+    //   setActive(newState);
+    // } catch (error) {
+    //   console.error('Failed to toggle mode', error);
+    // }
+    // Do not change active state as the underlying functionality is gone.
   };
 
   // Show fallback message if microphone permission is denied

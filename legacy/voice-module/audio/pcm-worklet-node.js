@@ -9,7 +9,7 @@ export class PCMWorkletNodeController {
   }
 
   async init() {
-    const workletURL = import.meta.env.BASE_URL + 'worklet/pcm-processor.js';
+    const workletURL = new URL('./worklet/pcm-processor.js', import.meta.url).href;
     try {
       await this.audioContext.audioWorklet.addModule(workletURL);
       console.log('[WORKLET] ✅ module loaded', workletURL);
