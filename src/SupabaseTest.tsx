@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase, getCurrentUserId, checkRequiredTables } from './lib/supabase/client';
+import { supabase, getCurrentUserId, checkRequiredTables } from './lib/supabase';
 import MainLayout from './components/layout/MainLayout';
 import SimpleWorkoutDisplay from './SimpleWorkoutDisplay';
 

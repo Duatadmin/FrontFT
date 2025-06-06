@@ -1,4 +1,4 @@
-import { WorkoutSession, TrainingPlan } from './supabaseClient';
+import { WorkoutSession, TrainingPlan } from './supabase';
 
 /**
  * MOCK DATA FOR DEVELOPMENT

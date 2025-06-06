@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from './lib/supabase/client';
+import { supabase } from './lib/supabase';
 import './workout-details.css';
 
 // Import icons

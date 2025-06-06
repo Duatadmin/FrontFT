@@ -6,7 +6,7 @@
  */
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { supabase, getCurrentUserId } from '../supabase/client';
+import { supabase, getCurrentUserId } from '../supabase';
 import { 
   WorkoutSession,
   TrainingPlan,

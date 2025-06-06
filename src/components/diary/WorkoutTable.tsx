@@ -3,7 +3,7 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 import { Clock, Calendar, Dumbbell, Award, ChevronRight } from 'lucide-react';
 import useDiaryStore from '../../store/useDiaryStore';
 import useUserStore from '../../store/useUserStore';
-import { WorkoutSession } from '../../lib/supabaseClient';
+import { WorkoutSession } from '../../lib/supabase';
 
 const WorkoutTable: React.FC = () => {
   // Get data from stores

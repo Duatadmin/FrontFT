@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { isMockData, getCurrentUserId } from '../lib/supabase/client';
+import { isMockData, getCurrentUserId } from '../lib/supabase';
 import { fetchWorkoutSessions, calculateWorkoutStats } from '../lib/supabase/dataAdapter';
 import type { WorkoutSession } from '../lib/supabase/schema.types';
 

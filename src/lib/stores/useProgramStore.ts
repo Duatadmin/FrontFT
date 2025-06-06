@@ -1,15 +1,8 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { supabase, getCurrentUserId } from '../supabase/client';
+import { supabase, getCurrentUserId } from '../supabase';
 import { toast } from '../utils/toast';
 import { TrainingPlan as DBTrainingPlan, Goal as DBGoal } from '../supabase/schema.types';
-
-// Add type definitions for ImportMeta
-declare global {
-  interface ImportMeta {
-    env: Record<string, string>;
-  }
-}
 
 // Import the getCurrentUserId from our unified client
 

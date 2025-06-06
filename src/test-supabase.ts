@@ -1,7 +1,7 @@
 /**
  * Test file to verify Supabase connection
  */
-import { supabase } from './lib/supabase/client';
+import { supabase } from './lib/supabase';
 
 // Log Supabase configuration
 console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);

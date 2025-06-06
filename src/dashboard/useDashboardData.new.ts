@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { isMockData, getCurrentUserId } from '../lib/supabase/client';
+import { isMockData, getCurrentUserId } from '../lib/supabase';
 import { fetchWorkoutSessions, calculateWorkoutStats } from '../lib/supabase/dataAdapter';
 import type { WorkoutSession } from '../lib/supabase/schema.types';
 
@@ -123,7 +123,7 @@ export function useDashboardData() {
         
         // Construct dashboard data
         const dashboardData: DashboardData = {
-          recentWorkouts: recentWorkouts.slice(0, 5), // Limit to 5 most recent
+          recentWorkouts: recentWorkouts.data ? recentWorkouts.data.slice(0, 5) : [], // Limit to 5 most recent
           monthlyStats: {
             workoutCount: stats.totalWorkouts,
             totalVolume: stats.totalVolume,

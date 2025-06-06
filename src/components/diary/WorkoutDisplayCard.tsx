@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../../lib/supabase/client';
+import { supabase } from '../../lib/supabase';
 import { Calendar, Clock, Dumbbell, ChevronDown, Award, Flame, BarChart3 } from 'lucide-react';
 import useDiaryStore from '../../store/useDiaryStore';
 import useUserStore from '../../store/useUserStore';

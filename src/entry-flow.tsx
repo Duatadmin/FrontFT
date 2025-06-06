@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import AuthCallback from "./components/auth/callback"; // Added import for AuthCallback
 import { createClient, Session } from "@supabase/supabase-js";
 
 import "./index.css";                               // Tailwind base
@@ -27,6 +28,7 @@ const SplashScreen = () => (
 import { Auth } from '@supabase/auth-ui-react';
 import { customAuthUITheme } from './auth-theme';
 import Logo from '../assets/Logo.svg?react';
+
 
 const LoginPage = () => {
   // console.log('Logo URL:', logoUrl); // No longer needed
@@ -68,12 +70,7 @@ const LoginPage = () => {
 );
 }
 
-/** 2. Chat placeholder (replace later) **********************************/
-const ChatPage = () => (
-  <div className="grid h-screen place-items-center">
-    <h1 className="text-2xl">💬 Chat screen (stub)</h1>
-  </div>
-);
+
 
 /** 3. Protected route ***************************************************/
 const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
@@ -103,6 +100,7 @@ const AppEntry = () => (
           }
         />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/auth/callback" element={<AuthCallback />} /> {/* Added route for AuthCallback */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AnimatePresence>

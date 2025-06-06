@@ -5,7 +5,7 @@
  */
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import { supabase } from '../supabase/client';
+import { supabase } from '../supabase';
 import { User } from '../supabase/schema.types';
 import { toast } from '../utils/toast';
 

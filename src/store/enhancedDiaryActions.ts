@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import supabase from '../lib/supabaseClient';
+import { supabase } from '../lib/supabase';
 import type { FitnessGoal, WeeklyReflection, ProgressPhoto, DiaryTab } from './useDiaryStore';
 
 // Define the DiaryState type locally to avoid circular dependency

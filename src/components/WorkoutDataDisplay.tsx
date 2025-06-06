@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWorkoutSessions } from '../lib/supabase/dataAdapter';
-import { getCurrentUserId } from '../lib/supabase/client';
+import { getCurrentUserId } from '../lib/supabase';
 import type { WorkoutSession } from '../lib/supabase/schema.types';
 
 // Test user ID for development

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
-import supabase, { WorkoutSession, TrainingPlan } from '../lib/supabaseClient';
+import { supabase, WorkoutSession, TrainingPlan } from '../lib/supabase';
 // Import mock data generators for development
 import { generateMockSessions, generateMockTrainingPlan } from '../lib/mockDiaryData';
 import { 
