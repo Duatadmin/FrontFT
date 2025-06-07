@@ -85,12 +85,14 @@ const initializer: StateCreator<UserStore> = (set, get) => {
       console.error('[UserStore] Failed to subscribe to Supabase auth state changes.');
     }
 
-    window.addEventListener('beforeunload', () => {
-      logDev('beforeunload: Unsubscribing from Supabase auth changes.');
-      globalAuthUnsub?.();
-      globalAuthUnsub = null;
-      delete (globalThis as any).__SUPABASE_AUTH_UNSUB;
-    });
+    if (typeof window !== 'undefined') {
+      window.addEventListener('beforeunload', () => {
+        logDev('beforeunload: Unsubscribing from Supabase auth changes.');
+        globalAuthUnsub?.();
+        globalAuthUnsub = null;
+        delete (globalThis as any).__SUPABASE_AUTH_UNSUB;
+      });
+    }
   }
 
   return {
@@ -125,7 +127,9 @@ const initializer: StateCreator<UserStore> = (set, get) => {
       } catch (err) {
         logDev('boot() error:', err);
         safeSet({ error: GENERIC_ERROR });
-        toast.error(GENERIC_ERROR);
+        if (typeof window !== 'undefined') {
+          toast.error(GENERIC_ERROR);
+        }
       } finally {
         safeSet({ isLoading: false });
         logDev('boot() finished, isLoading: false');
@@ -141,7 +145,9 @@ const initializer: StateCreator<UserStore> = (set, get) => {
       } catch (err) {
         logDev('login() error:', err);
         safeSet({ error: GENERIC_ERROR, isLoading: false });
-        toast.error(GENERIC_ERROR);
+        if (typeof window !== 'undefined') {
+          toast.error(GENERIC_ERROR);
+        }
       }
       // isLoading will be set to false by onAuthStateChange or finally in boot/error
     },
@@ -149,25 +155,33 @@ const initializer: StateCreator<UserStore> = (set, get) => {
     async signUp(email, password, data = {}) {
       try {
         safeSet({ isLoading: true, error: null });
+        const emailRedirectTo = typeof window !== 'undefined'
+          ? `${window.location.origin}/auth/callback`
+          : undefined;
+
         const { data: signUpResponse, error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             data,
-            emailRedirectTo: `${window.location.origin}/auth/callback`, // Standardized
+            emailRedirectTo,
           },
         });
         if (error) throw error;
-        if (signUpResponse.user && !signUpResponse.user.email_confirmed_at) {
-          toast.info('Confirmation email sent. Please check your inbox.');
-        } else if (signUpResponse.user) {
-          toast.success('Sign up successful!');
+        if (typeof window !== 'undefined') {
+          if (signUpResponse.user && !signUpResponse.user.email_confirmed_at) {
+            toast.info('Confirmation email sent. Please check your inbox.');
+          } else if (signUpResponse.user) {
+            toast.success('Sign up successful!');
+          }
         }
         // onAuthStateChange will handle user state
       } catch (err) {
         logDev('signUp() error:', err);
         safeSet({ error: GENERIC_ERROR, isLoading: false });
-        toast.error(GENERIC_ERROR);
+        if (typeof window !== 'undefined') {
+          toast.error(GENERIC_ERROR);
+        }
       }
     },
 
@@ -180,7 +194,9 @@ const initializer: StateCreator<UserStore> = (set, get) => {
       } catch (err) {
         logDev('logout() error:', err);
         safeSet({ error: GENERIC_ERROR, isLoading: false });
-        toast.error(GENERIC_ERROR);
+        if (typeof window !== 'undefined') {
+          toast.error(GENERIC_ERROR);
+        }
       }
     },
 
@@ -213,7 +229,9 @@ const initializer: StateCreator<UserStore> = (set, get) => {
         const errMessage = 'User not authenticated to update profile.';
         logDev(errMessage);
         safeSet({ error: errMessage });
-        toast.error(errMessage);
+        if (typeof window !== 'undefined') {
+          toast.error(errMessage);
+        }
         return;
       }
       try {
@@ -227,14 +245,21 @@ const initializer: StateCreator<UserStore> = (set, get) => {
         const updatedProfile = await get().fetchUserProfile(currentUserId); // Re-fetch for consistency
         if (updatedProfile) {
           safeSet({ profile: updatedProfile });
-          toast.success('Profile updated successfully!');
+          if (typeof window !== 'undefined') {
+            toast.success('Profile updated successfully!');
+          }
         } else {
-          toast.info('Profile updated, but could not immediately re-fetch details.');
+          if (typeof window !== 'undefined') {
+            toast.info('Profile updated, but could not immediately re-fetch details.');
+          }
         }
-      } catch (err) {
+      } catch (err: any) {
         logDev('updateProfile() error:', err);
-        safeSet({ error: GENERIC_ERROR });
-        toast.error(GENERIC_ERROR);
+        const errorMessage = err.message || GENERIC_ERROR;
+        safeSet({ error: errorMessage, isLoading: false });
+        if (typeof window !== 'undefined') {
+          toast.error(errorMessage);
+        }
       } finally {
         safeSet({ isLoading: false });
       }
@@ -243,15 +268,23 @@ const initializer: StateCreator<UserStore> = (set, get) => {
     async resetPassword(email: string) {
       try {
         safeSet({ isLoading: true, error: null });
+        const redirectTo = typeof window !== 'undefined'
+          ? `${window.location.origin}/account/update-password`
+          : undefined;
+
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/update-password`, // Ensure this route exists
+          redirectTo,
         });
         if (error) throw error;
-        toast.success('Password reset email sent. Please check your inbox.');
+        if (typeof window !== 'undefined') {
+          toast.info('Password reset email sent. Please check your inbox.');
+        }
       } catch (err) {
         logDev('resetPassword() error:', err);
-        safeSet({ error: GENERIC_ERROR });
-        toast.error(GENERIC_ERROR);
+        safeSet({ error: GENERIC_ERROR, isLoading: false });
+        if (typeof window !== 'undefined') {
+          toast.error(GENERIC_ERROR);
+        }
       } finally {
         safeSet({ isLoading: false });
       }
