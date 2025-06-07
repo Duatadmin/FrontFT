@@ -24,7 +24,7 @@ class ChatService {
     }
     try {
       const requestData: SendMessageRequest = { user_id: userId, message };
-      const response = await apiService.post<SendMessageResponse>('/chat/send_message', requestData);
+      const response = await apiService.post<SendMessageResponse>('/api/v1/message', requestData);
       return response.reply;
     } catch (error) {
       console.error('Failed to send message:', error);
