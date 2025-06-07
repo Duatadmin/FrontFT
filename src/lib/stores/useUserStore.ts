@@ -8,6 +8,8 @@ import { devtools } from 'zustand/middleware';
 import { supabase } from '../supabase';
 import { toast } from '../utils/toast';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import { useEffect } from 'react'; // Moved to top
+import { useNavigate } from 'react-router-dom'; // Moved to top
 
 // Define the shape of our user object, based on public.users table and auth info
 interface AppUser {
@@ -34,6 +36,7 @@ export const useUserStore = create<UserState>()(
   devtools(
     (set, get) => {
       // Initial state
+      console.log('[useUserStore Initializing] Setting initial isLoading: true');
       set({ isLoading: true }); // Start loading until session is checked
 
       // Function to fetch user profile from public.users table
@@ -47,8 +50,6 @@ export const useUserStore = create<UserState>()(
 
           if (profileError) {
             console.error('Error fetching user profile:', profileError);
-            // If profile doesn't exist, it might be a new signup, handle accordingly or error out
-            // For now, we'll assume a profile should exist if a session does.
             throw new Error(`Failed to fetch profile for user ${supabaseUser.id}: ${profileError.message}`);
           }
           if (!profileData) {
@@ -60,8 +61,6 @@ export const useUserStore = create<UserState>()(
         } catch (error) {
           console.error('fetchUserProfile error:', error);
           toast.error(error instanceof Error ? error.message : 'Could not load user profile.');
-          // Critical error, potentially sign out user if profile is essential
-          // await supabase.auth.signOut(); 
           return null;
         }
       };
@@ -69,29 +68,30 @@ export const useUserStore = create<UserState>()(
       // Handle auth state changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session: Session | null) => {
+          console.log(`[useUserStore onAuthStateChange event: ${event}] Setting isLoading: true`);
           set({ isLoading: true, error: null });
           if (event === 'INITIAL_SESSION') {
-            // Handled by getSession below, but good to be aware of
+            // Handled by getSession below
           }
 
           if (!session || event === 'SIGNED_OUT') {
+            console.log('[useUserStore onAuthStateChange] SIGNED_OUT or no session. Setting: {isLoading: false, isAuthenticated: false}');
             set({ user: null, isAuthenticated: false, isLoading: false, error: null });
             return;
           }
 
-          // SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED
           if (session.user) {
             const appUser = await fetchUserProfile(session.user);
             if (appUser) {
+              console.log('[useUserStore onAuthStateChange] User profile fetched. Setting: {isLoading: false, isAuthenticated: true}', appUser); // Logging added
               set({ user: appUser, isAuthenticated: true, isLoading: false, error: null });
             } else {
-              // Failed to get profile, treat as unauthenticated or error state
+              console.log('[useUserStore onAuthStateChange] Failed to fetch profile. Setting: {isLoading: false, isAuthenticated: false}');
               set({ user: null, isAuthenticated: false, isLoading: false, error: 'Failed to load user profile.' });
-              // Optionally sign out to clear inconsistent Supabase session
               await supabase.auth.signOut();
             }
           } else {
-            // Should not happen if session is present, but as a safeguard
+            console.log('[useUserStore onAuthStateChange] Session present but no user. Setting: {isLoading: false, isAuthenticated: false}');
             set({ user: null, isAuthenticated: false, isLoading: false, error: null });
           }
         }
@@ -99,20 +99,25 @@ export const useUserStore = create<UserState>()(
       
       // Check initial session state
       supabase.auth.getSession().then(async ({ data: { session } }) => {
-        set({ isLoading: true, error: null });
+        console.log('[useUserStore getSession Start] Setting isLoading: true');
+        set({ isLoading: true, error: null }); // Explicitly set isLoading true here
         if (session && session.user) {
           const appUser = await fetchUserProfile(session.user);
           if (appUser) {
+            console.log('[useUserStore getSession] User profile fetched. Setting: {isLoading: false, isAuthenticated: true}', appUser);
             set({ user: appUser, isAuthenticated: true, isLoading: false, error: null });
           } else {
+            console.log('[useUserStore getSession] Failed to fetch profile. Setting: {isLoading: false, isAuthenticated: false}');
             set({ user: null, isAuthenticated: false, isLoading: false, error: 'Failed to load user profile on initial check.' });
-            await supabase.auth.signOut(); // Clear potentially problematic session
+            await supabase.auth.signOut();
           }
         } else {
+          console.log('[useUserStore getSession] No initial session. Setting: {isLoading: false, isAuthenticated: false}');
           set({ user: null, isAuthenticated: false, isLoading: false, error: null });
         }
       }).catch(error => {
         console.error('Error in initial getSession:', error);
+        console.log('[useUserStore getSession] Error. Setting: {isLoading: false, isAuthenticated: false}');
         set({ user: null, isAuthenticated: false, isLoading: false, error: 'Error checking initial session.' });
       });
 
@@ -134,8 +139,6 @@ export const useUserStore = create<UserState>()(
           try {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
-            // onAuthStateChange will handle setting user and isAuthenticated
-            // toast.success will be handled based on user profile load if desired
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Login failed.';
             console.error('Login error:', errorMessage);
@@ -147,34 +150,19 @@ export const useUserStore = create<UserState>()(
         signUp: async (email, password, nickname) => {
           set({ isLoading: true, error: null });
           try {
-            // Supabase handles creating the auth.user and then the trigger/function creates public.users row
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
               email,
               password,
               options: {
-                // Pass nickname here if your Supabase setup (e.g., a function hook on auth.users insert)
-                // uses it to populate the public.users table immediately.
-                // Otherwise, the profile might be created by a trigger or manually after email confirmation.
-                // For simplicity, we assume a trigger handles public.users creation based on auth.users.
-                // If you need to pass `nickname` to be stored in `auth.users.raw_user_meta_data`
-                // and then a trigger reads it, that's a common pattern.
-                data: { nickname } // This stores it in raw_user_meta_data by default
+                data: { nickname }
               }
             });
 
             if (signUpError) throw signUpError;
             
-            // After successful Supabase auth.signUp, onAuthStateChange will be triggered.
-            // If email confirmation is required, user won't be fully 'SIGNED_IN' until confirmed.
-            // The public.users table entry is typically created by a DB trigger on auth.users insert.
-            // If not, you might need to insert into public.users here, but that's less common with modern Supabase setups.
-            // We rely on onAuthStateChange to fetch the profile once the user is effectively signed in.
-
             if (signUpData.user && !signUpData.user.email_confirmed_at) {
               toast.info('Confirmation email sent. Please check your inbox.');
             }
-            // If auto-confirm is on, or after confirmation, onAuthStateChange will set the user.
-
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Signup failed.';
             console.error('Signup error:', errorMessage);
@@ -273,7 +261,8 @@ export const useUserStore = create<UserState>()(
 
       }; // Closes the object returned by (set, get) => ({...})
     },
-    { name: 'UserStore' } // devtools name
+    { name: 'user-store', // Name for Redux DevTools
+    }
   )
 );
 
@@ -283,24 +272,22 @@ export const useAuthLoading   = () => useUserStore(s => s.isLoading);
 export const useAuthenticated = () => useUserStore(s => s.isAuthenticated);
 
 // Hook for requiring authentication on a page/component
-import { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-
 export const useRequireAuth = () => {
-  const isAuthenticated = useAuthenticated();
-  const isLoading = useAuthLoading();
   const navigate = useNavigate();
+  // It's important that useUserStore is fully defined before useRequireAuth calls it.
+  const isLoading = useUserStore((state) => state.isLoading);
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
+
+  console.log('[useRequireAuth Hook] State from store: isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   useEffect(() => {
-    // Only redirect if loading is complete and user is not authenticated.
-    // This prevents redirecting before the auth state is determined.
+    console.log('[useRequireAuth Effect] Running. isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
     if (!isLoading && !isAuthenticated) {
+      console.log('[useRequireAuth Effect] Conditions met: NOT loading AND NOT authenticated. Redirecting to /login.');
       navigate('/login', { replace: true });
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isLoading, isAuthenticated, navigate]);
 
-  // Optionally, return loading and auth state if components need to react to them
-  // For example, to show a spinner while loading auth state before redirecting.
   return { isLoading, isAuthenticated };
 };
 

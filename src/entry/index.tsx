@@ -54,16 +54,24 @@ export const LoginPage = () => {
 
 /** 3. ProtectedRoute ***************************************************/
 export const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
-  const { isLoading, isAuthenticated } = useRequireAuth(); // This hook now handles redirection logic
+  console.log('[ProtectedRoute] Rendering...');
+  const { isLoading, isAuthenticated } = useRequireAuth();
+  console.log('[ProtectedRoute] Values from useRequireAuth: isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   if (isLoading) {
+    console.log('[ProtectedRoute] Condition: isLoading is true. Rendering SplashScreen.');
     return <SplashScreen />; // Show splash screen while auth state is loading
   }
 
   // If not loading and authenticated, render children.
   // If not loading and not authenticated, useRequireAuth hook handles the redirect.
   // Rendering null here is a fallback for the brief moment before redirect completes.
-  return isAuthenticated ? children : null;
+  if (!isAuthenticated) {
+    console.log('[ProtectedRoute] Condition: NOT isLoading AND NOT isAuthenticated. Rendering null (expecting redirect from useRequireAuth).');
+    return null; // useRequireAuth handles redirect
+  }
+  console.log('[ProtectedRoute] Condition: NOT isLoading AND isAuthenticated. Rendering children.');
+  return children;
 };
 
 // Export the imported AuthCallback component under the name 'AuthCallback'
