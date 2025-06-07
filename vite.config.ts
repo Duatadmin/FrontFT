@@ -9,6 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       'voice-module': path.resolve(__dirname, 'voice-module'),
+      '@': path.resolve(__dirname, 'src'),
     },
   },
   plugins: [

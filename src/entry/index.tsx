@@ -5,7 +5,6 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion"; // For SplashScreen
 // Session is no longer directly used here
 import { supabase } from "../lib/supabase"; // Import the shared Supabase client
-import { useAuthLoading, useAuthenticated } from '../lib/stores/useUserStore';
 
 import AuthCallbackFromFile from "../components/auth/callback"; // Path relative to src/entry/index.tsx
 
@@ -24,7 +23,7 @@ export const SplashScreen = () => (
 
 // Imports for LoginPage
 import { Auth } from '@supabase/auth-ui-react';
-import { useUserStore } from '../lib/stores/useUserStore';
+import { useUserStore, type UserStore } from '../lib/stores/useUserStore';
 // Assuming auth-theme.ts is in 'src/' directory, so from 'src/entry/' it's '../auth-theme'
 import { customAuthUITheme } from '../auth-theme';
 // Assuming Logo.svg is in 'src/assets/', so from 'src/entry/' it's '../../assets/Logo.svg?react'
@@ -32,8 +31,8 @@ import Logo from '../../assets/Logo.svg?react';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
-  const isLoading = useUserStore((state) => state.isLoading);
+  const isAuthenticated = useUserStore((state: UserStore) => state.isAuthenticated);
+  const isLoading = useUserStore((state: UserStore) => state.isLoading);
 
   useEffect(() => {
     // If loading is finished and user is authenticated, redirect from login page
@@ -68,8 +67,8 @@ export const LoginPage = () => {
 /** 3. ProtectedRoute ***************************************************/
 export const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   console.log('[ProtectedRoute] Rendering...');
-  const isLoading = useAuthLoading();
-  const isAuthenticated = useAuthenticated();
+  const isLoading = useUserStore((state: UserStore) => state.isLoading);
+  const isAuthenticated = useUserStore((state: UserStore) => state.isAuthenticated);
   console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   if (isLoading) {

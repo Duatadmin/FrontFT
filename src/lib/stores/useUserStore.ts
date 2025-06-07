@@ -1,287 +1,296 @@
-/**
- * User Store - Manages user authentication and profile
- * 
- * Handles Supabase auth integration with fallback to mock data in development
- */
-import { create } from 'zustand';
+import { create, StateCreator } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import { supabase } from '../supabase';
-import { toast } from '../utils/toast';
-import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
+import type { Session, AuthChangeEvent, User } from '@supabase/supabase-js';
+import { supabase } from '../supabase'; // Corrected path
+import { toast } from '../utils/toast'; // Added for notifications
 
-// Define the shape of our user object, based on public.users table and auth info
-interface AppUser {
+/**
+ * ------- Types -------
+ */
+export type UserProfile = {
   id: string;
-  email?: string;
-  nickname?: string;
-  // Add any other fields from your public.users table you want in the store
-}
+  email: string;
+  nickname: string | null;
+  avatar_url: string | null;
+  created_at: string | null;
+};
 
-interface UserState {
-  user: AppUser | null;
+interface AuthState {
+  user: User | null;
+  profile: UserProfile | null;
   isAuthenticated: boolean;
-  isLoading: boolean; // True during initial session check and auth operations
+  isLoading: boolean;
   error: string | null;
-  login: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string, nickname: string) => Promise<void>;
-  logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<void>;
-  updateProfile: (updates: Partial<AppUser>) => Promise<void>;
-  clearError: () => void;
-  boot: () => Promise<void>;
 }
 
-export const useUserStore = create<UserState>()(
-  devtools(
-    (set, get) => {
-      // Initial state will be defined in the returned object; session initialization is now explicit.
+interface AuthActions {
+  /** Инициализация авторизации (вызывается один раз при старте приложения) */
+  boot: () => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string, data?: Partial<UserProfile>) => Promise<void>;
+  logout: () => Promise<void>;
+  fetchUserProfile: (userId?: string) => Promise<UserProfile | null>;
+  updateProfile: (data: Partial<UserProfile>) => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  clearError: () => void;
+}
 
-      // Function to fetch user profile from public.users table
-      const fetchUserProfile = async (supabaseUser: SupabaseUser): Promise<AppUser | null> => {
-        try {
-          const { data: profileData, error: profileError } = await supabase
-            .from('users') // Ensure this table name matches your DB
-            .select('id') // Select desired fields
-            .eq('id', supabaseUser.id)
-            .single();
+export type UserStore = AuthState & AuthActions;
 
-          if (profileError) {
-            if (process.env.NODE_ENV === 'development') console.error('Error fetching user profile:', profileError);
-            throw new Error(`Failed to fetch profile for user ${supabaseUser.id}: ${profileError.message}`);
-          }
-          if (!profileData) {
-            throw new Error(`No profile data found for user ${supabaseUser.id}`);
-          }
-          return {
-            id: profileData.id,
-          };
-        } catch (error) {
-          if (process.env.NODE_ENV === 'development') console.error('fetchUserProfile error:', error);
-          toast.error(error instanceof Error ? error.message : 'Could not load user profile.');
-          return null;
-        }
-      };
+/**
+ * ------- Utilities -------
+ */
+const logDev = (...args: unknown[]) => {
+  if (process.env.NODE_ENV === 'development') {
+    // eslint-disable-next-line no-console
+    console.debug('[useUserStore]', ...args);
+  }
+};
 
-      // Handle auth state changes
-      supabase.auth.onAuthStateChange(
-        async (event, session: Session | null) => {
-          if (process.env.NODE_ENV === 'development') console.log(`[UserStore onAuthStateChange event: ${event}]`);
+const GENERIC_ERROR = 'Что‑то пошло не так. Попробуйте ещё раз.';
 
-          if (event === 'INITIAL_SESSION') {
-            if (process.env.NODE_ENV === 'development') console.log('[UserStore onAuthStateChange] INITIAL_SESSION event received, deferring to internal boot() for session hydration.');
-            return; // Explicitly do nothing, as boot() handles initial session loading.
-          }
+// Глобальная отписка, чтобы не плодить слушателей при HMR / нескольких инстансах стора
+let globalAuthUnsub: (() => void) | null = (globalThis as any).__SUPABASE_AUTH_UNSUB || null;
 
-          if (!session || event === 'SIGNED_OUT') {
-            if (process.env.NODE_ENV === 'development') console.log('[useUserStore onAuthStateChange] SIGNED_OUT or no session. Setting: {isLoading: false, isAuthenticated: false}');
-            set({ user: null, isAuthenticated: false, isLoading: false, error: null });
-            return;
-          }
+/**
+ * ------- Store Implementation -------
+ */
+const initializer: StateCreator<UserStore> = (set, get) => {
+  const safeSet: typeof set = (partial, replace) => {
+    set(partial, replace);
+  };
 
-          if (session.user) {
-            const appUser = await fetchUserProfile(session.user);
-            if (appUser) {
-              if (process.env.NODE_ENV === 'development') console.log('[useUserStore onAuthStateChange] User profile fetched. Setting: {isLoading: false, isAuthenticated: true}', appUser);
-              set({ user: appUser, isAuthenticated: true, isLoading: false, error: null });
-            } else {
-              if (process.env.NODE_ENV === 'development') console.log('[useUserStore onAuthStateChange] Failed to fetch profile. Setting: {isLoading: false, isAuthenticated: false}');
-              set({ user: null, isAuthenticated: false, isLoading: false, error: 'Failed to load user profile during auth state change.' });
-              supabase.auth.signOut(); // Non-awaited, let onAuthStateChange handle the SIGNED_OUT event
-            }
-          } else {
-            if (process.env.NODE_ENV === 'development') console.log('[useUserStore onAuthStateChange] Session present but no user. Setting: {isLoading: false, isAuthenticated: false}');
-            set({ user: null, isAuthenticated: false, isLoading: false, error: null });
-          }
-        }
-      );
-
-      const initialStateAndMethods = {
-        user: null,
-        isAuthenticated: false,
-        isLoading: true, // Initial state; boot will set to false
-        error: null,
-
-        boot: async () => {
-          if (process.env.NODE_ENV === 'development') console.time('[UserStore boot]');
-          if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] Setting isLoading: true');
-          set({ isLoading: true, error: null });
-          try {
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            if (sessionError) throw sessionError;
-
-            if (session && session.user) {
-              const appUser = await fetchUserProfile(session.user);
-              if (appUser) {
-                if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] User profile fetched. Setting state.');
-                set({ user: appUser, isAuthenticated: true, error: null });
-              } else {
-                if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] Failed to fetch profile. Signing out.');
-                set({ user: null, isAuthenticated: false, error: 'Failed to load user profile on initial check.' });
-                // Don't await signOut here to prevent potential deadlocks if onAuthStateChange is also trying to act
-                supabase.auth.signOut(); 
-              }
-            } else {
-              if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] No initial session.');
-              set({ user: null, isAuthenticated: false, error: null });
-            }
-          } catch (error) {
-            if (process.env.NODE_ENV === 'development') console.error('[UserStore boot] Error:', error);
-            const errorMessage = error instanceof Error ? error.message : 'Error checking initial session.';
-            set({ user: null, isAuthenticated: false, error: errorMessage });
-          } finally {
-            if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] Setting isLoading: false (finally)');
-            set({ isLoading: false });
-            if (process.env.NODE_ENV === 'development') console.timeEnd('[UserStore boot]');
-          }
-        },
-
-        login: async (email: string, password: string) => {
-          set({ isLoading: true, error: null });
-          try {
-            const { error } = await supabase.auth.signInWithPassword({ email, password });
-            if (error) throw error;
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Login failed.';
-            if (process.env.NODE_ENV === 'development') console.error('Login error:', errorMessage);
-            set({ error: errorMessage, isLoading: false });
-            toast.error(errorMessage);
-          }
-        },
-
-        signUp: async (email: string, password: string, nickname: string) => {
-          set({ isLoading: true, error: null });
-          try {
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                data: { nickname }
-              }
-            });
-
-            if (signUpError) throw signUpError;
-
-            // Successfully initiated sign-up (user might need to confirm email)
-            // Set isLoading to false here as the signUp API call itself is done.
-            // onAuthStateChange will handle the actual session establishment later.
-            set({ isLoading: false });
-            
-            if (signUpData.user && !signUpData.user.email_confirmed_at) {
-              toast.info('Confirmation email sent. Please check your inbox.');
-            }
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Signup failed.';
-            if (process.env.NODE_ENV === 'development') console.error('Signup error:', errorMessage);
-            set({ error: errorMessage, isLoading: false });
-            toast.error(errorMessage);
-          }
-        },
-
-        logout: async () => {
-          set({ isLoading: true, error: null });
-          try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-            // onAuthStateChange will set user to null and isAuthenticated to false
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Logout failed.';
-            if (process.env.NODE_ENV === 'development') console.error('Logout error:', errorMessage);
-            set({ error: errorMessage, isLoading: false });
-            toast.error(errorMessage);
-          }
-        },
-
-        resetPassword: async (email: string) => {
-          set({ isLoading: true, error: null });
-          try {
-            const { error } = await supabase.auth.resetPasswordForEmail(email, {
-              redirectTo: `${window.location.origin}/update-password`, // Ensure this route exists or adjust as needed
-            });
-            if (error) throw error;
-            toast.success('Password reset email sent. Please check your inbox.');
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Password reset failed.';
-            if (process.env.NODE_ENV === 'development') console.error('Password reset error:', errorMessage);
-            set({ error: errorMessage, isLoading: false });
-            toast.error(errorMessage);
-          } finally {
-            set({ isLoading: false });
-          }
-        },
-
-        updateProfile: async (updates: Partial<AppUser>) => {
-          set({ isLoading: true, error: null });
-          const currentUser = get().user; // get() gives access to the store's state
-          
-          if (!currentUser?.id) {
-            const err = 'User not authenticated or ID missing. Cannot update profile.';
-            set({ error: err, isLoading: false });
-            toast.error(err);
-            return;
-          }
-
-          try {
-            // Prepare updates, ensuring we only send fields relevant to AppUser and 'users' table
-            // For example, if AppUser could have more fields than 'users' table, filter them here.
-            // Supabase update will ignore columns that don't exist, but it's cleaner to be explicit.
-            const profileUpdates: Partial<AppUser> = {};
-            if (updates.nickname !== undefined) profileUpdates.nickname = updates.nickname;
-            // Add other updatable fields from AppUser here, e.g., email if your policy allows
-            // if (updates.email !== undefined) profileUpdates.email = updates.email;
-
-            if (Object.keys(profileUpdates).length === 0) {
-              toast.info('No profile changes to apply.');
-              set({ isLoading: false });
-              return;
-            }
-
-            const { data, error: updateError } = await supabase
-              .from('users')
-              .update(profileUpdates) 
-              .eq('id', currentUser.id)
-              .select('id') // Reselect fields defined in AppUser
-              .single();
-
-            if (updateError) throw updateError;
-
-            if (data) {
-              set((state) => ({ 
-                user: state.user ? { ...state.user, ...data } : data, 
-                isLoading: false 
-              }));
-              toast.success('Profile updated successfully!');
-            } else {
-              throw new Error('Profile update failed - no data returned from Supabase');
-            }
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : 'Profile update failed.';
-            if (process.env.NODE_ENV === 'development') console.error('Profile update error:', errorMessage);
-            set({ error: errorMessage, isLoading: false });
-            toast.error(errorMessage);
-          }
-        },
-
-        clearError: () => {
-          set({ error: null });
-        },
-
-      }; // Closes initialStateAndMethods
-
-      return initialStateAndMethods;
-    },
-    { name: 'user-store', // Name for Redux DevTools
+  const handleAuthChange = async (_event: AuthChangeEvent, session: Session | null) => {
+    logDev('AuthChange', _event, session);
+    if (session?.user) {
+      const profile = await get().fetchUserProfile(session.user.id);
+      safeSet({
+        user: session.user,
+        profile,
+        isAuthenticated: true,
+        isLoading: false, // Auth change implies loading is done for this transition
+      });
+    } else {
+      safeSet({ user: null, profile: null, isAuthenticated: false, isLoading: false });
     }
-  )
-);
+  };
 
-// Export selectors/hooks
-export const useCurrentUser   = () => useUserStore(s => s.user);
-export const useAuthLoading   = () => useUserStore(s => s.isLoading);
-export const useAuthenticated = () => useUserStore((state) => state.isAuthenticated);
+  if (!globalAuthUnsub) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(handleAuthChange);
+    if (subscription) {
+      globalAuthUnsub = () => subscription.unsubscribe();
+      (globalThis as any).__SUPABASE_AUTH_UNSUB = globalAuthUnsub;
+      logDev('Subscribed to Supabase auth state changes.');
+    } else if (process.env.NODE_ENV === 'development') {
+      console.error('[UserStore] Failed to subscribe to Supabase auth state changes.');
+    }
+
+    window.addEventListener('beforeunload', () => {
+      logDev('beforeunload: Unsubscribing from Supabase auth changes.');
+      globalAuthUnsub?.();
+      globalAuthUnsub = null;
+      delete (globalThis as any).__SUPABASE_AUTH_UNSUB;
+    });
+  }
+
+  return {
+    /* ---------- State ---------- */
+    user: null,
+    profile: null,
+    isAuthenticated: false,
+    isLoading: true, // Start as true, boot() will set it to false
+    error: null,
+
+    /* ---------- Actions ---------- */
+    clearError() {
+      safeSet({ error: null });
+    },
+
+    async boot() {
+      logDev('boot() called');
+      try {
+        safeSet({ isLoading: true });
+        const {
+          data: { session },
+          error,
+        } = await supabase.auth.getSession();
+        if (error) throw error;
+
+        if (session?.user) {
+          const profile = await get().fetchUserProfile(session.user.id);
+          safeSet({ user: session.user, profile, isAuthenticated: true });
+        } else {
+          safeSet({ user: null, profile: null, isAuthenticated: false });
+        }
+      } catch (err) {
+        logDev('boot() error:', err);
+        safeSet({ error: GENERIC_ERROR });
+        toast.error(GENERIC_ERROR);
+      } finally {
+        safeSet({ isLoading: false });
+        logDev('boot() finished, isLoading: false');
+      }
+    },
+
+    async login(email, password) {
+      try {
+        safeSet({ isLoading: true, error: null });
+        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        // onAuthStateChange will handle success
+      } catch (err) {
+        logDev('login() error:', err);
+        safeSet({ error: GENERIC_ERROR, isLoading: false });
+        toast.error(GENERIC_ERROR);
+      }
+      // isLoading will be set to false by onAuthStateChange or finally in boot/error
+    },
+
+    async signUp(email, password, data = {}) {
+      try {
+        safeSet({ isLoading: true, error: null });
+        const { data: signUpResponse, error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data,
+            emailRedirectTo: `${window.location.origin}/auth/callback`, // Standardized
+          },
+        });
+        if (error) throw error;
+        if (signUpResponse.user && !signUpResponse.user.email_confirmed_at) {
+          toast.info('Confirmation email sent. Please check your inbox.');
+        } else if (signUpResponse.user) {
+          toast.success('Sign up successful!');
+        }
+        // onAuthStateChange will handle user state
+      } catch (err) {
+        logDev('signUp() error:', err);
+        safeSet({ error: GENERIC_ERROR, isLoading: false });
+        toast.error(GENERIC_ERROR);
+      }
+    },
+
+    async logout() {
+      try {
+        safeSet({ isLoading: true, error: null });
+        const { error } = await supabase.auth.signOut();
+        if (error) throw error;
+        // onAuthStateChange will handle setting user to null
+      } catch (err) {
+        logDev('logout() error:', err);
+        safeSet({ error: GENERIC_ERROR, isLoading: false });
+        toast.error(GENERIC_ERROR);
+      }
+    },
+
+    async fetchUserProfile(userId?: string) {
+      const idToFetch = userId ?? get().user?.id;
+      if (!idToFetch) {
+        logDev('fetchUserProfile: No user ID available.');
+        return null;
+      }
+      // Do not set isLoading here, this is often a background task or part of another flow
+      try {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, email, nickname, avatar_url, created_at')
+          .eq('id', idToFetch)
+          .single<UserProfile>();
+        if (error) throw error;
+        return data;
+      } catch (err) {
+        logDev('fetchUserProfile() error:', err);
+        // Do not set global error for this, as it might be an internal call
+        // toast.error('Failed to fetch user profile.');
+        return null;
+      }
+    },
+
+    async updateProfile(profileUpdates: Partial<UserProfile>) {
+      const currentUserId = get().user?.id;
+      if (!currentUserId) {
+        const errMessage = 'User not authenticated to update profile.';
+        logDev(errMessage);
+        safeSet({ error: errMessage });
+        toast.error(errMessage);
+        return;
+      }
+      try {
+        safeSet({ isLoading: true, error: null });
+        const { error } = await supabase
+          .from('users')
+          .update(profileUpdates)
+          .eq('id', currentUserId);
+        if (error) throw error;
+        
+        const updatedProfile = await get().fetchUserProfile(currentUserId); // Re-fetch for consistency
+        if (updatedProfile) {
+          safeSet({ profile: updatedProfile });
+          toast.success('Profile updated successfully!');
+        } else {
+          toast.info('Profile updated, but could not immediately re-fetch details.');
+        }
+      } catch (err) {
+        logDev('updateProfile() error:', err);
+        safeSet({ error: GENERIC_ERROR });
+        toast.error(GENERIC_ERROR);
+      } finally {
+        safeSet({ isLoading: false });
+      }
+    },
+
+    async resetPassword(email: string) {
+      try {
+        safeSet({ isLoading: true, error: null });
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${window.location.origin}/update-password`, // Ensure this route exists
+        });
+        if (error) throw error;
+        toast.success('Password reset email sent. Please check your inbox.');
+      } catch (err) {
+        logDev('resetPassword() error:', err);
+        safeSet({ error: GENERIC_ERROR });
+        toast.error(GENERIC_ERROR);
+      } finally {
+        safeSet({ isLoading: false });
+      }
+    },
+  };
+};
+
+export const useUserStore = process.env.NODE_ENV === 'development'
+  ? create<UserStore>()(devtools(initializer, { name: 'UserStore' }))
+  : create<UserStore>()(initializer);
+
+/**
+ * Побочный helper — вызовите в тестах или при hot‑reload, чтобы гарантированно очистить слушатель
+ */
+export const tearDownUserStore = () => {
+  logDev('tearDownUserStore() called.');
+  globalAuthUnsub?.();
+  globalAuthUnsub = null;
+  delete (globalThis as any).__SUPABASE_AUTH_UNSUB;
+  // Zustand's devtools middleware adds a destroy method to the store itself.
+  // If not using devtools (e.g. in prod if storeCreator is just initializer),
+  // this destroy method won't exist on useUserStore directly.
+  // The globalAuthUnsub handles the primary listener.
+  const storeWithDestroy = useUserStore as any;
+  if (typeof storeWithDestroy.destroy === 'function') {
+    logDev('Calling useUserStore.destroy()');
+    storeWithDestroy.destroy();
+  }
+};
 
 // Auto-initialize session on store creation
-if (typeof useUserStore.getState().boot === 'function') {
+// Ensure this runs after useUserStore is fully defined.
+if (typeof useUserStore.getState()?.boot === 'function') {
+  logDev('Auto-calling boot()');
   useUserStore.getState().boot();
 } else if (process.env.NODE_ENV === 'development') {
-  console.error('[UserStore setup] boot() method not found on useUserStore.getState(). Auto-hydration will not occur.');
+  // This might happen if the file is imported in a way that boot isn't available yet.
+  // Or if there's an issue with the store's creation.
+  console.error(
+    '[UserStore setup] boot() method not found on useUserStore.getState() or store not yet initialized. Auto-hydration will not occur immediately.'
+  );
 }

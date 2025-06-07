@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuthLoading, useAuthenticated } from '../lib/stores/useUserStore'; // Adjust path if your store is elsewhere
+import { useUserStore } from '@/lib/stores/useUserStore'; // Adjust path if your store is elsewhere
 
 export function useAuthGuard() {
   const navigate = useNavigate();
-  const isLoading = useAuthLoading();       // Selector for isLoading state
-  const isAuthenticated = useAuthenticated(); // Selector for isAuthenticated state
+  const isLoading = useUserStore((state) => state.isLoading);
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
 
   useEffect(() => {
     console.log('[useAuthGuard Effect] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);

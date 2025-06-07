@@ -3,7 +3,7 @@ import ChatLayout from './components/chat/ChatLayout';
 import { VoiceProvider } from './hooks/VoiceContext';
 import { Message } from './types';
 import chatService from './services/chatService';
-import { useUserStore } from './lib/stores/useUserStore'; // For currentUser selector
+import { useUserStore } from '@/lib/stores/useUserStore'; // For currentUser selector
 import { checkApiStatus } from './services/apiService';
 import SupabaseTest from './SupabaseTest';
 import { useAuthGuard } from './hooks/useAuthGuard';
