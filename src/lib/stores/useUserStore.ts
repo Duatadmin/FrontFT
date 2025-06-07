@@ -28,12 +28,12 @@ interface UserState {
   resetPassword: (email: string) => Promise<void>;
   updateProfile: (updates: Partial<AppUser>) => Promise<void>;
   clearError: () => void;
-  initializeSession: () => Promise<void>;
+  boot: () => Promise<void>;
 }
 
 export const useUserStore = create<UserState>()(
   devtools(
-    (set, get) => {
+    (set, get, storeApi) => {
       // Initial state will be defined in the returned object; session initialization is now explicit.
 
       // Function to fetch user profile from public.users table
@@ -46,7 +46,7 @@ export const useUserStore = create<UserState>()(
             .single();
 
           if (profileError) {
-            console.error('Error fetching user profile:', profileError);
+            if (process.env.NODE_ENV === 'development') console.error('Error fetching user profile:', profileError);
             throw new Error(`Failed to fetch profile for user ${supabaseUser.id}: ${profileError.message}`);
           }
           if (!profileData) {
@@ -56,24 +56,24 @@ export const useUserStore = create<UserState>()(
             id: profileData.id,
           };
         } catch (error) {
-          console.error('fetchUserProfile error:', error);
+          if (process.env.NODE_ENV === 'development') console.error('fetchUserProfile error:', error);
           toast.error(error instanceof Error ? error.message : 'Could not load user profile.');
           return null;
         }
       };
 
       // Handle auth state changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      supabase.auth.onAuthStateChange(
         async (event, session: Session | null) => {
-          console.log(`[UserStore onAuthStateChange event: ${event}]`);
+          if (process.env.NODE_ENV === 'development') console.log(`[UserStore onAuthStateChange event: ${event}]`);
 
           if (event === 'INITIAL_SESSION') {
-            console.log('[UserStore onAuthStateChange] INITIAL_SESSION event received, deferring to explicit initializeSession().');
-            return; // Explicitly do nothing, initializeSession in App.tsx is the source of truth for boot.
+            if (process.env.NODE_ENV === 'development') console.log('[UserStore onAuthStateChange] INITIAL_SESSION event received, deferring to internal boot() for session hydration.');
+            return; // Explicitly do nothing, as boot() handles initial session loading.
           }
 
           if (!session || event === 'SIGNED_OUT') {
-            console.log('[useUserStore onAuthStateChange] SIGNED_OUT or no session. Setting: {isLoading: false, isAuthenticated: false}');
+            if (process.env.NODE_ENV === 'development') console.log('[useUserStore onAuthStateChange] SIGNED_OUT or no session. Setting: {isLoading: false, isAuthenticated: false}');
             set({ user: null, isAuthenticated: false, isLoading: false, error: null });
             return;
           }
@@ -81,36 +81,29 @@ export const useUserStore = create<UserState>()(
           if (session.user) {
             const appUser = await fetchUserProfile(session.user);
             if (appUser) {
-              console.log('[useUserStore onAuthStateChange] User profile fetched. Setting: {isLoading: false, isAuthenticated: true}', appUser); // Logging added
+              if (process.env.NODE_ENV === 'development') console.log('[useUserStore onAuthStateChange] User profile fetched. Setting: {isLoading: false, isAuthenticated: true}', appUser);
               set({ user: appUser, isAuthenticated: true, isLoading: false, error: null });
             } else {
-              console.log('[useUserStore onAuthStateChange] Failed to fetch profile. Setting: {isLoading: false, isAuthenticated: false}');
-              set({ user: null, isAuthenticated: false, isLoading: false, error: 'Failed to load user profile.' });
-              await supabase.auth.signOut();
+              if (process.env.NODE_ENV === 'development') console.log('[useUserStore onAuthStateChange] Failed to fetch profile. Setting: {isLoading: false, isAuthenticated: false}');
+              set({ user: null, isAuthenticated: false, isLoading: false, error: 'Failed to load user profile during auth state change.' });
+              supabase.auth.signOut(); // Non-awaited, let onAuthStateChange handle the SIGNED_OUT event
             }
           } else {
-            console.log('[useUserStore onAuthStateChange] Session present but no user. Setting: {isLoading: false, isAuthenticated: false}');
+            if (process.env.NODE_ENV === 'development') console.log('[useUserStore onAuthStateChange] Session present but no user. Setting: {isLoading: false, isAuthenticated: false}');
             set({ user: null, isAuthenticated: false, isLoading: false, error: null });
           }
         }
       );
 
-      // Handle HMR for the subscription
-      if (import.meta.hot) {
-        import.meta.hot.dispose(() => {
-          subscription?.unsubscribe();
-        });
-      }
-
-      return {
+      const initialStateAndMethods = {
         user: null,
         isAuthenticated: false,
-        isLoading: true, // Initial state; initializeSession will set to false
+        isLoading: true, // Initial state; boot will set to false
         error: null,
 
-        initializeSession: async () => {
-          console.time('[UserStore initializeSession]');
-          console.log('[UserStore initializeSession] Setting isLoading: true');
+        boot: async () => {
+          if (process.env.NODE_ENV === 'development') console.time('[UserStore boot]');
+          if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] Setting isLoading: true');
           set({ isLoading: true, error: null });
           try {
             const { data: { session }, error: sessionError } = await supabase.auth.getSession();
@@ -119,43 +112,43 @@ export const useUserStore = create<UserState>()(
             if (session && session.user) {
               const appUser = await fetchUserProfile(session.user);
               if (appUser) {
-                console.log('[UserStore initializeSession] User profile fetched. Setting state.');
+                if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] User profile fetched. Setting state.');
                 set({ user: appUser, isAuthenticated: true, error: null });
               } else {
-                console.log('[UserStore initializeSession] Failed to fetch profile. Signing out.');
+                if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] Failed to fetch profile. Signing out.');
                 set({ user: null, isAuthenticated: false, error: 'Failed to load user profile on initial check.' });
                 // Don't await signOut here to prevent potential deadlocks if onAuthStateChange is also trying to act
                 supabase.auth.signOut(); 
               }
             } else {
-              console.log('[UserStore initializeSession] No initial session.');
+              if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] No initial session.');
               set({ user: null, isAuthenticated: false, error: null });
             }
           } catch (error) {
-            console.error('[UserStore initializeSession] Error:', error);
+            if (process.env.NODE_ENV === 'development') console.error('[UserStore boot] Error:', error);
             const errorMessage = error instanceof Error ? error.message : 'Error checking initial session.';
             set({ user: null, isAuthenticated: false, error: errorMessage });
           } finally {
-            console.log('[UserStore initializeSession] Setting isLoading: false (finally)');
+            if (process.env.NODE_ENV === 'development') console.log('[UserStore boot] Setting isLoading: false (finally)');
             set({ isLoading: false });
-            console.timeEnd('[UserStore initializeSession]');
+            if (process.env.NODE_ENV === 'development') console.timeEnd('[UserStore boot]');
           }
         },
 
-        login: async (email, password) => {
+        login: async (email: string, password: string) => {
           set({ isLoading: true, error: null });
           try {
             const { error } = await supabase.auth.signInWithPassword({ email, password });
             if (error) throw error;
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Login failed.';
-            console.error('Login error:', errorMessage);
+            if (process.env.NODE_ENV === 'development') console.error('Login error:', errorMessage);
             set({ error: errorMessage, isLoading: false });
             toast.error(errorMessage);
           }
         },
 
-        signUp: async (email, password, nickname) => {
+        signUp: async (email: string, password: string, nickname: string) => {
           set({ isLoading: true, error: null });
           try {
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -178,7 +171,7 @@ export const useUserStore = create<UserState>()(
             }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Signup failed.';
-            console.error('Signup error:', errorMessage);
+            if (process.env.NODE_ENV === 'development') console.error('Signup error:', errorMessage);
             set({ error: errorMessage, isLoading: false });
             toast.error(errorMessage);
           }
@@ -192,7 +185,7 @@ export const useUserStore = create<UserState>()(
             // onAuthStateChange will set user to null and isAuthenticated to false
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Logout failed.';
-            console.error('Logout error:', errorMessage);
+            if (process.env.NODE_ENV === 'development') console.error('Logout error:', errorMessage);
             set({ error: errorMessage, isLoading: false });
             toast.error(errorMessage);
           }
@@ -208,7 +201,7 @@ export const useUserStore = create<UserState>()(
             toast.success('Password reset email sent. Please check your inbox.');
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Password reset failed.';
-            console.error('Password reset error:', errorMessage);
+            if (process.env.NODE_ENV === 'development') console.error('Password reset error:', errorMessage);
             set({ error: errorMessage, isLoading: false });
             toast.error(errorMessage);
           } finally {
@@ -262,7 +255,7 @@ export const useUserStore = create<UserState>()(
             }
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Profile update failed.';
-            console.error('Profile update error:', errorMessage);
+            if (process.env.NODE_ENV === 'development') console.error('Profile update error:', errorMessage);
             set({ error: errorMessage, isLoading: false });
             toast.error(errorMessage);
           }
@@ -272,7 +265,15 @@ export const useUserStore = create<UserState>()(
           set({ error: null });
         },
 
-      }; // Closes the object returned by (set, get) => ({...})
+      }; // Closes initialStateAndMethods
+
+      // Auto-initialize session on store creation
+      if (typeof storeApi.getState().boot === 'function') {
+        storeApi.getState().boot();
+      } else if (process.env.NODE_ENV === 'development') {
+        console.error('[UserStore setup] boot() method not found on storeApi.getState(). Auto-hydration will not occur.');
+      }
+      return initialStateAndMethods;
     },
     { name: 'user-store', // Name for Redux DevTools
     }

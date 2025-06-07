@@ -3,25 +3,13 @@ import ChatLayout from './components/chat/ChatLayout';
 import { VoiceProvider } from './hooks/VoiceContext';
 import { Message } from './types';
 import chatService from './services/chatService';
-import { useUserStore } from './lib/stores/useUserStore'; // Or your specific user selector
+import { useUserStore } from './lib/stores/useUserStore'; // For currentUser selector
 import { checkApiStatus } from './services/apiService';
 import SupabaseTest from './SupabaseTest';
 import { useAuthGuard } from './hooks/useAuthGuard';
 import VoiceWidget from './components/VoiceWidget';
 
 function App() {
-  // Initialize session on app load
-  useEffect(() => {
-    console.log('[App.tsx init] Calling initializeSession. Current isLoading:', useUserStore.getState().isLoading);
-    console.time('[App.tsx init] Session Initialization');
-    const init = async () => {
-      await useUserStore.getState().initializeSession();
-      console.log('[App.tsx init] initializeSession complete. Final isLoading:', useUserStore.getState().isLoading);
-      console.timeEnd('[App.tsx init] Session Initialization');
-    };
-    init();
-  }, []);
-
   useAuthGuard(); // Enforce authentication for this component and its children
   const currentUser = useUserStore((state) => state.user);
   const [messages, setMessages] = useState<Message[]>([
