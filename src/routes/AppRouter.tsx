@@ -1,5 +1,6 @@
 // src/routes/AppRouter.tsx
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useUserStore } from '@/lib/stores/useUserStore';
 import { Routes, Route, Navigate } from "react-router-dom";
 import { LoginPage, AuthCallback, ProtectedRoute } from "../entry";
 import App from "../App";
@@ -17,6 +18,18 @@ const ProgramsPage = React.lazy(() => {
 });
 
 export default function AppRouter() {
+  const { boot } = useUserStore.getState(); // Get boot function directly
+
+  useEffect(() => {
+    // Ensure boot() is called only on the client side
+    if (typeof window !== 'undefined') {
+      console.log('[AppRouter] useEffect: Calling boot()');
+      boot().catch(error => {
+        console.error('[AppRouter] boot() call failed in useEffect:', error);
+      });
+    }
+  }, [boot]); // Include boot in dependency array if it could change, though typically it's stable
+
   return (
     <Routes>
       {/* Entry-flow */}

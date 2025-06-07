@@ -85,13 +85,14 @@ const initializer: StateCreator<UserStore> = (set, get) => {
       console.error('[UserStore] Failed to subscribe to Supabase auth state changes.');
     }
 
-    if (typeof window !== 'undefined') {
-      window.addEventListener('beforeunload', () => {
-        logDev('beforeunload: Unsubscribing from Supabase auth changes.');
-        globalAuthUnsub?.();
-        globalAuthUnsub = null;
-        delete (globalThis as any).__SUPABASE_AUTH_UNSUB;
-      });
+    if (typeof window !== 'undefined' && !(globalThis as any).__BEFORE_UNLOAD_SET__) {
+      const beforeUnloadHandler = () => {
+        logDev('beforeunload: Tearing down user store and unsubscribing from Supabase auth changes.');
+        tearDownUserStore(); // This should handle unsubscription logic
+      };
+      window.addEventListener('beforeunload', beforeUnloadHandler);
+      (globalThis as any).__BEFORE_UNLOAD_SET__ = true;
+      (globalThis as any).__BEFORE_UNLOAD_HANDLER__ = beforeUnloadHandler; // Store handler to potentially remove it if tearDown is called manually
     }
   }
 
@@ -109,30 +110,38 @@ const initializer: StateCreator<UserStore> = (set, get) => {
     },
 
     async boot() {
-      logDev('boot() called');
+      if (typeof window === 'undefined') {
+        console.log('[BOOT] skip – server env');
+        return;
+      }
+      console.log('[BOOT] start');
+      // safeSet({ isLoading: true }); // isLoading is true by default, boot will set it to false
       try {
-        safeSet({ isLoading: true });
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-        if (error) throw error;
+        const { data, error } = await supabase.auth.getSession();
+        console.log('[BOOT] session:', data.session, 'error:', error);
+        if (error) {
+            // If getSession errors, we still want to set loading to false
+            // and potentially log the user out or show an error.
+            console.error('[BOOT] getSession error:', error);
+            safeSet({ isLoading: false, user: null, profile: null, isAuthenticated: false, error: error.message });
+            if (typeof window !== 'undefined') {
+              toast.error(`Session error: ${error.message}`);
+            }
+            return;
+        }
 
-        if (session?.user) {
-          const profile = await get().fetchUserProfile(session.user.id);
-          safeSet({ user: session.user, profile, isAuthenticated: true });
+        if (data.session?.user) {
+          const profile = await get().fetchUserProfile(data.session.user.id);
+          safeSet({ isLoading: false, user: data.session.user, profile, isAuthenticated: true, error: null });
         } else {
-          safeSet({ user: null, profile: null, isAuthenticated: false });
+          safeSet({ isLoading: false, user: null, profile: null, isAuthenticated: false, error: null });
         }
-      } catch (err) {
-        logDev('boot() error:', err);
-        safeSet({ error: GENERIC_ERROR });
+      } catch (e: any) {
+        console.error('[BOOT] crashed', e);
+        safeSet({ isLoading: false, user: null, profile: null, isAuthenticated: false, error: e.message || 'Boot process crashed' });
         if (typeof window !== 'undefined') {
-          toast.error(GENERIC_ERROR);
+          toast.error(`Boot crashed: ${e.message || 'Unknown error'}`);
         }
-      } finally {
-        safeSet({ isLoading: false });
-        logDev('boot() finished, isLoading: false');
       }
     },
 
@@ -299,7 +308,7 @@ export const useUserStore = process.env.NODE_ENV === 'development'
 /**
  * Побочный helper — вызовите в тестах или при hot‑reload, чтобы гарантированно очистить слушатель
  */
-export const tearDownUserStore = () => {
+export function tearDownUserStore() {
   logDev('tearDownUserStore() called.');
   globalAuthUnsub?.();
   globalAuthUnsub = null;
@@ -315,15 +324,4 @@ export const tearDownUserStore = () => {
   }
 };
 
-// Auto-initialize session on store creation
-// Ensure this runs after useUserStore is fully defined.
-if (typeof useUserStore.getState()?.boot === 'function') {
-  logDev('Auto-calling boot()');
-  useUserStore.getState().boot();
-} else if (process.env.NODE_ENV === 'development') {
-  // This might happen if the file is imported in a way that boot isn't available yet.
-  // Or if there's an issue with the store's creation.
-  console.error(
-    '[UserStore setup] boot() method not found on useUserStore.getState() or store not yet initialized. Auto-hydration will not occur immediately.'
-  );
-}
+// Removed automatic boot() call
