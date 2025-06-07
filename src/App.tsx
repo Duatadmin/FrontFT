@@ -3,11 +3,13 @@ import ChatLayout from './components/chat/ChatLayout';
 import { VoiceProvider } from './hooks/VoiceContext';
 import { Message } from './types';
 import chatService from './services/chatService';
+import { useUserStore } from './lib/stores/useUserStore'; // Or your specific user selector
 import { checkApiStatus } from './services/apiService';
 import SupabaseTest from './SupabaseTest';
 import VoiceWidget from './components/VoiceWidget';
 
 function App() {
+  const currentUser = useUserStore((state) => state.user);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 'initial-1',
@@ -54,8 +56,19 @@ function App() {
     setMessages(prevMessages => [...prevMessages, userMessage]);
     setIsLoading(true);
 
+    if (!currentUser || !currentUser.id) {
+      console.error('Cannot send message: User or User ID is not available.');
+      setMessages(prevMessages => [...prevMessages, {
+        id: `error-no-user-${Date.now()}`,
+        content: 'Error: Could not send message. User not identified.',
+        role: 'system'
+      }]);
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const assistantMessageContent = await chatService.sendMessage(content);
+      const assistantMessageContent = await chatService.sendMessage(content, currentUser.id);
       const assistantMessage: Message = {
         id: `assistant-${Date.now()}`,
         content: assistantMessageContent,
