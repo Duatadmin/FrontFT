@@ -157,6 +157,11 @@ export const useUserStore = create<UserState>()(
             });
 
             if (signUpError) throw signUpError;
+
+            // Successfully initiated sign-up (user might need to confirm email)
+            // Set isLoading to false here as the signUp API call itself is done.
+            // onAuthStateChange will handle the actual session establishment later.
+            set({ isLoading: false });
             
             if (signUpData.user && !signUpData.user.email_confirmed_at) {
               toast.info('Confirmation email sent. Please check your inbox.');
