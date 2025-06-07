@@ -35,18 +35,20 @@ const ChevronDownIcon = () => (
   </svg>
 );
 
-// Test user ID for development
-import useCurrentUser from '@/lib/stores/useUserStore';
+import { useUserStore } from './lib/stores/useUserStore';
 
 const SimpleWorkoutDisplay: React.FC = () => {
-  const currentUser = useCurrentUser();
-  // Support both { user: { id } } and { id } shapes
-  const userId = (currentUser && typeof currentUser === 'object')
-    ? (currentUser.user?.id || currentUser.id)
-    : undefined;
-  if (!userId) return null;
+  const { user } = useUserStore();
+  const userId = user?.id;
 
-const SimpleWorkoutDisplay: React.FC = () => {
+  // If there's no authenticated user, don't render the component or attempt to fetch data.
+  if (!userId) {
+    // Optionally, you could return a placeholder or a message indicating no user is logged in.
+    // For now, returning null to render nothing, which is often desired for such components.
+    console.log('SimpleWorkoutDisplay: No authenticated user ID found.');
+    return null;
+  }
+
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

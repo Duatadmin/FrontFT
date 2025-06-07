@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Filter, X } from 'lucide-react';
 import useDiaryStore from '../../store/useDiaryStore';
+import { useUserStore } from '../../lib/stores/useUserStore';
 
 // Common focus areas for workouts
 const FOCUS_AREAS = [
@@ -15,6 +16,8 @@ const FOCUS_AREAS = [
 ];
 
 const FiltersBar: React.FC = () => {
+  const { user } = useUserStore();
+  const userId = user?.id;
   const { filters, setFilters } = useDiaryStore();
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isFocusAreaOpen, setIsFocusAreaOpen] = useState(false);
@@ -122,10 +125,10 @@ const FiltersBar: React.FC = () => {
                     });
                     
                     // Trigger a refetch with the new date range
-                    import useCurrentUser from '@/lib/stores/useUserStore';
-const currentUser = useCurrentUser();
-const userId = currentUser?.id;
-if (!userId) return null;
+                    if (!userId) {
+                      console.warn('Cannot fetch sessions: userId is not available.');
+                      return; // Or handle appropriately, maybe show a message
+                    }
                     const store = useDiaryStore.getState();
                     store.fetchSessions(userId, { dateRange: filters.dateRange });
                   }}

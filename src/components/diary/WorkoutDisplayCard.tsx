@@ -1,22 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Calendar, Clock, Dumbbell, ChevronDown, Award, Flame, BarChart3 } from 'lucide-react';
-import useDiaryStore from '../../store/useDiaryStore';
-import useUserStore from '../../store/useUserStore';
-import useCurrentUser from '@/lib/stores/useUserStore';
+import useDiaryStore from '../../store/useDiaryStore'; // Assuming this path is correct for now
+import { useUserStore } from '../../lib/stores/useUserStore';
 
 const WorkoutDisplayCard: React.FC = () => {
-  const currentUser = useCurrentUser();
-  // Support both { user: { id } } and { id } shapes
-  const userId = (currentUser && typeof currentUser === 'object')
-    ? (currentUser.user?.id || currentUser.id)
-    : undefined;
+  const { user } = useUserStore();
+  const userId = user?.id;
+  // Support both { user: { id } } and { id } shapes // This comment might need review based on new derivation
   if (!userId) return null;
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [expandedWorkout, setExpandedWorkout] = useState<string | null>(null);
-  const { user } = useUserStore();
+  // const { user } from useUserStore(); // This is now declared above
   const { selectSession } = useDiaryStore();
 
   useEffect(() => {
