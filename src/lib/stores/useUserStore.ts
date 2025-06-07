@@ -60,18 +60,74 @@ const initializer: StateCreator<UserStore> = (set, get) => {
     set(partial, replace);
   };
 
-  const handleAuthChange = async (_event: AuthChangeEvent, session: Session | null) => {
-    logDev('AuthChange', _event, session);
-    if (session?.user) {
-      const profile = await get().fetchUserProfile(session.user.id);
-      safeSet({
-        user: session.user,
-        profile,
-        isAuthenticated: true,
-        isLoading: false, // Auth change implies loading is done for this transition
-      });
-    } else {
-      safeSet({ user: null, profile: null, isAuthenticated: false, isLoading: false });
+  const handleAuthChange = async (event: AuthChangeEvent, session: Session | null) => {
+    logDev('[AuthListener] Event:', event, 'Session:', session);
+
+    switch (event) {
+      case 'INITIAL_SESSION':
+      case 'SIGNED_IN':
+        if (session?.user) {
+          try {
+            logDev('[AuthListener] User session found. Fetching profile for user:', session.user.id);
+            const profile = await get().fetchUserProfile(session.user.id);
+            logDev('[AuthListener] Profile fetched:', profile);
+            safeSet({
+              user: session.user,
+              profile,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+            });
+          } catch (profileError: any) {
+            console.error('[AuthListener] Error fetching profile:', profileError);
+            safeSet({
+              user: session.user, // Keep user data even if profile fetch fails
+              profile: null,
+              isAuthenticated: true, // Still authenticated, but profile is missing
+              isLoading: false,
+              error: 'Failed to fetch user profile.',
+            });
+            if (typeof window !== 'undefined') {
+              toast.error('Failed to fetch user profile.');
+            }
+          }
+        } else {
+          // No user session (e.g., INITIAL_SESSION with no one logged in)
+          logDev('[AuthListener] No active user session.');
+          safeSet({ user: null, profile: null, isAuthenticated: false, isLoading: false, error: null });
+        }
+        break;
+      case 'SIGNED_OUT':
+        logDev('[AuthListener] User signed out.');
+        safeSet({ user: null, profile: null, isAuthenticated: false, isLoading: false, error: null });
+        break;
+      case 'TOKEN_REFRESHED':
+        logDev('[AuthListener] Token refreshed. Session:', session);
+        if (session?.user && !get().user) {
+          // If for some reason the user was not set but token refresh provides one (edge case)
+          logDev('[AuthListener] User was null, but token refresh provided a user. Re-populating.');
+          const profile = await get().fetchUserProfile(session.user.id);
+          safeSet({ user: session.user, profile, isAuthenticated: true, isLoading: false });
+        } else if (!session?.user && get().user) {
+          // If token refresh results in no user, treat as sign out (edge case)
+          logDev('[AuthListener] Token refresh resulted in no user. Signing out.');
+          safeSet({ user: null, profile: null, isAuthenticated: false, isLoading: false, error: null });
+        }
+        // Typically, isLoading should not change on TOKEN_REFRESHED unless session validity changes.
+        break;
+      case 'USER_UPDATED':
+        logDev('[AuthListener] User updated. New user data:', session?.user);
+        if (session?.user) {
+          const updatedProfile = await get().fetchUserProfile(session.user.id); // Re-fetch profile if user attributes changed
+          safeSet({ user: session.user, profile: updatedProfile });
+        }
+        break;
+      case 'PASSWORD_RECOVERY':
+        logDev('[AuthListener] Password recovery event.');
+        // Typically no change to auth state here, UI might show a message.
+        break;
+      default:
+        logDev('[AuthListener] Unhandled auth event:', event);
     }
   };
 
@@ -111,64 +167,21 @@ const initializer: StateCreator<UserStore> = (set, get) => {
 
     async boot() {
       if (typeof window === 'undefined') {
-        console.log('[BOOT] skip – server env');
+        logDev('[BOOT] Skipping boot() on server.');
         return;
       }
-      console.log('[BOOT] start');
-      console.time('[BOOT] getSession');
-
-      // Initialize data and error to be accessible in finally
-      let sessionData: Session | null = null;
-      let sessionError: any = null; // Use 'any' for error to match Supabase type, or be more specific
-      let userProfile: UserProfile | null = null;
-
-      const sessionPromise = supabase.auth.getSession().then(r => {
-        console.log('[getSession] raw promise resolved. Session exists:', !!r.data.session, 'Error:', r.error);
-        return r;
-      });
-      const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) =>
-        setTimeout(() => reject(new Error('getSession timeout')), 3000)
-      );
-
-      try {
-        // Use a type assertion for the result of Promise.race if needed, or handle types carefully
-        const result = await Promise.race([sessionPromise, timeoutPromise]) as { data: { session: Session | null }, error: any | null };
-        sessionData = result.data.session;
-        sessionError = result.error;
-
-        console.timeEnd('[BOOT] getSession');
-        console.log('[BOOT] getSession resolved. Session:', sessionData, 'Error:', sessionError);
-
-        if (sessionError) {
-          // This case handles errors returned by getSession itself (not timeout)
-          console.error('[BOOT] getSession returned error:', sessionError);
-          // toast.error is handled in finally or if specific error handling is needed here
-        }
-
-        if (sessionData?.user) {
-          console.log('[BOOT] Fetching profile for user:', sessionData.user.id);
-          userProfile = await get().fetchUserProfile(sessionData.user.id);
-          console.log('[BOOT] Profile fetched:', userProfile);
-        }
-
-      } catch (e: any) {
-        // This catch block handles the timeout error or other unexpected errors from Promise.race
-        console.error('[BOOT] getSession failed (timeout or other error):', e);
-        sessionError = e; // Store the error to be used in finally
-        if (typeof window !== 'undefined') {
-            toast.error(`Session retrieval failed: ${e.message}`);
-        }
-      } finally {
-        const isAuthenticated = !!(sessionData?.user && userProfile && !sessionError);
-        safeSet({
-          isLoading: false,
-          user: sessionData?.user ?? null,
-          profile: isAuthenticated ? userProfile : null, // Only set profile if authenticated
-          isAuthenticated: isAuthenticated,
-          error: sessionError ? (sessionError.message || 'An unknown error occurred') : null,
-        });
-        console.log('[BOOT] isLoading → false. isAuthenticated:', isAuthenticated, 'User:', sessionData?.user ?? null, 'Profile:', userProfile, 'Error:', sessionError);
+      logDev('[BOOT] boot() called on client. Initial isLoading:', get().isLoading);
+      // Ensure isLoading is true if not already set by initial state, 
+      // though onAuthStateChange's INITIAL_SESSION will be the primary driver for setting it to false.
+      if (!get().isLoading) {
+        // safeSet({ isLoading: true }); // Potentially set isLoading to true if not already.
+                                      // However, initial state is isLoading: true, so this might be redundant.
+                                      // The key is that onAuthStateChange WILL set it to false.
       }
+      logDev('[BOOT] boot() finished. Relying on onAuthStateChange for session and loading state.');
+      // The onAuthStateChange listener is set up when the store initializes.
+      // The INITIAL_SESSION event will fire and be handled by handleAuthChange,
+      // which will then update isLoading, user, profile, and isAuthenticated.
     },
 
     async login(email, password) {
