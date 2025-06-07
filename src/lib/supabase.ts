@@ -31,7 +31,48 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(errorMessage);
 }
 
-export const supabase: SupabaseClient<Database> = createClient<Database>(supabaseUrl, supabaseAnonKey); // Typed client
+// Custom storage adapter to guard localStorage access
+const GuardedLocalStorage = {
+  getItem: (key: string) => {
+    try {
+      return typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
+    } catch (error) {
+      console.warn(`[GuardedLocalStorage] Error getting item ${key}:`, error);
+      return null;
+    }
+  },
+  setItem: (key: string, value: string) => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(key, value);
+      }
+    } catch (error) {
+      console.warn(`[GuardedLocalStorage] Error setting item ${key}:`, error);
+    }
+  },
+  removeItem: (key: string) => {
+    try {
+      if (typeof window !== 'undefined') {
+        window.localStorage.removeItem(key);
+      }
+    } catch (error) {
+      console.warn(`[GuardedLocalStorage] Error removing item ${key}:`, error);
+    }
+  },
+};
+
+export const supabase: SupabaseClient<Database> = createClient<Database>(
+  supabaseUrl, 
+  supabaseAnonKey,
+  {
+    auth: {
+      storage: GuardedLocalStorage,
+      autoRefreshToken: true,
+      persistSession: true, // This remains true, Supabase will use the provided storage adapter
+      detectSessionInUrl: true,
+    },
+  }
+); // Typed client
 
 // Global Auth State Change Logger
 if (typeof window !== 'undefined' && !(globalThis as any).__SB_AUTH_SUB__) {
