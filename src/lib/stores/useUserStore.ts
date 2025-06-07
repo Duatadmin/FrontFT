@@ -122,7 +122,10 @@ const initializer: StateCreator<UserStore> = (set, get) => {
       let sessionError: any = null; // Use 'any' for error to match Supabase type, or be more specific
       let userProfile: UserProfile | null = null;
 
-      const sessionPromise = supabase.auth.getSession();
+      const sessionPromise = supabase.auth.getSession().then(r => {
+        console.log('[getSession] raw promise resolved. Session exists:', !!r.data.session, 'Error:', r.error);
+        return r;
+      });
       const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) =>
         setTimeout(() => reject(new Error('getSession timeout')), 3000)
       );
@@ -169,29 +172,44 @@ const initializer: StateCreator<UserStore> = (set, get) => {
     },
 
     async login(email, password) {
+      console.time('[LOGIN] signInWithPassword');
+      logDev('[LOGIN] Attempting for user:', email);
+      let loginData: any = null;
+      let loginError: any = null;
       try {
         safeSet({ isLoading: true, error: null });
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) throw error;
-        // onAuthStateChange will handle success
-      } catch (err) {
-        logDev('login() error:', err);
-        safeSet({ error: GENERIC_ERROR, isLoading: false });
+        const response = await supabase.auth.signInWithPassword({ email, password });
+        loginData = response.data;
+        loginError = response.error;
+        if (loginError) throw loginError;
+        // onAuthStateChange will handle success and further state updates
+      } catch (err: any) {
+        logDev('[LOGIN] signInWithPassword error:', err);
+        loginError = err; // Ensure error is captured for logging
+        safeSet({ error: err.message || GENERIC_ERROR, isLoading: false });
         if (typeof window !== 'undefined') {
-          toast.error(GENERIC_ERROR);
+          toast.error(err.message || GENERIC_ERROR);
         }
+      } finally {
+        console.timeEnd('[LOGIN] signInWithPassword');
+        console.log('[LOGIN] signInWithPassword completed. Data:', loginData ? !!loginData.session : false, 'Error:', loginError);
+        // isLoading is primarily managed by onAuthStateChange or boot's final outcome
+        // If direct login fails, isLoading should be false, which is handled in catch.
       }
-      // isLoading will be set to false by onAuthStateChange or finally in boot/error
     },
 
     async signUp(email, password, data = {}) {
+      console.time('[SIGNUP] signUp');
+      logDev('[SIGNUP] Attempting for user:', email);
+      let signUpData: any = null;
+      let signUpError: any = null;
       try {
         safeSet({ isLoading: true, error: null });
         const emailRedirectTo = typeof window !== 'undefined'
           ? `${window.location.origin}/auth/callback`
           : undefined;
 
-        const { data: signUpResponse, error } = await supabase.auth.signUp({
+        const response = await supabase.auth.signUp({
           email,
           password,
           options: {
@@ -199,21 +217,30 @@ const initializer: StateCreator<UserStore> = (set, get) => {
             emailRedirectTo,
           },
         });
-        if (error) throw error;
+        signUpData = response.data;
+        signUpError = response.error;
+
+        if (signUpError) throw signUpError;
+
         if (typeof window !== 'undefined') {
-          if (signUpResponse.user && !signUpResponse.user.email_confirmed_at) {
+          if (signUpData.user && !signUpData.user.email_confirmed_at) {
             toast.info('Confirmation email sent. Please check your inbox.');
-          } else if (signUpResponse.user) {
+          } else if (signUpData.user) {
             toast.success('Sign up successful!');
           }
         }
-        // onAuthStateChange will handle user state
-      } catch (err) {
-        logDev('signUp() error:', err);
-        safeSet({ error: GENERIC_ERROR, isLoading: false });
+        // onAuthStateChange will handle user state and isLoading
+      } catch (err: any) {
+        logDev('[SIGNUP] signUp error:', err);
+        signUpError = err; // Ensure error is captured for logging
+        safeSet({ error: err.message || GENERIC_ERROR, isLoading: false });
         if (typeof window !== 'undefined') {
-          toast.error(GENERIC_ERROR);
+          toast.error(err.message || GENERIC_ERROR);
         }
+      } finally {
+        console.timeEnd('[SIGNUP] signUp');
+        console.log('[SIGNUP] signUp completed. Data:', signUpData ? !!signUpData.user : false, 'Error:', signUpError);
+        // isLoading is primarily managed by onAuthStateChange or boot's final outcome
       }
     },
 

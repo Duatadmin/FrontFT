@@ -33,6 +33,39 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase: SupabaseClient<Database> = createClient<Database>(supabaseUrl, supabaseAnonKey); // Typed client
 
+// Global Auth State Change Logger
+if (typeof window !== 'undefined' && !(globalThis as any).__SB_AUTH_SUB__) {
+  console.log('[AUTH] Subscribing to onAuthStateChange');
+  (globalThis as any).__SB_AUTH_SUB__ = supabase.auth.onAuthStateChange(
+    (event, session) => {
+      console.log(
+        '[AUTH] event:', event,
+        'session status:', session ? 'exists' : 'null',
+        'access_token:', session?.access_token?.slice(0, 10) + (session?.access_token ? '...' : ''),
+        'user_id:', session?.user?.id
+      );
+    }
+  ).data.subscription;
+  if (!(globalThis as any).__SB_AUTH_SUB__) {
+    console.error('[AUTH] Failed to subscribe to onAuthStateChange!');
+  }
+}
+
+// DevTools Helper to show current session
+if (typeof window !== 'undefined') {
+  (window as any).__showSession = async () => {
+    console.log('[DevHelper] __showSession() called');
+    const { data, error } = await supabase.auth.getSession();
+    if (error) {
+      console.error('[DevHelper] Error getting session:', error);
+      return { error };
+    }
+    console.log('[DevHelper] Current session:', data.session);
+    return data.session;
+  };
+  console.log('[DevHelper] __showSession() is now available in the console.');
+}
+
 // Helper to get the current user ID
 export const getCurrentUserId = async (): Promise<string | null> => {
   const { data, error } = await supabase.auth.getSession();
