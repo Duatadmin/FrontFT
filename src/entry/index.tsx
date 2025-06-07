@@ -1,5 +1,6 @@
 // src/entry/index.tsx
-import React from "react";
+import React, { useEffect } from "react";
+import { useNavigate } from 'react-router-dom';
 // Navigate component is no longer directly used here, useRequireAuth handles redirection.
 import { motion } from "framer-motion"; // For SplashScreen
 // Session is no longer directly used here
@@ -24,12 +25,25 @@ export const SplashScreen = () => (
 
 // Imports for LoginPage
 import { Auth } from '@supabase/auth-ui-react';
+import { useUserStore } from '../lib/stores/useUserStore';
 // Assuming auth-theme.ts is in 'src/' directory, so from 'src/entry/' it's '../auth-theme'
 import { customAuthUITheme } from '../auth-theme';
 // Assuming Logo.svg is in 'src/assets/', so from 'src/entry/' it's '../../assets/Logo.svg?react'
 import Logo from '../../assets/Logo.svg?react';
 
 export const LoginPage = () => {
+  const navigate = useNavigate();
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
+  const isLoading = useUserStore((state) => state.isLoading);
+
+  useEffect(() => {
+    // If loading is finished and user is authenticated, redirect from login page
+    if (!isLoading && isAuthenticated) {
+      console.log('[LoginPage Effect] User is authenticated, redirecting to /');
+      navigate('/', { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
   return (
     <div className="relative grid h-screen place-items-center overflow-hidden bg-[#121212]">
       {/* radial glow */}
