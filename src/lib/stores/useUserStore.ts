@@ -28,14 +28,13 @@ interface UserState {
   resetPassword: (email: string) => Promise<void>;
   updateProfile: (updates: Partial<AppUser>) => Promise<void>;
   clearError: () => void;
+  initializeSession: () => Promise<void>;
 }
 
 export const useUserStore = create<UserState>()(
   devtools(
     (set, get) => {
-      // Initial state
-      console.log('[useUserStore Initializing] Setting initial isLoading: true');
-      set({ isLoading: true }); // Start loading until session is checked
+      // Initial state will be defined in the returned object; session initialization is now explicit.
 
       // Function to fetch user profile from public.users table
       const fetchUserProfile = async (supabaseUser: SupabaseUser): Promise<AppUser | null> => {
@@ -66,10 +65,11 @@ export const useUserStore = create<UserState>()(
       // Handle auth state changes
       const { data: { subscription } } = supabase.auth.onAuthStateChange(
         async (event, session: Session | null) => {
-          console.log(`[useUserStore onAuthStateChange event: ${event}] Setting isLoading: true`);
-          set({ isLoading: true, error: null });
+          console.log(`[UserStore onAuthStateChange event: ${event}]`);
+
           if (event === 'INITIAL_SESSION') {
-            // Handled by getSession below
+            console.log('[UserStore onAuthStateChange] INITIAL_SESSION event received, deferring to explicit initializeSession().');
+            return; // Explicitly do nothing, initializeSession in App.tsx is the source of truth for boot.
           }
 
           if (!session || event === 'SIGNED_OUT') {
@@ -94,30 +94,6 @@ export const useUserStore = create<UserState>()(
           }
         }
       );
-      
-      // Check initial session state
-      supabase.auth.getSession().then(async ({ data: { session } }) => {
-        console.log('[useUserStore getSession Start] Setting isLoading: true');
-        set({ isLoading: true, error: null }); // Explicitly set isLoading true here
-        if (session && session.user) {
-          const appUser = await fetchUserProfile(session.user);
-          if (appUser) {
-            console.log('[useUserStore getSession] User profile fetched. Setting: {isLoading: false, isAuthenticated: true}', appUser);
-            set({ user: appUser, isAuthenticated: true, isLoading: false, error: null });
-          } else {
-            console.log('[useUserStore getSession] Failed to fetch profile. Setting: {isLoading: false, isAuthenticated: false}');
-            set({ user: null, isAuthenticated: false, isLoading: false, error: 'Failed to load user profile on initial check.' });
-            await supabase.auth.signOut();
-          }
-        } else {
-          console.log('[useUserStore getSession] No initial session. Setting: {isLoading: false, isAuthenticated: false}');
-          set({ user: null, isAuthenticated: false, isLoading: false, error: null });
-        }
-      }).catch(error => {
-        console.error('Error in initial getSession:', error);
-        console.log('[useUserStore getSession] Error. Setting: {isLoading: false, isAuthenticated: false}');
-        set({ user: null, isAuthenticated: false, isLoading: false, error: 'Error checking initial session.' });
-      });
 
       // Handle HMR for the subscription
       if (import.meta.hot) {
@@ -129,8 +105,42 @@ export const useUserStore = create<UserState>()(
       return {
         user: null,
         isAuthenticated: false,
-        isLoading: true, // Will be set to false after initial check
+        isLoading: true, // Initial state; initializeSession will set to false
         error: null,
+
+        initializeSession: async () => {
+          console.time('[UserStore initializeSession]');
+          console.log('[UserStore initializeSession] Setting isLoading: true');
+          set({ isLoading: true, error: null });
+          try {
+            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+            if (sessionError) throw sessionError;
+
+            if (session && session.user) {
+              const appUser = await fetchUserProfile(session.user);
+              if (appUser) {
+                console.log('[UserStore initializeSession] User profile fetched. Setting state.');
+                set({ user: appUser, isAuthenticated: true, error: null });
+              } else {
+                console.log('[UserStore initializeSession] Failed to fetch profile. Signing out.');
+                set({ user: null, isAuthenticated: false, error: 'Failed to load user profile on initial check.' });
+                // Don't await signOut here to prevent potential deadlocks if onAuthStateChange is also trying to act
+                supabase.auth.signOut(); 
+              }
+            } else {
+              console.log('[UserStore initializeSession] No initial session.');
+              set({ user: null, isAuthenticated: false, error: null });
+            }
+          } catch (error) {
+            console.error('[UserStore initializeSession] Error:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Error checking initial session.';
+            set({ user: null, isAuthenticated: false, error: errorMessage });
+          } finally {
+            console.log('[UserStore initializeSession] Setting isLoading: false (finally)');
+            set({ isLoading: false });
+            console.timeEnd('[UserStore initializeSession]');
+          }
+        },
 
         login: async (email, password) => {
           set({ isLoading: true, error: null });
