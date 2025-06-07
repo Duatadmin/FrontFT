@@ -41,7 +41,7 @@ export const useUserStore = create<UserState>()(
         try {
           const { data: profileData, error: profileError } = await supabase
             .from('users') // Ensure this table name matches your DB
-            .select('id, nickname, email') // Select desired fields
+            .select('id') // Select desired fields
             .eq('id', supabaseUser.id)
             .single();
 
@@ -56,8 +56,6 @@ export const useUserStore = create<UserState>()(
           }
           return {
             id: profileData.id,
-            email: profileData.email || supabaseUser.email,
-            nickname: profileData.nickname,
           };
         } catch (error) {
           console.error('fetchUserProfile error:', error);
@@ -247,7 +245,7 @@ export const useUserStore = create<UserState>()(
               .from('users')
               .update(profileUpdates) 
               .eq('id', currentUser.id)
-              .select('id, nickname, email') // Reselect fields defined in AppUser
+              .select('id') // Reselect fields defined in AppUser
               .single();
 
             if (updateError) throw updateError;
