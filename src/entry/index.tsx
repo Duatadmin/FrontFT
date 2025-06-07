@@ -1,7 +1,7 @@
 // src/entry/index.tsx
 import React, { useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
-// Navigate component is no longer directly used here, useRequireAuth handles redirection.
+// Navigate component is used for redirection in ProtectedRoute.
 import { motion } from "framer-motion"; // For SplashScreen
 // Session is no longer directly used here
 import { supabase } from "../lib/supabase"; // Import the shared Supabase client
@@ -71,16 +71,26 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   console.log('[ProtectedRoute] Rendering...');
   const isLoading = useAuthLoading();
   const isAuthenticated = useAuthenticated();
+  const navigate = useNavigate(); // Added for redirection
   console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
-  if (isLoading) {
-    console.log('[ProtectedRoute] Auth state is loading. Rendering null.');
-    return null; // Page components will use useAuthGuard which handles its own loading state
-  }
+  useEffect(() => {
+    if (isLoading) {
+      console.log('[ProtectedRoute Effect] Auth state is loading. Waiting...');
+      return; // Wait for the auth state to resolve
+    }
 
-  if (!isAuthenticated) {
-    console.log('[ProtectedRoute] User not authenticated. Rendering null (expecting redirect from useAuthGuard in page).');
-    return null; // Page components will use useAuthGuard which handles redirection
+    if (!isAuthenticated) {
+      console.log('[ProtectedRoute Effect] User not authenticated. Redirecting to /login.');
+      navigate('/login', { replace: true });
+    }
+  }, [isLoading, isAuthenticated, navigate]);
+
+  if (isLoading || !isAuthenticated) {
+    // If loading, or if not authenticated (and effect will redirect),
+    // render null or a loading spinner to prevent child component flash.
+    console.log('[ProtectedRoute] Auth loading or user not authenticated (redirect pending). Rendering null.');
+    return null; 
   }
 
   console.log('[ProtectedRoute] User authenticated. Rendering children.');
