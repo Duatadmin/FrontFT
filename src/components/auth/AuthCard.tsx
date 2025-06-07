@@ -39,11 +39,11 @@ export default function AuthCard() {
             // The w-9 h-9 will make all buttons (social + primary submit) 36x36px.
             // This might not be ideal for the primary submit button.
             // Consider if these styles should only apply to social buttons via more specific CSS overrides if needed.
-            button: 'w-9 h-9 p-0 flex-grow-0 flex-shrink-0 basis-9', 
             container: 'p-0 mb-4', // Removes inner Auth padding and adds margin-bottom for spacing.
             anchor: 'text-xs text-center', // Styles for links like 'Forgot password', 'Sign up'.
             // label: '', // For input labels
-            // input: '', // For input fields
+            // input: '', // For input fields - Rely on ThemeSupa dark mode
+            // button: '', // Rely on ThemeSupa dark mode
             // message: '', // For error/info messages
             // divider: '', // For the divider (e.g., "OR")
           },
