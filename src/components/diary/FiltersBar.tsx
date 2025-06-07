@@ -122,7 +122,10 @@ const FiltersBar: React.FC = () => {
                     });
                     
                     // Trigger a refetch with the new date range
-                    const userId = '792ee0b8-5ba2-40a5-8f35-ab1bff798908'; // Test user ID
+                    import useCurrentUser from '@/lib/stores/useUserStore';
+const currentUser = useCurrentUser();
+const userId = currentUser?.id;
+if (!userId) return null;
                     const store = useDiaryStore.getState();
                     store.fetchSessions(userId, { dateRange: filters.dateRange });
                   }}

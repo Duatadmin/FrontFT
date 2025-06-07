@@ -157,7 +157,10 @@ const DateRangeFilter: React.FC<DateRangeFilterProps> = ({ className = '' }) => 
     // Trigger a refetch of sessions with the new date range
     if (typeof window !== 'undefined') {
       // Use a mock user ID for development or the actual user ID in production
-      const userId = '792ee0b8-5ba2-40a5-8f35-ab1bff798908'; // This should be replaced with the actual user ID in production
+      import useCurrentUser from '@/lib/stores/useUserStore';
+const currentUser = useCurrentUser();
+const userId = currentUser?.id;
+if (!userId) return null;
       const store = useDiaryStore.getState();
       store.fetchSessions(userId, formattedRange);
     }

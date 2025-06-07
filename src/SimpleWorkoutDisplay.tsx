@@ -36,7 +36,15 @@ const ChevronDownIcon = () => (
 );
 
 // Test user ID for development
-const TEST_USER_ID = '792ee0b8-5ba2-40a5-8f35-ab1bff798908';
+import useCurrentUser from '@/lib/stores/useUserStore';
+
+const SimpleWorkoutDisplay: React.FC = () => {
+  const currentUser = useCurrentUser();
+  // Support both { user: { id } } and { id } shapes
+  const userId = (currentUser && typeof currentUser === 'object')
+    ? (currentUser.user?.id || currentUser.id)
+    : undefined;
+  if (!userId) return null;
 
 const SimpleWorkoutDisplay: React.FC = () => {
   const [workouts, setWorkouts] = useState<any[]>([]);
@@ -53,7 +61,7 @@ const SimpleWorkoutDisplay: React.FC = () => {
         const { data, error } = await supabase
           .from('workout_sessions')
           .select('*')
-          .eq('user_id', TEST_USER_ID)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false });
           
         if (error) {

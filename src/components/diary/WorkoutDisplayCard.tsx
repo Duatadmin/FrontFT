@@ -3,8 +3,15 @@ import { supabase } from '../../lib/supabase';
 import { Calendar, Clock, Dumbbell, ChevronDown, Award, Flame, BarChart3 } from 'lucide-react';
 import useDiaryStore from '../../store/useDiaryStore';
 import useUserStore from '../../store/useUserStore';
+import useCurrentUser from '@/lib/stores/useUserStore';
 
 const WorkoutDisplayCard: React.FC = () => {
+  const currentUser = useCurrentUser();
+  // Support both { user: { id } } and { id } shapes
+  const userId = (currentUser && typeof currentUser === 'object')
+    ? (currentUser.user?.id || currentUser.id)
+    : undefined;
+  if (!userId) return null;
   const [workouts, setWorkouts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -18,13 +25,13 @@ const WorkoutDisplayCard: React.FC = () => {
         setLoading(true);
         
         // Use a specific test user ID directly to avoid the mock user ID from the store
-        const TEST_USER_ID = '792ee0b8-5ba2-40a5-8f35-ab1bff798908';
+        
         
         // Direct query to workout_sessions table
         const { data, error } = await supabase
           .from('workout_sessions')
           .select('*')
-          .eq('user_id', TEST_USER_ID)
+          .eq('user_id', userId)
           .order('created_at', { ascending: false });
           
         if (error) {
@@ -110,11 +117,11 @@ const WorkoutDisplayCard: React.FC = () => {
           onClick={() => {
             setLoading(true);
             setError(null);
-            const TEST_USER_ID = '792ee0b8-5ba2-40a5-8f35-ab1bff798908';
+            
             supabase
               .from('workout_sessions')
               .select('*')
-              .eq('user_id', TEST_USER_ID)
+              .eq('user_id', userId)
               .order('created_at', { ascending: false })
               .then(({ data, error }) => {
                 if (error) {

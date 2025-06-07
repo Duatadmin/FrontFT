@@ -8,7 +8,9 @@ console.log('Supabase URL:', import.meta.env.VITE_SUPABASE_URL);
 console.log('Supabase key length:', import.meta.env.VITE_SUPABASE_ANON_KEY?.length || 0);
 
 // Test user ID
-const TEST_USER_ID = '792ee0b8-5ba2-40a5-8f35-ab1bff798908';
+import { useUserStore } from '@/lib/stores/useUserStore';
+const userId = useUserStore.getState().user?.id;
+if (!userId) throw new Error('Missing userId in test context');
 
 // Function to test Supabase connection
 async function testSupabaseConnection() {
@@ -19,7 +21,7 @@ async function testSupabaseConnection() {
     const { data: userData, error: userError } = await supabase
       .from('users')
       .select('*')
-      .eq('id', TEST_USER_ID);
+      .eq('id', userId);
     
     if (userError) {
       console.error('Error fetching user data:', userError);
@@ -32,7 +34,7 @@ async function testSupabaseConnection() {
     const { data: workouts, error: workoutsError } = await supabase
       .from('workout_sessions')
       .select('*')
-      .eq('user_id', TEST_USER_ID);
+      .eq('user_id', userId);
     
     if (workoutsError) {
       console.error('Error fetching workout data:', workoutsError);
@@ -48,7 +50,7 @@ async function testSupabaseConnection() {
     const { data: plans, error: plansError } = await supabase
       .from('training_plans')
       .select('*')
-      .eq('user_id', TEST_USER_ID);
+      .eq('user_id', userId);
     
     if (plansError) {
       console.error('Error fetching training plans:', plansError);
@@ -61,7 +63,7 @@ async function testSupabaseConnection() {
     const { data: goals, error: goalsError } = await supabase
       .from('goals')
       .select('*')
-      .eq('user_id', TEST_USER_ID);
+      .eq('user_id', userId);
     
     if (goalsError) {
       console.error('Error fetching goals:', goalsError);

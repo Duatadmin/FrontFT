@@ -1,9 +1,10 @@
 // src/entry/index.tsx
-import React, { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom"; // For ProtectedRoute
+import React from "react";
+// Navigate component is no longer directly used here, useRequireAuth handles redirection.
 import { motion } from "framer-motion"; // For SplashScreen
-import { Session } from "@supabase/supabase-js"; 
+// Session is no longer directly used here
 import { supabase } from "../lib/supabase"; // Import the shared Supabase client
+import { useRequireAuth } from '../lib/stores/useUserStore';
 
 // Import the actual AuthCallback component. It's a default export from its file.
 import AuthCallbackFromFile from "../components/auth/callback"; // Path relative to src/entry/index.tsx
@@ -53,38 +54,16 @@ export const LoginPage = () => {
 
 /** 3. ProtectedRoute ***************************************************/
 export const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
-  const [session, setSession] = useState<Session | null | undefined>(undefined); // undefined: loading, null: no session, Session: active session
+  const { isLoading, isAuthenticated } = useRequireAuth(); // This hook now handles redirection logic
 
-  useEffect(() => {
-    // onAuthStateChange fires an event with the initial session state as well.
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, sessionState) => {
-      setSession(sessionState);
-    });
-    
-    // Ensure the initial session state is set if onAuthStateChange hasn't fired yet or for immediate check
-    // This helps avoid a flicker if onAuthStateChange is slightly delayed.
-    supabase.auth.getSession().then(({ data: { session: currentSession } }) => {
-      // Only update if the session state is still in its initial 'undefined' state
-      // to prevent overriding a state already set by onAuthStateChange.
-      if (session === undefined) {
-        setSession(currentSession);
-      }
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, []); // Empty dependency array means this effect runs once on mount and cleans up on unmount
-
-  if (session === undefined) {
-    return <SplashScreen />; // Show splash screen while session is being determined
+  if (isLoading) {
+    return <SplashScreen />; // Show splash screen while auth state is loading
   }
 
-  if (!session) {
-    return <Navigate to="/login" replace />; // No session, redirect to login
-  }
-
-  return children; // Session exists, render the protected content
+  // If not loading and authenticated, render children.
+  // If not loading and not authenticated, useRequireAuth hook handles the redirect.
+  // Rendering null here is a fallback for the brief moment before redirect completes.
+  return isAuthenticated ? children : null;
 };
 
 // Export the imported AuthCallback component under the name 'AuthCallback'

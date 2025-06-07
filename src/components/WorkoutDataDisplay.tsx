@@ -1,12 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { fetchWorkoutSessions } from '../lib/supabase/dataAdapter';
-import { getCurrentUserId } from '../lib/supabase';
+
 import type { WorkoutSession } from '../lib/supabase/schema.types';
 
 // Test user ID for development
-const TEST_USER_ID = '792ee0b8-5ba2-40a5-8f35-ab1bff798908';
+import useCurrentUser from '@/lib/stores/useUserStore';
 
 const WorkoutDataDisplay: React.FC = () => {
+  const currentUser = useCurrentUser();
+  // Support both { user: { id } } and { id } shapes
+  const userId = (currentUser && typeof currentUser === 'object')
+    ? (currentUser.user?.id || currentUser.id)
+    : undefined;
+  if (!userId) return null;
+
   const [workouts, setWorkouts] = useState<WorkoutSession[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{
@@ -15,20 +22,13 @@ const WorkoutDataDisplay: React.FC = () => {
     missingData?: string;
     affectedModule?: string;
   } | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-
-
 
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // Get current user ID
-        const currentUserId = await getCurrentUserId();
-        setUserId(currentUserId || TEST_USER_ID);
-        
-        if (!currentUserId && !TEST_USER_ID) {
+        if (!userId) {
           setError({
             code: 'AUTH_ERROR',
             message: 'Missing data: user_id. Cannot fetch workout data.',
@@ -40,7 +40,7 @@ const WorkoutDataDisplay: React.FC = () => {
         
         // Fetch workout sessions for the user
         const result = await fetchWorkoutSessions(
-          currentUserId || TEST_USER_ID,
+          userId,
           undefined,
           undefined,
           undefined
