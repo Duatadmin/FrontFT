@@ -33,7 +33,7 @@ interface UserState {
 
 export const useUserStore = create<UserState>()(
   devtools(
-    (set, get, storeApi) => {
+    (set, get) => {
       // Initial state will be defined in the returned object; session initialization is now explicit.
 
       // Function to fetch user profile from public.users table
@@ -267,12 +267,6 @@ export const useUserStore = create<UserState>()(
 
       }; // Closes initialStateAndMethods
 
-      // Auto-initialize session on store creation
-      if (typeof storeApi.getState().boot === 'function') {
-        storeApi.getState().boot();
-      } else if (process.env.NODE_ENV === 'development') {
-        console.error('[UserStore setup] boot() method not found on storeApi.getState(). Auto-hydration will not occur.');
-      }
       return initialStateAndMethods;
     },
     { name: 'user-store', // Name for Redux DevTools
@@ -283,5 +277,11 @@ export const useUserStore = create<UserState>()(
 // Export selectors/hooks
 export const useCurrentUser   = () => useUserStore(s => s.user);
 export const useAuthLoading   = () => useUserStore(s => s.isLoading);
-export const useAuthenticated = () => useUserStore(s => s.isAuthenticated);
+export const useAuthenticated = () => useUserStore((state) => state.isAuthenticated);
 
+// Auto-initialize session on store creation
+if (typeof useUserStore.getState().boot === 'function') {
+  useUserStore.getState().boot();
+} else if (process.env.NODE_ENV === 'development') {
+  console.error('[UserStore setup] boot() method not found on useUserStore.getState(). Auto-hydration will not occur.');
+}
