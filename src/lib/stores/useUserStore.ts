@@ -115,33 +115,56 @@ const initializer: StateCreator<UserStore> = (set, get) => {
         return;
       }
       console.log('[BOOT] start');
-      // safeSet({ isLoading: true }); // isLoading is true by default, boot will set it to false
+      console.time('[BOOT] getSession');
+
+      // Initialize data and error to be accessible in finally
+      let sessionData: Session | null = null;
+      let sessionError: any = null; // Use 'any' for error to match Supabase type, or be more specific
+      let userProfile: UserProfile | null = null;
+
+      const sessionPromise = supabase.auth.getSession();
+      const timeoutPromise = new Promise<{ data: { session: null }; error: Error }>((_, reject) =>
+        setTimeout(() => reject(new Error('getSession timeout')), 3000)
+      );
+
       try {
-        const { data, error } = await supabase.auth.getSession();
-        console.log('[BOOT] session:', data.session, 'error:', error);
-        if (error) {
-            // If getSession errors, we still want to set loading to false
-            // and potentially log the user out or show an error.
-            console.error('[BOOT] getSession error:', error);
-            safeSet({ isLoading: false, user: null, profile: null, isAuthenticated: false, error: error.message });
-            if (typeof window !== 'undefined') {
-              toast.error(`Session error: ${error.message}`);
-            }
-            return;
+        // Use a type assertion for the result of Promise.race if needed, or handle types carefully
+        const result = await Promise.race([sessionPromise, timeoutPromise]) as { data: { session: Session | null }, error: any | null };
+        sessionData = result.data.session;
+        sessionError = result.error;
+
+        console.timeEnd('[BOOT] getSession');
+        console.log('[BOOT] getSession resolved. Session:', sessionData, 'Error:', sessionError);
+
+        if (sessionError) {
+          // This case handles errors returned by getSession itself (not timeout)
+          console.error('[BOOT] getSession returned error:', sessionError);
+          // toast.error is handled in finally or if specific error handling is needed here
         }
 
-        if (data.session?.user) {
-          const profile = await get().fetchUserProfile(data.session.user.id);
-          safeSet({ isLoading: false, user: data.session.user, profile, isAuthenticated: true, error: null });
-        } else {
-          safeSet({ isLoading: false, user: null, profile: null, isAuthenticated: false, error: null });
+        if (sessionData?.user) {
+          console.log('[BOOT] Fetching profile for user:', sessionData.user.id);
+          userProfile = await get().fetchUserProfile(sessionData.user.id);
+          console.log('[BOOT] Profile fetched:', userProfile);
         }
+
       } catch (e: any) {
-        console.error('[BOOT] crashed', e);
-        safeSet({ isLoading: false, user: null, profile: null, isAuthenticated: false, error: e.message || 'Boot process crashed' });
+        // This catch block handles the timeout error or other unexpected errors from Promise.race
+        console.error('[BOOT] getSession failed (timeout or other error):', e);
+        sessionError = e; // Store the error to be used in finally
         if (typeof window !== 'undefined') {
-          toast.error(`Boot crashed: ${e.message || 'Unknown error'}`);
+            toast.error(`Session retrieval failed: ${e.message}`);
         }
+      } finally {
+        const isAuthenticated = !!(sessionData?.user && userProfile && !sessionError);
+        safeSet({
+          isLoading: false,
+          user: sessionData?.user ?? null,
+          profile: isAuthenticated ? userProfile : null, // Only set profile if authenticated
+          isAuthenticated: isAuthenticated,
+          error: sessionError ? (sessionError.message || 'An unknown error occurred') : null,
+        });
+        console.log('[BOOT] isLoading → false. isAuthenticated:', isAuthenticated, 'User:', sessionData?.user ?? null, 'Profile:', userProfile, 'Error:', sessionError);
       }
     },
 
