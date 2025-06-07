@@ -1,13 +1,12 @@
 // src/entry/index.tsx
 import React, { useEffect } from "react";
-import { useNavigate } from 'react-router-dom';
-// Navigate component is used for redirection in ProtectedRoute.
+import { Navigate, useNavigate } from 'react-router-dom';
+// Navigate component is used for redirection in ProtectedRoute, useNavigate for LoginPage.
 import { motion } from "framer-motion"; // For SplashScreen
 // Session is no longer directly used here
 import { supabase } from "../lib/supabase"; // Import the shared Supabase client
 import { useAuthLoading, useAuthenticated } from '../lib/stores/useUserStore';
 
-// Import the actual AuthCallback component. It's a default export from its file.
 import AuthCallbackFromFile from "../components/auth/callback"; // Path relative to src/entry/index.tsx
 
 /** 0. SplashScreen ******************************************************/
@@ -71,26 +70,18 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   console.log('[ProtectedRoute] Rendering...');
   const isLoading = useAuthLoading();
   const isAuthenticated = useAuthenticated();
-  const navigate = useNavigate(); // Added for redirection
   console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
-  useEffect(() => {
-    if (isLoading) {
-      console.log('[ProtectedRoute Effect] Auth state is loading. Waiting...');
-      return; // Wait for the auth state to resolve
-    }
-
-    if (!isAuthenticated) {
-      console.log('[ProtectedRoute Effect] User not authenticated. Redirecting to /login.');
-      navigate('/login', { replace: true });
-    }
-  }, [isLoading, isAuthenticated, navigate]);
-
-  if (isLoading || !isAuthenticated) {
-    // If loading, or if not authenticated (and effect will redirect),
-    // render null or a loading spinner to prevent child component flash.
-    console.log('[ProtectedRoute] Auth loading or user not authenticated (redirect pending). Rendering null.');
+  if (isLoading) {
+    console.log('[ProtectedRoute] Auth state is loading. Rendering null (or a spinner).');
+    // Optionally, render a loading spinner here instead of null
+    // For example: return <div className="flex h-screen items-center justify-center">Loading...</div>;
     return null; 
+  }
+
+  if (!isAuthenticated) {
+    console.log('[ProtectedRoute] User not authenticated. Redirecting to /login via <Navigate />.');
+    return <Navigate to="/login" replace />;
   }
 
   console.log('[ProtectedRoute] User authenticated. Rendering children.');
