@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import CurrentPlanCard from '../components/diary/CurrentPlanCard';
 import FiltersBar from '../components/diary/FiltersBar';
 import WorkoutDisplayCard from '../components/diary/WorkoutDisplayCard';
@@ -9,6 +10,7 @@ import DashboardBackground from '../components/layout/DashboardBackground';
 import Sidebar from '../components/layout/Sidebar';
 
 const DiaryPage: React.FC = () => {
+  useAuthGuard();
   const { fetchSessions, fetchCurrentPlan } = useDiaryStore();
   const { user } = useUserStore();
   

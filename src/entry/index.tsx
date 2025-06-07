@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion"; // For SplashScreen
 // Session is no longer directly used here
 import { supabase } from "../lib/supabase"; // Import the shared Supabase client
-import { useRequireAuth } from '../lib/stores/useUserStore';
+import { useAuthLoading, useAuthenticated } from '../lib/stores/useUserStore';
 
 // Import the actual AuthCallback component. It's a default export from its file.
 import AuthCallbackFromFile from "../components/auth/callback"; // Path relative to src/entry/index.tsx
@@ -69,22 +69,21 @@ export const LoginPage = () => {
 /** 3. ProtectedRoute ***************************************************/
 export const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   console.log('[ProtectedRoute] Rendering...');
-  const { isLoading, isAuthenticated } = useRequireAuth();
-  console.log('[ProtectedRoute] Values from useRequireAuth: isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+  const isLoading = useAuthLoading();
+  const isAuthenticated = useAuthenticated();
+  console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   if (isLoading) {
-    console.log('[ProtectedRoute] Condition: isLoading is true. Rendering SplashScreen.');
-    return <SplashScreen />; // Show splash screen while auth state is loading
+    console.log('[ProtectedRoute] Auth state is loading. Rendering null.');
+    return null; // Page components will use useAuthGuard which handles its own loading state
   }
 
-  // If not loading and authenticated, render children.
-  // If not loading and not authenticated, useRequireAuth hook handles the redirect.
-  // Rendering null here is a fallback for the brief moment before redirect completes.
   if (!isAuthenticated) {
-    console.log('[ProtectedRoute] Condition: NOT isLoading AND NOT isAuthenticated. Rendering null (expecting redirect from useRequireAuth).');
-    return null; // useRequireAuth handles redirect
+    console.log('[ProtectedRoute] User not authenticated. Rendering null (expecting redirect from useAuthGuard in page).');
+    return null; // Page components will use useAuthGuard which handles redirection
   }
-  console.log('[ProtectedRoute] Condition: NOT isLoading AND isAuthenticated. Rendering children.');
+
+  console.log('[ProtectedRoute] User authenticated. Rendering children.');
   return children;
 };
 

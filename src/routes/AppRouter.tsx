@@ -1,7 +1,7 @@
 // src/routes/AppRouter.tsx
 import React from 'react';
 import { Routes, Route, Navigate } from "react-router-dom";
-import { SplashScreen, LoginPage, AuthCallback, ProtectedRoute } from "../entry";
+import { LoginPage, AuthCallback, ProtectedRoute } from "../entry";
 import App from "../App";
 import Dashboard from '../pages/dashboard'; 
 import EnhancedDashboard from "../pages/EnhancedDashboard";

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import AnalyticsDashboardLayout from '../components/layout/AnalyticsDashboardLayout';
 import KpiCard from '../components/ui/KpiCard';
 import AreaVolume from '../components/charts/AreaVolume';
@@ -48,6 +49,7 @@ const topProductsData = [
 ];
 
 const EnhancedDashboard: React.FC = () => {
+  useAuthGuard();
   const [revenueData, setRevenueData] = useState(generateMockRevenueData());
   const [volumeData, setVolumeData] = useState(generateMockVolumeData());
   

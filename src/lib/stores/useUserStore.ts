@@ -8,8 +8,6 @@ import { devtools } from 'zustand/middleware';
 import { supabase } from '../supabase';
 import { toast } from '../utils/toast';
 import type { Session, User as SupabaseUser } from '@supabase/supabase-js';
-import { useEffect } from 'react'; // Moved to top
-import { useNavigate } from 'react-router-dom'; // Moved to top
 
 // Define the shape of our user object, based on public.users table and auth info
 interface AppUser {
@@ -270,24 +268,4 @@ export const useUserStore = create<UserState>()(
 export const useCurrentUser   = () => useUserStore(s => s.user);
 export const useAuthLoading   = () => useUserStore(s => s.isLoading);
 export const useAuthenticated = () => useUserStore(s => s.isAuthenticated);
-
-// Hook for requiring authentication on a page/component
-export const useRequireAuth = () => {
-  const navigate = useNavigate();
-  // It's important that useUserStore is fully defined before useRequireAuth calls it.
-  const isLoading = useUserStore((state) => state.isLoading);
-  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
-
-  console.log('[useRequireAuth Hook] State from store: isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
-
-  useEffect(() => {
-    console.log('[useRequireAuth Effect] Running. isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
-    if (!isLoading && !isAuthenticated) {
-      console.log('[useRequireAuth Effect] Conditions met: NOT loading AND NOT authenticated. Redirecting to /login.');
-      navigate('/login', { replace: true });
-    }
-  }, [isLoading, isAuthenticated, navigate]);
-
-  return { isLoading, isAuthenticated };
-};
 

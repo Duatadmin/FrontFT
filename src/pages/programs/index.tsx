@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
 import MainLayout from '../../components/layout/MainLayout';
@@ -12,6 +13,7 @@ import CurrentProgramTab from '../../components/programs/CurrentProgramTab';
  * Integrated with Supabase for live data
  */
 const ProgramsPage: React.FC = () => {
+  useAuthGuard();
   return (
     <MainLayout>
       <div className="flex justify-between items-center mb-6">

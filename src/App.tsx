@@ -6,9 +6,11 @@ import chatService from './services/chatService';
 import { useUserStore } from './lib/stores/useUserStore'; // Or your specific user selector
 import { checkApiStatus } from './services/apiService';
 import SupabaseTest from './SupabaseTest';
+import { useAuthGuard } from './hooks/useAuthGuard';
 import VoiceWidget from './components/VoiceWidget';
 
 function App() {
+  useAuthGuard(); // Enforce authentication for this component and its children
   const currentUser = useUserStore((state) => state.user);
   const [messages, setMessages] = useState<Message[]>([
     {

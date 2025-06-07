@@ -1,6 +1,8 @@
 import React from 'react';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 
 const TestPage: React.FC = () => {
+  useAuthGuard();
   return (
     <div className="flex items-center justify-center h-screen bg-background text-text">
       <div className="text-center">

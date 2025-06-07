@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useAuthGuard } from '../hooks/useAuthGuard';
 import DashboardBackground from '../components/layout/DashboardBackground';
 import Sidebar from '../components/layout/Sidebar';
 import useDiaryStore from '../store/useDiaryStore';
@@ -16,6 +17,7 @@ import GoalsReflectionsTab from '../components/diary/tabs/GoalsReflectionsTab';
  * Manages multiple sections of the training diary through a tabbed interface
  */
 const EnhancedDiaryPage: React.FC = () => {
+  useAuthGuard();
   const { 
     activeTab, 
     setActiveTab, 
