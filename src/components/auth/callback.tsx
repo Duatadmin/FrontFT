@@ -4,27 +4,49 @@ import { supabase } from '../../lib/supabase'; // Updated to use the shared clie
 
 export default function AuthCallback() {
   const navigate = useNavigate();
-  
+
   useEffect(() => {
-    const handleCallback = async () => {
-      try {
-        const { error } = await supabase.auth.exchangeCodeForSession(window.location.href);
-        if (error) throw error;
-        
-        // After successful auth, redirect to production URL (Nichat)
-        window.location.href = 'https://frontft-production.up.railway.app/';
-      } catch (error) {
-        console.error('Auth callback error:', error);
+    const handleAuthCallback = async () => {
+      const url = new URL(window.location.href);
+      const code = url.searchParams.get('code');
+
+      if (code) {
+        try {
+          const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+          if (error) {
+            console.error('Error exchanging code for session:', error.message);
+            navigate('/login', { replace: true });
+            return;
+          }
+
+          if (data && data.session) {
+            // Session established. The onAuthStateChange listener in useUserStore should pick this up.
+            console.log('AuthCallback: Session successfully established, navigating to /');
+            navigate('/', { replace: true }); // Or '/dashboard' or other appropriate route
+          } else {
+            // No session found after exchange, possibly an old or invalid link.
+            console.warn('AuthCallback: No session data found after exchange. Navigating to login.');
+            navigate('/login', { replace: true });
+          }
+        } catch (e) {
+          // Catch any unexpected errors during the process
+          console.error('Unexpected error in auth callback handler:', e);
+          navigate('/login', { replace: true });
+        }
+      } else {
+        // No code found in URL parameters.
+        console.warn('AuthCallback: No code found in URL. Navigating to login.');
         navigate('/login', { replace: true });
       }
     };
-    
-    handleCallback();
+
+    handleAuthCallback();
   }, [navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="text-text-secondary">Finalizing authentication...</div>
+      <div className="text-text-secondary">Finalizing authentication... Please wait.</div>
     </div>
   );
 }

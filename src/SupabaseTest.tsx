@@ -273,10 +273,7 @@ export default function SupabaseTest() {
                 </span>
               </div>
             </div>
-            <div className="flex items-start">
-              <div className="w-32 font-medium">Development Mode:</div>
-              <div className="flex-1 font-mono text-sm bg-gray-50 p-2 rounded">{import.meta.env.DEV ? 'Yes' : 'No'}</div>
-            </div>
+
           </div>
         </div>
       </div>
