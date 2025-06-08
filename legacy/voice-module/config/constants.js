@@ -2,13 +2,30 @@
  * Voice Module Configuration Constants
  */
 
+// Helper function to safely get environment variables
+function getEnvVariable(viteName, denoName) {
+  // Check for Deno environment first
+  // @ts-ignore
+  if (typeof Deno !== 'undefined' && Deno.env && typeof Deno.env.get === 'function') {
+    // @ts-ignore
+    return Deno.env.get(denoName || viteName); // Use denoName if provided, else fallback to viteName
+  }
+  // Check for Vite environment (import.meta.env)
+  // @ts-ignore
+  if (typeof import.meta !== 'undefined' && import.meta.env) {
+    // @ts-ignore
+    return import.meta.env[viteName];
+  }
+  return undefined; // Or null, or a default string like ''
+}
+
 // WebSocket endpoints
 export const WEBSOCKET = {
   // Main WebSocket endpoint for ASR (Automatic Speech Recognition)
-  ASR_ENDPOINT: import.meta.env.VITE_ASR_WS_URL,
+  ASR_ENDPOINT: getEnvVariable('VITE_ASR_WS_URL', 'ASR_WS_URL'), // Suggests ASR_WS_URL for Deno env
   
   // Test endpoint for connection debugging (echoes back messages)
-  TEST_ENDPOINT: import.meta.env.VITE_ASR_WS_URL,
+  TEST_ENDPOINT: getEnvVariable('VITE_ASR_WS_URL', 'ASR_WS_URL'), // Same here
 };
 
 // Audio configuration
