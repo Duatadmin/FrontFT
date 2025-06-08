@@ -23,16 +23,16 @@ export const SplashScreen = () => (
 
 // Imports for LoginPage
 import { Auth } from '@supabase/auth-ui-react';
-import { useUserStore, type UserStore } from '../lib/stores/useUserStore';
+import { useUserStore, type UserState } from '@/lib/stores/useUserStore';
 // Assuming auth-theme.ts is in 'src/' directory, so from 'src/entry/' it's '../auth-theme'
 import { customAuthUITheme } from '../auth-theme';
-// Assuming Logo.svg is in 'src/assets/', so from 'src/entry/' it's '../../assets/Logo.svg?react'
+// Assuming Logo.svg is in 'src/assets/', so from 'src/entry/' it's '@/assets/Logo.svg?react'
 import Logo from '../../assets/Logo.svg?react';
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const isAuthenticated = useUserStore((state: UserStore) => state.isAuthenticated);
-  const isLoading = useUserStore((state: UserStore) => state.isLoading);
+  const isAuthenticated = useUserStore((state: UserState) => state.isAuthenticated);
+  const isLoading = useUserStore((state: UserState) => state.isLoading);
 
   useEffect(() => {
     // If loading is finished and user is authenticated, redirect from login page
@@ -67,8 +67,8 @@ export const LoginPage = () => {
 /** 3. ProtectedRoute ***************************************************/
 export const ProtectedRoute = ({ children }: { children: React.ReactElement }) => {
   console.log('[ProtectedRoute] Rendering...');
-  const isLoading = useUserStore((state: UserStore) => state.isLoading);
-  const isAuthenticated = useUserStore((state: UserStore) => state.isAuthenticated);
+  const isLoading = useUserStore((state: UserState) => state.isLoading);
+  const isAuthenticated = useUserStore((state: UserState) => state.isAuthenticated);
   console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   if (isLoading) {

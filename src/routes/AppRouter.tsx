@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { Routes, Route, Navigate } from "react-router-dom";
-import { LoginPage, AuthCallback, ProtectedRoute } from "../entry";
+import { LoginPage, AuthCallback, ProtectedRoute } from "@/entry";
 import App from "../App";
 import Dashboard from '../pages/dashboard'; 
 import EnhancedDashboard from "../pages/EnhancedDashboard";

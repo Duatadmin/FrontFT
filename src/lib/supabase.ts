@@ -74,6 +74,13 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
   }
 ); // Typed client
 
+// Expose Supabase client globally in development for easier debugging
+if (import.meta.env.MODE !== 'production' && typeof window !== 'undefined') {
+  // @ts-ignore – attach client to window
+  (window as any).supabase = supabase;
+  console.log('[DevHelper] window.supabase is now available');
+}
+
 // Global Auth State Change Logger
 if (typeof window !== 'undefined' && !(globalThis as any).__SB_AUTH_SUB__) {
   console.log('[AUTH] Subscribing to onAuthStateChange');
