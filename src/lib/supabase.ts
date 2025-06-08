@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import Cookies from 'js-cookie';
 import { Database } from './supabase/schema.types'; // Added Database type import
 
 // Type definitions (moved from supabaseClient.ts)
@@ -31,34 +32,28 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(errorMessage);
 }
 
-// Custom storage adapter to guard localStorage access
-const GuardedLocalStorage = {
-  getItem: (key: string) => {
-    try {
-      return typeof window !== 'undefined' ? window.localStorage.getItem(key) : null;
-    } catch (error) {
-      console.warn(`[GuardedLocalStorage] Error getting item ${key}:`, error);
-      return null;
-    }
-  },
-  setItem: (key: string, value: string) => {
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(key, value);
+export const HybridStorage = {
+  getItem: (k: string) => Cookies.get(k) ?? (typeof window !== 'undefined' ? window.localStorage.getItem(k) : null),
+  setItem: (k: string, v: string) => {
+    Cookies.set(k, v, { sameSite: 'Lax', secure: true });
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.setItem(k, v);
+      } catch (error) {
+        console.warn(`[HybridStorage] Error setting localStorage item ${k}:`, error);
       }
-    } catch (error) {
-      console.warn(`[GuardedLocalStorage] Error setting item ${key}:`, error);
     }
   },
-  removeItem: (key: string) => {
-    try {
-      if (typeof window !== 'undefined') {
-        window.localStorage.removeItem(key);
+  removeItem: (k: string) => { 
+    Cookies.remove(k); 
+    if (typeof window !== 'undefined') {
+      try {
+        window.localStorage.removeItem(k); 
+      } catch (error) {
+        console.warn(`[HybridStorage] Error removing localStorage item ${k}:`, error);
       }
-    } catch (error) {
-      console.warn(`[GuardedLocalStorage] Error removing item ${key}:`, error);
     }
-  },
+  }
 };
 
 export const supabase: SupabaseClient<Database> = createClient<Database>(
@@ -66,9 +61,10 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
   supabaseAnonKey,
   {
     auth: {
-      storage: GuardedLocalStorage,
+      storage: HybridStorage,
+      flowType: 'pkce',
       autoRefreshToken: true,
-      persistSession: true, // This remains true, Supabase will use the provided storage adapter
+      persistSession: true,
       detectSessionInUrl: true,
     },
   }
