@@ -106,7 +106,7 @@ const WeeklySummaryCard: React.FC = () => {
             <div className="bg-background-surface h-2 w-24 rounded-full overflow-hidden">
               <div 
                 className={`h-full rounded-full ${
-                  completionPercentage >= 80 ? 'bg-accent-green' : 
+                  completionPercentage >= 80 ? 'bg-accent-mint' : 
                   completionPercentage >= 50 ? 'bg-accent-violet' : 
                   'bg-accent-red'
                 }`}
@@ -136,7 +136,7 @@ const WeeklySummaryCard: React.FC = () => {
         
         {/* New PRs */}
         <div className="bg-background-surface rounded-lg p-3 flex flex-col items-center" data-testid="metric-prs">
-          <Award className="text-accent-green mb-1" size={20} />
+          <Award className="text-accent-mint mb-1" size={20} />
           <span className="text-sm text-text-secondary">PRs</span>
           <div className="font-bold text-lg">{currentWeekReflection.new_prs}</div>
         </div>

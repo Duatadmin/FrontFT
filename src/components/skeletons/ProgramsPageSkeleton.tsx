@@ -28,7 +28,7 @@ const ProgramsPageSkeleton: React.FC = () => {
           <div className="bg-background-surface rounded-xl p-6 mb-6">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
               <div className="h-7 w-48 bg-background-card/40 animate-pulse rounded-lg"></div>
-              <div className="h-6 w-20 bg-accent-green/10 animate-pulse rounded-full mt-2 sm:mt-0"></div>
+              <div className="h-6 w-20 bg-accent-mint/10 animate-pulse rounded-full mt-2 sm:mt-0"></div>
             </div>
             <div className="h-4 w-full bg-background-card/30 animate-pulse rounded mb-2"></div>
             <div className="h-4 w-5/6 bg-background-card/30 animate-pulse rounded mb-4"></div>

@@ -326,7 +326,7 @@ const GoalTracker: React.FC = () => {
               <div 
                 key={goal.id} 
                 className={`bg-background-surface border border-border-light rounded-lg overflow-hidden ${
-                  goal.completed ? 'border-accent-green/30 bg-accent-green/5' : ''
+                  goal.completed ? 'border-accent-mint/30 bg-accent-mint/5' : ''
                 }`}
                 data-testid={`goal-${goal.id}`}
               >
@@ -398,89 +398,57 @@ const GoalTracker: React.FC = () => {
                             id={`goal-check-${goal.id}`}
                             data-testid={`goal-checkbox-${goal.id}`}
                           />
-                          <label 
+                          <label
                             htmlFor={`goal-check-${goal.id}`}
                             className={`font-medium text-sm ${goal.completed ? 'line-through text-text-tertiary' : ''}`}
                           >
                             {goal.title}
                           </label>
                         </div>
-                        
                         <div className="flex items-center space-x-1">
                           <button
                             onClick={() => handleStartEditing(goal)}
-                            className="text-text-tertiary hover:text-accent-violet"
+                            className="p-1.5 text-text-secondary hover:text-accent-violet hover:bg-accent-violet/10 rounded-md"
                             aria-label="Edit goal"
                           >
                             <Edit2 size={14} />
                           </button>
                           <button
                             onClick={() => handleDeleteGoal(goal.id)}
-                            className="text-text-tertiary hover:text-red-500"
+                            className="p-1.5 text-text-secondary hover:text-red-500 hover:bg-red-500/10 rounded-md"
                             aria-label="Delete goal"
                           >
                             <X size={14} />
                           </button>
                           <button
                             onClick={() => toggleExpanded(goal.id)}
-                            className="text-text-tertiary hover:text-text-primary"
+                            className="p-1.5 text-text-secondary hover:text-text-primary hover:bg-background-hover rounded-md"
                             aria-label={expanded[goal.id] ? "Collapse goal" : "Expand goal"}
                           >
                             {expanded[goal.id] ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                           </button>
                         </div>
                       </div>
-                      
-                      <div className="mb-1">
-                        <div className="w-full bg-background-card rounded-full h-1.5">
-                          <div 
-                            className={`h-1.5 rounded-full ${
-                              goal.completed ? 'bg-accent-green' : 'bg-accent-violet'
-                            }`}
+                      <div className="mt-2 mb-1">
+                        <div className="w-full bg-background-neutral h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-accent-violet h-1.5 rounded-full transition-all duration-300"
                             style={{ width: `${goal.progress}%` }}
+                            data-testid={`goal-progress-${goal.id}`}
                           ></div>
                         </div>
-                        <div className="flex justify-between mt-1">
-                          <span className="text-xs text-text-tertiary">
+                      </div>
+                      {expanded[goal.id] && (
+                        <div className="mt-2 pt-2 border-t border-border-light">
+                          <p className="text-xs text-text-secondary whitespace-pre-wrap">
+                            {goal.description || <span className="italic">No description.</span>}
+                          </p>
+                          <p className="text-xs text-text-tertiary mt-1">
                             Target: {formatDate(goal.target_date)}
-                          </span>
-                          <span className="text-xs font-medium">
-                            {goal.progress}%
-                          </span>
+                          </p>
                         </div>
-                      </div>
+                      )}
                     </div>
-                    
-                    {expanded[goal.id] && (
-                      <div className="border-t border-border-light p-3 bg-background-card/50">
-                        {goal.description ? (
-                          <p className="text-sm text-text-secondary mb-3">{goal.description}</p>
-                        ) : (
-                          <p className="text-sm italic text-text-tertiary mb-3">No description provided</p>
-                        )}
-                        
-                        {!goal.completed && (
-                          <div>
-                            <p className="text-xs text-text-tertiary mb-1">Update Progress:</p>
-                            <div className="flex items-center space-x-2">
-                              {[0, 25, 50, 75, 100].map((progress) => (
-                                <button
-                                  key={progress}
-                                  onClick={() => handleProgressChange(goal.id, progress)}
-                                  className={`px-2 py-1 text-xs rounded ${
-                                    goal.progress === progress 
-                                      ? 'bg-accent-violet text-white' 
-                                      : 'bg-background-surface text-text-secondary hover:bg-background-surface/70'
-                                  }`}
-                                >
-                                  {progress}%
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -491,7 +459,7 @@ const GoalTracker: React.FC = () => {
       
       {/* Long Term Goals */}
       <div>
-        <h4 className="text-sm font-medium mb-2 text-accent-green">Long Term Goals</h4>
+        <h4 className="text-sm font-medium mb-2 text-accent-mint">Long Term Goals</h4>
         
         {longTermGoals.length === 0 ? (
           <p className="text-sm text-text-secondary italic py-2">
@@ -503,7 +471,7 @@ const GoalTracker: React.FC = () => {
               <div 
                 key={goal.id} 
                 className={`bg-background-surface border border-border-light rounded-lg overflow-hidden ${
-                  goal.completed ? 'border-accent-green/30 bg-accent-green/5' : ''
+                  goal.completed ? 'border-accent-mint/30 bg-accent-mint/5' : ''
                 }`}
                 data-testid={`goal-${goal.id}`}
               >
@@ -571,7 +539,7 @@ const GoalTracker: React.FC = () => {
                             type="checkbox"
                             checked={goal.completed}
                             onChange={(e) => handleProgressChange(goal.id, e.target.checked ? 100 : 0)}
-                            className="h-4 w-4 text-accent-green rounded focus:ring-accent-green mr-2"
+                            className="h-4 w-4 text-accent-mint rounded focus:ring-accent-mint mr-2"
                             id={`goal-check-${goal.id}`}
                             data-testid={`goal-checkbox-${goal.id}`}
                           />
@@ -612,7 +580,7 @@ const GoalTracker: React.FC = () => {
                         <div className="w-full bg-background-card rounded-full h-1.5">
                           <div 
                             className={`h-1.5 rounded-full ${
-                              goal.completed ? 'bg-accent-green' : 'bg-accent-green'
+                              goal.completed ? 'bg-accent-mint' : 'bg-accent-mint'
                             }`}
                             style={{ width: `${goal.progress}%` }}
                           ></div>
@@ -646,7 +614,7 @@ const GoalTracker: React.FC = () => {
                                   onClick={() => handleProgressChange(goal.id, progress)}
                                   className={`px-2 py-1 text-xs rounded ${
                                     goal.progress === progress 
-                                      ? 'bg-accent-green text-white' 
+                                      ? 'bg-accent-mint text-dark-surface' 
                                       : 'bg-background-surface text-text-secondary hover:bg-background-surface/70'
                                   }`}
                                 >

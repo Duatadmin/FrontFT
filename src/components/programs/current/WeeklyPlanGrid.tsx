@@ -112,14 +112,14 @@ const WeeklyPlanGrid: React.FC<{ program: TrainingPlan }> = ({ program }) => {
               key={dayOfWeek}
               className={`
                 p-4 rounded-xl bg-card border border-border-light shadow-sm
-                ${isToday ? 'ring-1 ring-accent-green/50 bg-accent-green/5' : ''}
+                ${isToday ? 'ring-1 ring-accent-mint/50 bg-accent-mint/5' : ''}
                 ${hasExercises ? 'cursor-pointer hover:shadow-md transition-shadow' : 'opacity-80'}
               `}
               onClick={() => hasExercises && handleDayClick(dayOfWeek)}
             >
               <div className="flex justify-between items-start mb-2">
                 <h3 className="font-medium text-primary">{displayName}</h3>
-                {isToday && <span className="text-xs px-1.5 py-0.5 bg-accent-green/20 text-accent-green rounded-full">Today</span>}
+                {isToday && <span className="text-xs px-1.5 py-0.5 bg-accent-mint/20 text-accent-mint rounded-full">Today</span>}
               </div>
               
               {hasExercises ? (

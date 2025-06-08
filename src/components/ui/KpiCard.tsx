@@ -57,9 +57,9 @@ const KpiCard: React.FC<KpiCardProps> = ({
     switch (color) {
       case 'green':
         return { 
-          text: 'accent-green', 
-          bg: 'accent-green/10',
-          trend: 'bg-accent-green/10 text-accent-green' 
+          text: 'accent-mint', 
+          bg: 'accent-mint/10',
+          trend: 'bg-accent-mint/10 text-accent-mint' 
         };
       case 'red':
         return { 

@@ -169,11 +169,11 @@ const SessionDrawer: React.FC = () => {
           
           {/* PR Achievement */}
           {hasPr && (
-            <div className="bg-accent-green/10 border border-accent-green/20 rounded-xl p-4">
+            <div className="bg-accent-mint/10 border border-accent-mint/20 rounded-xl p-4">
               <div className="flex items-center">
-                <Award className="text-accent-green mr-3" size={24} />
+                <Award className="text-accent-mint mr-3" size={24} />
                 <div>
-                  <h4 className="font-medium text-accent-green">New Personal Record!</h4>
+                  <h4 className="font-medium text-accent-mint">New Personal Record!</h4>
                   <p className="text-sm">Bench Press: 225 lbs x 5 reps</p>
                 </div>
               </div>
@@ -201,7 +201,7 @@ const SessionDrawer: React.FC = () => {
                         </div>
                       </div>
                       {exercise === 'Bench Press' && hasPr && (
-                        <div className="bg-accent-green/20 text-accent-green text-xs font-medium px-2 py-1 rounded-full">
+                        <div className="bg-accent-mint/20 text-accent-mint text-xs font-medium px-2 py-1 rounded-full">
                           PR
                         </div>
                       )}

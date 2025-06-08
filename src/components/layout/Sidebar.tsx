@@ -83,7 +83,7 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
       onClick={() => navigate(to)}
       onMouseEnter={handleMouseEnter}
       className={`flex items-center w-full px-4 py-3 rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none ${
-        isActive ? 'bg-accent-green/10 text-accent-green' : 'text-text-secondary hover:text-text-primary hover:bg-background-card/50'
+        isActive ? 'bg-accent-mint/10 text-accent-mint' : 'text-text-secondary hover:text-text-primary hover:bg-background-card/50'
       }`}
     >
       <span className="w-5 h-5 mr-3">{icon}</span>
@@ -189,7 +189,7 @@ const Sidebar: React.FC = () => {
             <img 
               src="https://ui-avatars.com/api/?name=Fitness+User&background=10a37f&color=fff&size=32" 
               alt="User avatar" 
-              className="w-10 h-10 rounded-full border-2 border-accent-green" 
+              className="w-10 h-10 rounded-full border-2 border-accent-mint" 
             />
             <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background-surface rounded-full"></span>
           </div>

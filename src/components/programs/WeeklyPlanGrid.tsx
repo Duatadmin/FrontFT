@@ -30,7 +30,7 @@ const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ plan }) => {
         return (
           <Card 
             key={day} 
-            className={`${hasExercises ? 'border-l-2 border-accent-green' : ''} hover:bg-card-hover transition-colors`}
+            className={`${hasExercises ? 'border-l-2 border-accent-mint' : ''} hover:bg-card-hover transition-colors`}
           >
             <CardContent className="p-4">
               <h3 className="font-medium mb-2 text-text-primary text-sm">{dayFormatted}</h3>
@@ -44,7 +44,7 @@ const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ plan }) => {
                       key={`${exerciseId}-${index}`} 
                       className="text-xs flex items-center text-text-secondary"
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent-green mr-1.5"></span>
+                      <span className="w-1.5 h-1.5 rounded-full bg-accent-mint mr-1.5"></span>
                       <span>{exerciseId}</span>
                     </li>
                   ))}

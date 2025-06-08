@@ -3,33 +3,38 @@ const defaultTheme = require('tailwindcss/defaultTheme');
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class', // Keep class-based dark mode
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}", "./node_modules/@supabase/**/**.{js,ts,jsx,tsx}"],
+  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx,css}", "./node_modules/@supabase/**/**.{js,ts,jsx,tsx}"],
   presets: [require('./tailwind.preset.ts')],
   theme: {
     extend: {
-      // ChatGPT Inspired Palette & Custom Brand Colors
       colors: {
-        primary: '#10a37f',      // Accent Green (used for user bubble, focus rings)
-        background: '#202123', // Main dark background
-        surface: '#343541',    // Slightly lighter background (bot bubbles)
-        input: '#40414f',      // Input field background
-        border: 'rgba(255, 255, 255, 0.1)', // Subtle white border
-        text: '#ECECF1',         // Primary light text
-        textSecondary: '#A9A9B3', // Secondary muted text
-        userBubble: '#10a37f',  // Explicit user bubble color
-        botBubble: '#343541',   // Explicit bot bubble color
-        brand: { 
-          50:  "#fef3ec", // Lighter shade for new brand
-          100: "#fde7d8", // Lighter shade for new brand
-          200: "#fbd4ba", // Lighter shade for new brand
-          300: "#fac09c", // Lighter shade for new brand
-          400: "#f7ab7e", // Lighter shade for new brand
-          500: '#f45d09', // Your specified brand color
-          600: '#ff8a1f', // Your specified brand accent
-          700: '#d95008', // Darker shade for new brand
-          800: '#bf4607', // Darker shade for new brand
-          900: '#a43d06'  // Darker shade for new brand
-        }
+        // New Core Palette
+        'dark-olive': '#454A1E',
+        'dark-surface': '#242424',
+        'accent-lime': '#DFF250',
+        'accent-orange': '#F2A03D',
+        'accent-red': '#F24949',
+        'accent-mint': '#4AA181',
+
+        // Text Colors from New Palette
+        'text': '#FFFFFF',           // Replaces old 'text', aligns with new 'text-primary'
+        'text-secondary': '#BFBFBF', // Replaces old 'textSecondary'
+
+        // Semantic mappings / updates to existing keys from old config
+        'primary': '#DFF250',          // Old 'primary' (#10a37f) now maps to 'accent-lime' for primary actions
+        'background': '#171717',       // Old 'background' (#202123) maps to 'dark-surface'. Olive gradient is separate.
+        'surface': '#242424',          // Old 'surface' (#343541) maps to 'dark-surface'
+        'input': '#2A2A2A',            // Old 'input' (#40414f) maps to 'dark-surface'
+        'border': 'rgba(255, 255, 255, 0.1)', // Kept as is, subtle white border
+        'userBubble': '#4AA181',        // Old 'userBubble' (#10a37f) maps to 'accent-mint'
+        'botBubble': '#2A2A2A',         // Old 'botBubble' (#343541) maps to 'dark-surface'
+
+        // Explicit semantic mappings as requested by user
+        // These ensure that if 'accent-green' etc. are used directly from preset or old habits, they map to new values.
+        'accent-green': '#4AA181',      // Maps to new 'accent-mint' value
+        'accent-yellow': '#F2A03D',     // Maps to new 'accent-orange' value
+        'accent-primary': '#DFF250',    // Maps to new 'accent-lime' value
+        // Note: 'accent-red' as a semantic key is covered by its direct definition in the New Core Palette.
       },
       borderRadius: {
         sm: '0.25rem',
@@ -78,6 +83,7 @@ module.exports = {
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(circle at center, var(--tw-gradient-stops))',
+        'gradient-radial-olive': 'radial-gradient(120% 120% at 50% 0%, #454A1E 0%, #2A2A2A 100%)',
       },
     },
   },
@@ -96,7 +102,7 @@ module.exports = {
           'z-index': '-1',
         },
         '.card': {
-          'background-color': theme('colors.background-card', '#1C1D24'), // Assuming background-card is preferred or fallback
+          'background-color': theme('colors.dark-surface', '#2A2A2A'), // Updated to use new dark-surface
           'border-radius': theme('borderRadius.xl'), // Using theme token for consistency
           'box-shadow': theme('boxShadow.card'),
           'transition-property': 'transform, box-shadow',
@@ -125,6 +131,15 @@ module.exports = {
             'background': 'linear-gradient(to bottom, #8B5CF6, #10a37f)',
             'border-radius': '0 2px 2px 0',
           },
+        },
+        '.btn-primary': {
+          '@apply text-dark-surface bg-accent-lime hover:bg-accent-orange': {},
+        },
+        '.badge-success': {
+          '@apply text-accent-mint bg-accent-mint/10': {},
+        },
+        '.badge-error': {
+          '@apply text-accent-red bg-accent-red/10': {},
         },
       });
     },

@@ -155,7 +155,7 @@ export default {
         },
       });
     },
-    function({ addUtilities }) {
+    function({ addUtilities, theme }) {
       const utilities = {
         '.grid-baseline': {
           'display': 'grid',
@@ -165,7 +165,7 @@ export default {
           'transition': 'transform 150ms ease-out, box-shadow 150ms ease-out',
           '&:hover': {
             'transform': 'translateY(-4px)',
-            'box-shadow': '0 4px 20px rgba(0, 0, 0, 0.35)',
+            'box-shadow': theme('boxShadow.card-hover'),
           },
         },
         '.press-effect': {

@@ -189,7 +189,7 @@ const FiltersBar: React.FC = () => {
           onClick={handlePrToggle}
           className={`flex items-center px-3 py-1.5 text-sm rounded-lg hover:bg-background-card/80 ${
             filters.prAchieved 
-              ? 'bg-accent-green/10 text-accent-green' 
+              ? 'bg-accent-mint/10 text-accent-mint' 
               : 'bg-background-card'
           }`}
         >

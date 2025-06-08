@@ -184,7 +184,7 @@ const WorkoutTable: React.FC = () => {
                     </div>
                     {/* Show PR badge if PR was achieved */}
                     {Math.random() > 0.7 && (
-                      <div className="flex items-center text-accent-green">
+                      <div className="flex items-center text-accent-mint">
                         <Award size={14} className="mr-1" />
                         PR
                       </div>

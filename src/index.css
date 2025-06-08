@@ -90,7 +90,7 @@
   }
 
   button[class*="sbui-btn"][class*="sbui-btn-provider"]:focus {
-    @apply ring-2 ring-brand-500 ring-offset-2 ring-offset-black; /* Using 'brand' color and 'black' offset */
+    @apply ring-2 ring-primary ring-offset-2 ring-offset-black; /* Using 'primary' color and 'black' offset */
   }
 
   button[class*="sbui-btn"][class*="sbui-btn-provider"] svg {

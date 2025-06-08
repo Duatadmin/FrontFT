@@ -18,7 +18,7 @@ const CurrentProgramTab: React.FC = () => {
       <Card className="mb-6">
         <CardContent className="flex justify-center items-center py-8">
           <div className="flex items-center gap-2">
-            <RefreshCw className="h-4 w-4 animate-spin text-accent-green" />
+            <RefreshCw className="h-4 w-4 animate-spin text-accent-mint" />
             <span className="text-sm text-text-secondary">Loading your training plan...</span>
           </div>
         </CardContent>
@@ -59,7 +59,7 @@ const CurrentProgramTab: React.FC = () => {
           </CardDescription>
         </CardHeader>
         <CardFooter>
-          <button className="px-3 py-1.5 text-sm bg-accent-green text-white rounded-md hover:bg-accent-green/90 transition-colors">
+          <button className="px-3 py-1.5 text-sm bg-accent-mint text-dark-surface rounded-md hover:bg-accent-mint/90 transition-colors">
             Create New Program
           </button>
         </CardFooter>
@@ -82,7 +82,7 @@ const CurrentProgramTab: React.FC = () => {
         <CardHeader className="pb-2">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between">
             <CardTitle>{currentPlan.name}</CardTitle>
-            <span className="px-2 py-0.5 bg-accent-green/10 text-accent-green rounded-full text-xs mt-2 sm:mt-0">
+            <span className="px-2 py-0.5 bg-accent-mint/10 text-accent-mint rounded-full text-xs mt-2 sm:mt-0">
               Active
             </span>
           </div>

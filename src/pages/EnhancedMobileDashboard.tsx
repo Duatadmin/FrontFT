@@ -98,7 +98,7 @@ const EnhancedMobileDashboard: React.FC = () => {
                         style={{ height: `${item.current}px` }}
                       ></div>
                       <div 
-                        className="absolute bottom-0 w-full bg-accent-green rounded-none"
+                        className="absolute bottom-0 w-full bg-accent-mint rounded-none"
                         style={{ height: `${item.subscribers}px`, transform: `translateY(-${item.current}px)` }}
                       ></div>
                       <div 
@@ -122,7 +122,7 @@ const EnhancedMobileDashboard: React.FC = () => {
                 <span className="text-xs">Current</span>
               </div>
               <div className="flex items-center">
-                <div className="w-3 h-3 rounded-full bg-accent-green mr-1"></div>
+                <div className="w-3 h-3 rounded-full bg-accent-mint mr-1"></div>
                 <span className="text-xs">Subscribers</span>
               </div>
               <div className="flex items-center">
@@ -209,7 +209,7 @@ const EnhancedMobileDashboard: React.FC = () => {
           <div className="h-full flex flex-col justify-center items-center p-4">
             <div className="w-full mb-4">
               <div className="text-xl font-bold">388</div>
-              <div className="text-sm text-accent-green bg-accent-green/10 px-2 py-0.5 rounded-full inline-flex items-center">
+              <div className="text-sm text-accent-mint bg-accent-mint/10 px-2 py-0.5 rounded-full inline-flex items-center">
                 16.9% ↑
               </div>
             </div>

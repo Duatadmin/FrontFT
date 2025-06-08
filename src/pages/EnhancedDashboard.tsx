@@ -176,7 +176,7 @@ const EnhancedDashboard: React.FC = () => {
               <div className="mb-4">
                 <div className="text-2xl font-bold">388</div>
                 <div className="flex items-center text-sm">
-                  <span className="text-accent-green bg-accent-green/10 px-2 py-0.5 rounded-full flex items-center">
+                  <span className="text-accent-mint bg-accent-mint/10 px-2 py-0.5 rounded-full flex items-center">
                     16.9% <LineChart size={14} className="ml-1" />
                   </span>
                 </div>

@@ -22,8 +22,8 @@ const MobileKpiCard: React.FC<MobileKpiCardProps> = ({
     switch (color) {
       case 'green':
         return { 
-          text: 'text-accent-green', 
-          bg: 'bg-accent-green/10'
+          text: 'text-accent-mint', 
+          bg: 'bg-accent-mint/10'
         };
       case 'red':
         return { 
