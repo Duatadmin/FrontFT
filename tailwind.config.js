@@ -25,7 +25,7 @@ module.exports = {
         'background': '#171717',       // Old 'background' (#202123) maps to 'dark-surface'. Olive gradient is separate.
         'surface': '#242424',          // Old 'surface' (#343541) maps to 'dark-surface'
         'input': '#2A2A2A',            // Old 'input' (#40414f) maps to 'dark-surface'
-        'border': 'rgba(255, 255, 255, 0.1)', // Kept as is, subtle white border
+        'border': 'rgba(255, 255, 255, 0.05)', // Kept as is, subtle white border
         'userBubble': '#4AA181',        // Old 'userBubble' (#10a37f) maps to 'accent-mint'
         'botBubble': '#2A2A2A',         // Old 'botBubble' (#343541) maps to 'dark-surface'
 
