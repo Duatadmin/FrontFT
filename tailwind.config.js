@@ -44,6 +44,8 @@ module.exports = {
         DEFAULT: '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
         md: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
         lg: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
+        card: '0 2px 10px rgba(0 0 0 / 0.15)',
+        'card-hover': '0 4px 20px rgba(0 0 0 / 0.35)',
       },
       spacing: defaultTheme.spacing,
       fontFamily: {
@@ -82,7 +84,7 @@ module.exports = {
   plugins: [
     require('@tailwindcss/forms'), 
     require('@tailwindcss/typography'),
-    function({ addComponents }) {
+    function({ addComponents, theme }) {
       addComponents({
         '.dashboard-radial-bg': {
           'position': 'fixed',
@@ -94,12 +96,15 @@ module.exports = {
           'z-index': '-1',
         },
         '.card': {
-          'background-color': 'var(--card-bg, #1C1D24)',
-          'border-radius': '24px',
-          'transition': 'all 150ms ease-out',
+          'background-color': theme('colors.background-card', '#1C1D24'), // Assuming background-card is preferred or fallback
+          'border-radius': theme('borderRadius.xl'), // Using theme token for consistency
+          'box-shadow': theme('boxShadow.card'),
+          'transition-property': 'transform, box-shadow',
+          'transition-timing-function': theme('transitionTimingFunction.out'), // Or 'ease-out'
+          'transition-duration': theme('transitionDuration.150'), // Or '150ms'
           '&:hover': {
             'transform': 'translateY(-4px)',
-            'box-shadow': '0 4px 20px rgba(0, 0, 0, 0.35)',
+            'box-shadow': theme('boxShadow.card-hover'),
           },
         },
         '.card-header': {

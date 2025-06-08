@@ -1,0 +1,22 @@
+{
+  "plugins": [
+    "stylelint-declaration-strict-value"
+  ],
+  "rules": {
+    "plugin/stylelint-declaration-strict-value": [
+      [
+        "color",
+        "background-color",
+        "box-shadow"
+      ],
+      {
+        "ignoreKeywords": [
+          "currentColor",
+          "inherit",
+          "transparent",
+          "var(--\\S+)"
+        ]
+      }
+    ]
+  }
+}

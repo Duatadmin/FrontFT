@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   Heart,
   Package,
   CreditCard,
   DollarSign,
   TrendingUp,
-  TrendingDown,
-  ChevronUp,
-  ChevronDown
+  TrendingDown
 } from 'lucide-react';
 
 export interface KpiCardProps {
@@ -29,7 +27,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
   formatValue = (val) => val.toString()
 }) => {
   const [displayValue, setDisplayValue] = useState('0');
-  const [isHovered, setIsHovered] = useState(false);
+  // const [isHovered, setIsHovered] = useState(false); // Removed as isHovered is not used
   
   // Animate value on mount
   useEffect(() => {
@@ -90,11 +88,10 @@ const KpiCard: React.FC<KpiCardProps> = ({
   return (
     <motion.div
       className="card p-5 transition-all duration-150"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      // onMouseEnter={() => setIsHovered(true)} // Removed as isHovered is not used
+      // onMouseLeave={() => setIsHovered(false)} // Removed as isHovered is not used
       whileHover={{ 
-        y: -4,
-        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)' 
+        y: -4
       }}
       aria-live="polite"
     >
