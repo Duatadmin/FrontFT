@@ -4,9 +4,9 @@ import { Navigate, useNavigate } from 'react-router-dom';
 // Navigate component is used for redirection in ProtectedRoute, useNavigate for LoginPage.
 import { motion } from "framer-motion"; // For SplashScreen
 // Session is no longer directly used here
-import { supabase } from "../lib/supabase"; // Import the shared Supabase client
+import { supabase } from "../lib/supabase/browser"; // Import the new browser Supabase client
 
-import AuthCallbackFromFile from "../components/auth/callback"; // Path relative to src/entry/index.tsx
+
 
 /** 0. SplashScreen ******************************************************/
 export const SplashScreen = () => (
@@ -86,7 +86,3 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   console.log('[ProtectedRoute] User authenticated. Rendering children.');
   return children;
 };
-
-// Export the imported AuthCallback component under the name 'AuthCallback'
-// This makes `import { AuthCallback } from '@/entry'` (or similar aliased path) work as intended.
-export { AuthCallbackFromFile as AuthCallback };

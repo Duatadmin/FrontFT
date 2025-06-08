@@ -2,7 +2,7 @@
 import React, { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { Routes, Route, Navigate } from "react-router-dom";
-import { LoginPage, AuthCallback, ProtectedRoute } from "@/entry";
+import { LoginPage, ProtectedRoute } from "@/entry";
 import App from "../App";
 import Dashboard from '../pages/dashboard'; 
 import EnhancedDashboard from "../pages/EnhancedDashboard";
@@ -34,7 +34,6 @@ export default function AppRouter() {
     <Routes>
       {/* Entry-flow */}
       <Route path="/login" element={<LoginPage />} />
-      <Route path="/auth/callback" element={<AuthCallback />} />
 
       {/* Protected heavy pages - Main landing page */}
       <Route
