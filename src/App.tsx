@@ -7,7 +7,7 @@ import { useUserStore } from '@/lib/stores/useUserStore'; // For currentUser sel
 import { checkApiStatus } from './services/apiService';
 import SupabaseTest from './SupabaseTest';
 import { useAuthGuard } from './hooks/useAuthGuard';
-import VoiceWidget from './components/VoiceWidget';
+// import VoiceWidget from './components/VoiceWidget';
 
 function App() {
   useAuthGuard(); // Enforce authentication for this component and its children
@@ -110,7 +110,7 @@ function App() {
         
         {/* Voice Widget Integration */}
         <div className="fixed bottom-10 right-10 z-10">
-            <VoiceWidget onFinalTranscriptCommitted={handleSendMessage} />
+            {/* <VoiceWidget onFinalTranscriptCommitted={handleSendMessage} /> */}
         </div>
 
       </div>

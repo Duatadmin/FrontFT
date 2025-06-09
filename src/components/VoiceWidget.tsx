@@ -174,7 +174,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
         <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled ? 'group-hover:opacity-100 bg-gradient-to-r from-[#5533ff] to-[#10a37f]' : ''}`}></div>
         <span className="relative flex items-center z-10">
           {currentIcon}
-          <span className="font-medium text-sm whitespace-nowrap">{currentLabel}</span>
+          <span className="font-medium text-xs whitespace-nowrap">{currentLabel}</span>
         </span>
       </div>
 
