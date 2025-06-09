@@ -1,5 +1,4 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { initVoiceModule } from '../voice'; 
 
 import { DashboardButton } from '../chat/DashboardButton'; // Adjusted path
 import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
@@ -37,7 +36,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
   useEffect(() => {
     const initVoice = async () => {
       try {
-        await initVoiceModule();
       } catch (error) {
         console.error('Failed to initialize voice module in chat input:', error);
       }

@@ -1,22 +1,25 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import {
   LayoutDashboard,
   BarChart2,
-  FileText,
+  // FileText, // Unused
   ShoppingCart,
-  Star,
-  CheckSquare,
-  FolderKanban,
+  // Star, // Unused
+  // CheckSquare, // Unused
+  // FolderKanban, // Unused
   Settings,
   MessageCircle,
   HelpCircle,
   ChevronRight,
   Bell,
   BookOpen,
-  Dumbbell
+  Dumbbell,
+  LogOut,
+  LogIn
 } from 'lucide-react';
+import { supabase } from '../../lib/supabase'; // Corrected path
+import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
 
 // Track which modules have been prefetched to prevent redundant fetches
 const prefetchedModules = new Set<string>();
@@ -97,6 +100,48 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
 
 const Sidebar: React.FC = () => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  useEffect(() => {
+    const fetchUserSession = async () => {
+      setLoadingUser(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      setUser(session?.user ?? null);
+      setLoadingUser(false);
+    };
+
+    fetchUserSession();
+
+    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      setUser(session?.user ?? null);
+      setLoadingUser(false);
+    });
+
+    return () => {
+      authListener?.unsubscribe();
+    };
+  }, []);
+
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Error logging out:', error.message);
+      // TODO: Show toast notification for error
+    } else {
+      setUser(null); // Clear user state immediately
+      navigate('/login'); // Navigate to login page
+    }
+  };
+
+  const getAvatarUrl = () => {
+    if (user?.user_metadata?.avatar_url) {
+      return user.user_metadata.avatar_url;
+    }
+    const name = user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User';
+    return `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=10a37f&color=fff&size=32`;
+  };
   
   return (
     <aside className="w-[250px] h-full bg-background-surface border-r border-border-light flex flex-col overflow-hidden">
@@ -184,28 +229,42 @@ const Sidebar: React.FC = () => {
       
       {/* User Account */}
       <div className="mt-auto p-4 border-t border-border-light">
-        <div className="flex items-center">
-          <div className="relative">
-            <img 
-              src="https://ui-avatars.com/api/?name=Fitness+User&background=10a37f&color=fff&size=32" 
-              alt="User avatar" 
-              className="w-10 h-10 rounded-full border-2 border-accent-mint" 
-            />
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background-surface rounded-full"></span>
+        {loadingUser ? (
+          <div className="flex items-center justify-center h-[56px]">
+            <p className="text-sm text-text-secondary animate-pulse">Loading user...</p>
           </div>
-          <div className="ml-3">
-            <div className="text-sm font-medium">Fitness User</div>
-            <div className="text-xs text-text-secondary">fitness@example.com</div>
-          </div>
-          <button className="ml-auto text-text-secondary hover:text-text-primary">
-            <motion.div 
-              whileHover={{ x: 2 }}
-              transition={{ duration: 0.2 }}
+        ) : user ? (
+          <div className="flex items-center">
+            <div className="relative">
+              <img 
+                src={getAvatarUrl()} 
+                alt="User avatar" 
+                className="w-10 h-10 rounded-full border-2 border-accent-mint" 
+              />
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background-surface rounded-full"></span>
+            </div>
+            <div className="ml-3 flex-1 overflow-hidden">
+              <div className="text-sm font-medium text-text-primary truncate" title={user.user_metadata?.full_name || user.email}>
+                {user.user_metadata?.full_name || user.email?.split('@')[0]}
+              </div>
+              <div className="text-xs text-text-secondary truncate" title={user.email}>{user.email}</div>
+            </div>
+            <button 
+              onClick={handleLogout}
+              className="ml-2 p-2 text-text-secondary hover:text-accent-red rounded-md focus-visible:ring-2 focus-visible:ring-accent-red focus-visible:outline-none transition-colors"
+              aria-label="Logout"
             >
-              <ChevronRight size={16} />
-            </motion.div>
-          </button>
-        </div>
+              <LogOut size={18} />
+            </button>
+          </div>
+        ) : (
+          <SidebarLink 
+            icon={<LogIn size={18} />} 
+            label="Login / Sign Up" 
+            to="/login"
+            isActive={location.pathname === '/login'}
+          />
+        )}
       </div>
     </aside>
   );
