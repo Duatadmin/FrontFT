@@ -10,3 +10,5 @@ await supabase.auth.signInWithPassword({
   email:   'maximilianrozenberg@gmail.com',
   password:'Maxim!1990'
 });
+
+git reset --hard a121598

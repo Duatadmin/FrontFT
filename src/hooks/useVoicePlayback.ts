@@ -84,11 +84,11 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       audio.pause();
       audio.currentTime = 0;
 
-      if (!supportsMediaSource) {
+      if (!supportsMediaSource()) {
         console.warn('[TTS] MediaSource API not supported. Streaming audio will be disabled. Falling back to alternative playback.');
       }
 
-      if (supportsMediaSource && supportsOpus) {
+      if (supportsMediaSource() && supportsOpus) {
         mediaSourceRef.current = new MediaSource();
         audio.src = URL.createObjectURL(mediaSourceRef.current);
 
