@@ -5,3 +5,8 @@ npx vite --host
 git add .; git commit -m "Fixes"; git push
 
 npx tsc -p .
+
+await supabase.auth.signInWithPassword({
+  email:   'maximilianrozenberg@gmail.com',
+  password:'Maxim!1990'
+});

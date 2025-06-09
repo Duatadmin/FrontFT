@@ -1,5 +1,6 @@
 console.log('[TTS Module] useVoicePlayback.ts module loaded');
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { supportsMediaSource } from '../lib/supportsMediaSource';
 
 const TTS_BASE_URL = 'https://ftvoiceservice-production-6960.up.railway.app/tts/v1/tts';
 const VOICE_ENABLED_KEY = 'voiceEnabled';
@@ -83,7 +84,11 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       audio.pause();
       audio.currentTime = 0;
 
-      if (supportsOpus) {
+      if (!supportsMediaSource) {
+        console.warn('[TTS] MediaSource API not supported. Streaming audio will be disabled. Falling back to alternative playback.');
+      }
+
+      if (supportsMediaSource && supportsOpus) {
         mediaSourceRef.current = new MediaSource();
         audio.src = URL.createObjectURL(mediaSourceRef.current);
 
