@@ -2,30 +2,18 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { supabase, getCurrentUserId } from '../supabase';
 import { toast } from '../utils/toast';
-import { TrainingPlan as DBTrainingPlan, Goal as DBGoal } from '../supabase/schema.types';
+import { Goal as DBGoal } from '../supabase/schema.types'; // Removed TrainingPlan as DBTrainingPlan
 
 // Import the getCurrentUserId from our unified client
 
 // Mock data for development or when Supabase connection fails
 const MOCK_TRAINING_PLAN: TrainingPlan = {
-  id: 'mock-plan-001',
+  plan_id: 'mock-plan-001',
   user_id: 'mock-user-123',
-  name: 'Strength Building Program',
-  description: '12-week progressive overload program focused on compound movements and strength development',
-  days: {
-    monday: ['Bench Press', 'Overhead Press', 'Tricep Extensions'],
-    tuesday: [], // Rest Day
-    wednesday: ['Squats', 'Deadlifts', 'Lunges'],
-    thursday: ['Pull-ups', 'Rows', 'Bicep Curls'],
-    friday: [], // Rest Day
-    saturday: ['Full Body Circuit', 'Core Work'],
-    sunday: ['Active Recovery', 'Mobility']
-  },
-  start_date: '2025-03-15',
-  end_date: '2025-06-07',
-  active: true, // Add active property
-  created_at: '2025-03-14T08:30:00Z',
-  updated_at: '2025-04-22T13:45:00Z'
+  split_type: 'Full Body',
+  goal: 'Strength Gain',
+  level: 'Intermediate',
+  plan_status: 'active' // Assuming 'active' is a possible status
 };
 
 // Fallback mock data for goals with properly typed status values
@@ -59,7 +47,16 @@ const MOCK_GOALS: Goal[] = [
 ];
 
 // Re-export types from schema.types.ts for backwards compatibility
-export type TrainingPlan = DBTrainingPlan;
+// This line (export type TrainingPlan = DBTrainingPlan;) is replaced by the interface below
+export interface TrainingPlan {
+  plan_id: string; 
+  user_id: string;
+  split_type: string | null;
+  goal: string | null;
+  level: string | null;
+  plan_status: string | null;
+  // Add any other essential plan-level fields that constitute 'current plan' metadata
+}
 export type Goal = DBGoal;
 
 interface ProgramState {
@@ -76,7 +73,7 @@ interface ProgramState {
 }
 
 // Create a Zustand store for program data
-export const useProgramStore = create<ProgramState>()(devtools(persist((set, get) => ({
+export const useProgramStore = create<ProgramState>()(devtools(persist((set, _get) => ({
   // State
   currentPlan: null,
   goals: [],
@@ -104,11 +101,13 @@ export const useProgramStore = create<ProgramState>()(devtools(persist((set, get
       }
       try {
         const { data, error } = await supabase
-          .from('training_plans')
-          .select('*')
+          .from('workout_full_view')
+          // Select specific plan-level fields. Adjust these fields as necessary.
+          .select('plan_id, user_id, split_type, goal, level, plan_status') 
           .eq('user_id', userId)
-          .eq('active', true)
-          .single();
+          // IMPORTANT: Replace 'active' with the actual value from your 'plan_status' column that denotes an active plan.
+          .eq('plan_status', 'active') 
+          .maybeSingle(); // Use maybeSingle as a plan might not exist or to prevent errors if query setup could return multiple
         if (error) {
           console.warn('Supabase error fetching plan, falling back to mock data:', error);
           throw error; 
