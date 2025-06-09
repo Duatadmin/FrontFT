@@ -1,6 +1,5 @@
 # nixpacks.toml
-[providers]
-node = "18"
+providers = ["node@18"]
 
 [phases.build]
 cmds = [
