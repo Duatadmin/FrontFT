@@ -1,5 +1,6 @@
 // src/components/VoiceWidget.tsx
 import React, { useRef, useState, Fragment, useEffect } from 'react';
+import { useVoice } from '../hooks/VoiceContext';
 import { useWalkie } from '../hooks/useWalkie'; 
 import { v4 as uuid } from 'uuid';
 import PTTButton from './PTTButton';
@@ -14,6 +15,7 @@ interface VoiceWidgetProps {
 }
 
 const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted }) => {
+  const { voiceEnabled, toggleVoice } = useVoice();
   const walkie = useWalkie({
     wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
     recorderConfig: { // Maps to CreateRecorderOptions from sepiaRecorder.ts
@@ -54,6 +56,9 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
     try {
       setShowErrorToast(false);
       setToastMessage('');
+      if (!voiceEnabled) {
+        toggleVoice(); // Ensure TTS is on
+      }
       await walkie.start(sidRef.current); // Assuming start takes a session ID
     } catch (e: any) {
       console.error('Failed to start walkie:', e);
