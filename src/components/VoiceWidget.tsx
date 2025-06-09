@@ -117,7 +117,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
       currentIcon = <Mic size={18} className="mr-2 text-white scale-110 transition-transform duration-150 flex-shrink-0" />;
       currentLabel = "Listening...";
       currentTitle = "Streaming... Release to stop";
-      bgGradient = "bg-gradient-to-r from-[#0da37f] to-[#4f23ff]"; 
+      bgGradient = "bg-[linear-gradient(to_left,#F28E3F_0%,#F28E3F_28%,#D54444_56%,#D54444_77%,#5A3131_99%)]"; 
       hoverEffects = "hover:shadow-xl hover:scale-105";
       cursorClass = "cursor-pointer";
       // Add a subtle visual cue for audio level if desired here
@@ -126,7 +126,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
       currentIcon = <Mic size={18} className="mr-2 text-white flex-shrink-0" />;
       currentLabel = "Voice Mode";
       currentTitle = "Press and hold to talk";
-      bgGradient = "bg-gradient-to-r from-[#10a37f] to-[#5533ff]";
+      bgGradient = "bg-[linear-gradient(to_left,#F28E3F_0%,#F28E3F_28%,#D54444_56%,#D54444_77%,#5A3131_99%)]";
       hoverEffects = "hover:shadow-xl hover:scale-105";
       cursorClass = "cursor-pointer";
       break;
@@ -171,7 +171,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
         aria-label={currentTitle}
       >
         <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-full"></div>
-        <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled ? 'group-hover:opacity-100 bg-gradient-to-r from-[#5533ff] to-[#10a37f]' : ''}`}></div>
+        <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled ? 'group-hover:opacity-100 bg-[linear-gradient(to_left,#FFA500_0%,#FFA500_28%,#D54444_56%,#D54444_77%,#5A3131_99%)]' : ''}`}></div>
         <span className="relative flex items-center z-10">
           {currentIcon}
           <span className="font-medium text-xs whitespace-nowrap">{currentLabel}</span>
