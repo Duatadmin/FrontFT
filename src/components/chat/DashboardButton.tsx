@@ -11,10 +11,14 @@ export const DashboardButton: React.FC<DashboardButtonProps> = ({ className }) =
       to="/dashboard"
       role="button"
       aria-label="Open Dashboard"
-      className={`flex items-center justify-center gap-2 text-sm font-medium text-slate-400 hover:text-slate-100 px-3 py-2 rounded-lg hover:bg-slate-800 active:bg-slate-700 transition-colors duration-150 ease-in-out focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 focus-visible:ring-offset-slate-900 ${className}`}
+      className={`relative overflow-hidden group flex items-center bg-gradient-to-r from-[#10a37f] to-[#5533ff] text-white rounded-full py-2 px-3 shadow-lg transition-all duration-300 hover:shadow-xl hover:scale-105 ${className}`}
     >
-      <LayoutDashboard size={18} aria-hidden="true" />
-      <span>Dashboard</span>
+      <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
+      <div className="absolute inset-0 bg-gradient-to-r from-[#5533ff] to-[#10a37f] opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+      <span className="relative flex items-center">
+        <LayoutDashboard size={18} className="mr-2" aria-hidden="true" />
+        <span className="font-medium">Dashboard</span>
+      </span>
     </Link>
   );
 };
