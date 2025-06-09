@@ -132,7 +132,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         {/* Lower row for other action buttons */}
         <div className="flex items-center justify-start gap-2 pt-2">
           <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
-          <VoiceWidget />
+          <VoiceWidget onFinalTranscriptCommitted={onSendMessage} />
           {/* <VoiceModeToggle 
             isVoiceEnabled={voiceEnabled} 
             toggleVoiceEnabled={toggleVoice} 

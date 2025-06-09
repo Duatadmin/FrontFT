@@ -171,7 +171,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
         aria-label={currentTitle}
       >
         <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-full"></div>
-        <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled && status !== 'connecting' ? 'group-hover:opacity-100 bg-gradient-to-r from-[#5533ff] to-[#10a37f]' : ''}`}></div>
+        <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled ? 'group-hover:opacity-100 bg-gradient-to-r from-[#5533ff] to-[#10a37f]' : ''}`}></div>
         <span className="relative flex items-center z-10">
           {currentIcon}
           <span className="font-medium text-sm whitespace-nowrap">{currentLabel}</span>
