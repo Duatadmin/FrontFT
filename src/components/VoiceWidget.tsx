@@ -3,9 +3,7 @@ import React, { useRef, useState, Fragment, useEffect } from 'react';
 import { useVoice } from '../hooks/VoiceContext';
 import { useWalkie } from '../hooks/useWalkie'; 
 import { v4 as uuid } from 'uuid';
-import PTTButton from './PTTButton';
-import type { PTTButtonState } from './PTTButton'; 
-import Meter from './Meter';
+import { Mic } from 'lucide-react';
 import { Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -78,18 +76,109 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
     }
   };
 
-  const pttState: PTTButtonState = walkie.state as PTTButtonState; // Cast if WalkieState and PTTButtonState differ slightly but are compatible
+  const { status, errorMessage } = walkie.state;
+
+  let currentIcon;
+  let currentLabel;
+  let currentTitle;
+  const baseButtonClasses = "relative overflow-hidden group flex items-center justify-center h-12 min-w-[120px] text-white rounded-full py-2 px-3 shadow-lg transition-all duration-300 focus:outline-none";
+  let bgGradient;
+  let hoverEffects;
+  let cursorClass;
+  let stateSpecificClasses = "";
+
+  const isDisabled = status === 'connecting' || status === 'error';
+
+  switch (status) {
+    case 'error':
+      currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-yellow-300 mr-2 flex-shrink-0" />;
+      currentLabel = "Error";
+      currentTitle = errorMessage || 'Microphone error';
+      bgGradient = "bg-gradient-to-r from-red-500 to-rose-600";
+      hoverEffects = ""; 
+      cursorClass = "cursor-not-allowed";
+      stateSpecificClasses = "opacity-80";
+      break;
+    case 'connecting':
+      currentIcon = (
+        <svg className="animate-spin h-5 w-5 text-white mr-2 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+      );
+      currentLabel = "Connecting...";
+      currentTitle = "Connecting...";
+      bgGradient = "bg-gradient-to-r from-sky-500 to-blue-600";
+      hoverEffects = ""; 
+      cursorClass = "cursor-wait";
+      stateSpecificClasses = "opacity-90";
+      break;
+    case 'active':
+      currentIcon = <Mic size={18} className="mr-2 text-white scale-110 transition-transform duration-150 flex-shrink-0" />;
+      currentLabel = "Listening...";
+      currentTitle = "Streaming... Release to stop";
+      bgGradient = "bg-gradient-to-r from-[#0da37f] to-[#4f23ff]"; 
+      hoverEffects = "hover:shadow-xl hover:scale-105";
+      cursorClass = "cursor-pointer";
+      // Add a subtle visual cue for audio level if desired here
+      break;
+    default: // idle
+      currentIcon = <Mic size={18} className="mr-2 text-white flex-shrink-0" />;
+      currentLabel = "Voice Mode";
+      currentTitle = "Press and hold to talk";
+      bgGradient = "bg-gradient-to-r from-[#10a37f] to-[#5533ff]";
+      hoverEffects = "hover:shadow-xl hover:scale-105";
+      cursorClass = "cursor-pointer";
+      break;
+  }
+
+  const dynamicButtonClasses = `${baseButtonClasses} ${bgGradient} ${hoverEffects} ${cursorClass} ${stateSpecificClasses}`.replace(/\s+/g, ' ').trim();
+
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (isDisabled) return;
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (status === 'idle') {
+        handleStart();
+      }
+    }
+  };
+
+  const handleKeyRelease = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (isDisabled) return;
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (status === 'active') {
+        handleStop();
+      }
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center space-y-4 p-4 bg-zinc-800 rounded-lg shadow-xl">
-      <PTTButton
-        state={pttState}
-        onPress={handleStart}
-        onRelease={handleStop}
-      />
-      <Meter level={walkie.state.level} />
+    <>
+      <div
+        className={dynamicButtonClasses}
+        onMouseDown={!isDisabled && status === 'idle' ? handleStart : undefined}
+        onMouseUp={!isDisabled && status === 'active' ? handleStop : undefined} // Only call stop if streaming
+        onTouchStart={!isDisabled && status === 'idle' ? handleStart : undefined}
+        onTouchEnd={!isDisabled && status === 'active' ? handleStop : undefined} // Only call stop if streaming
+        onKeyDown={handleKeyPress}
+        onKeyUp={handleKeyRelease}
+        role="button"
+        tabIndex={isDisabled ? -1 : 0}
+        aria-disabled={isDisabled}
+        title={currentTitle}
+        aria-label={currentTitle}
+      >
+        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-full"></div>
+        <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled && status !== 'connecting' ? 'group-hover:opacity-100 bg-gradient-to-r from-[#5533ff] to-[#10a37f]' : ''}`}></div>
+        <span className="relative flex items-center z-10">
+          {currentIcon}
+          <span className="font-medium text-sm whitespace-nowrap">{currentLabel}</span>
+        </span>
+      </div>
 
-      {/* Toast Notification Area for this widget */}
+      {/* Toast Notification Area (sibling) */}
       <div
         aria-live="assertive"
         className="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6 z-50"
@@ -133,7 +222,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
           </Transition>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
