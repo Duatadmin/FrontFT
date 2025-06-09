@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // For React 17 or if @testing-library/react is < v13.1.0 use:
 // import { renderHook, act } from '@testing-library/react-hooks';
 import { renderHook, act } from '@testing-library/react'; // For React 18 and @testing-library/react >= v13.1.0
-import { useWalkie } from './useWalkie';
+import { useWalkie, UseWalkieOptions } from './useWalkie';
 import { WalkieWS, WalkieWSOptions } from '../services/WalkieWS';
 import { createRecorder, RecorderHandle } from '../lib/sepiaRecorder';
 
@@ -16,6 +16,7 @@ const mockWalkieWSInstance = {
   connect: vi.fn(() => Promise.resolve()),
   sendFrame: vi.fn(),
   close: vi.fn(() => Promise.resolve()),
+  isConnected: vi.fn(() => true), // Added mock for isConnected
 };
 let capturedWalkieWSOnMessage: ((message: any, channel: 'audio' | 'ctrl') => void) | null = null;
 vi.mock('../services/WalkieWS', () => ({
@@ -36,6 +37,13 @@ vi.mock('../lib/sepiaRecorder', () => ({
 
 // --- Test Suite ---
 describe('useWalkie Hook', () => {
+  const mockWalkieOptions: UseWalkieOptions = {
+    wsUrl: 'ws://localhost:8080/test-ws',
+    onVadStatusChange: vi.fn(),
+    onTranscription: vi.fn(),
+    onError: vi.fn(),
+  };
+
   beforeEach(() => {
     vi.clearAllMocks();
     capturedWalkieWSOnMessage = null;
@@ -44,16 +52,16 @@ describe('useWalkie Hook', () => {
   });
 
   it('should initialize with correct default state', () => {
-    const { result } = renderHook(() => useWalkie());
+    const { result } = renderHook(() => useWalkie(mockWalkieOptions));
     expect(result.current.state.isStreaming).toBe(false);
     expect(result.current.state.level).toBe(0);
   });
 
   it('start() should initiate streaming, connect WS, and start recorder', async () => {
-    const { result } = renderHook(() => useWalkie());
+    const { result } = renderHook(() => useWalkie(mockWalkieOptions));
 
     await act(async () => {
-      await result.current.start();
+      await result.current.start('test-session-id-spec');
     });
 
     expect(WalkieWS).toHaveBeenCalledWith(expect.objectContaining({ sid: 'test-session-id-spec' }));
@@ -64,7 +72,7 @@ describe('useWalkie Hook', () => {
   });
 
   it('should send frames and update level when recorder provides chunks', async () => {
-    const { result } = renderHook(() => useWalkie());
+    const { result } = renderHook(() => useWalkie(mockWalkieOptions));
     let onChunkCallback: ((pcm: Int16Array) => void) | null = null;
 
     // Override mockRecorderInstance.start to capture onChunk
@@ -73,7 +81,7 @@ describe('useWalkie Hook', () => {
     });
 
     await act(async () => {
-      await result.current.start();
+      await result.current.start('test-session-id-spec');
     });
 
     expect(onChunkCallback).not.toBeNull();
@@ -114,11 +122,11 @@ describe('useWalkie Hook', () => {
   });
 
   it('should skip sending frames if micLocked is true, then resume when unlocked', async () => {
-    const { result } = renderHook(() => useWalkie());
+    const { result } = renderHook(() => useWalkie(mockWalkieOptions));
     let onChunkCallback: ((pcm: Int16Array) => void) | null = null;
     mockRecorderInstance.start = vi.fn(async (cb: (pcm: Int16Array) => void) => { onChunkCallback = cb; });
 
-    await act(async () => { result.current.start(); });
+    await act(async () => { result.current.start('test-session-id-spec'); });
     expect(capturedWalkieWSOnMessage).not.toBeNull();
 
     const frame = new Int16Array(480);
@@ -147,10 +155,10 @@ describe('useWalkie Hook', () => {
   });
 
   it('stop() should close WS, stop recorder, and update state', async () => {
-    const { result } = renderHook(() => useWalkie());
+    const { result } = renderHook(() => useWalkie(mockWalkieOptions));
 
     await act(async () => {
-      await result.current.start();
+      await result.current.start('test-session-id-spec');
     });
     expect(result.current.state.isStreaming).toBe(true);
 
@@ -165,9 +173,9 @@ describe('useWalkie Hook', () => {
   });
 
   it('should clean up on unmount', async () => {
-    const { unmount, result } = renderHook(() => useWalkie());
+    const { unmount, result } = renderHook(() => useWalkie(mockWalkieOptions));
     await act(async () => {
-      await result.current.start();
+      await result.current.start('test-session-id-spec');
     });
 
     act(() => {

@@ -81,7 +81,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
   let currentIcon;
   let currentLabel;
   let currentTitle;
-  const baseButtonClasses = "relative overflow-hidden group flex items-center justify-center h-12 min-w-[120px] text-white rounded-full py-2 px-3 shadow-lg transition-all duration-300 focus:outline-none";
+  const baseButtonClasses = "relative overflow-hidden group flex items-center justify-center min-w-[120px] text-white rounded-full py-2 px-3 shadow-lg transition-all duration-300 focus:outline-none";
   let bgGradient;
   let hoverEffects;
   let cursorClass;

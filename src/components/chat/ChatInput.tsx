@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 
 import { DashboardButton } from '../chat/DashboardButton'; // Adjusted path
-import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
-import { WalkieTalkieButton } from '../chat/WalkieTalkieButton';// Adjusted path
+import VoiceWidget from '../VoiceWidget'; // Added import for VoiceWidget
+// import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
+// import { WalkieTalkieButton } from '../chat/WalkieTalkieButton';// Adjusted path
 import { SendButton } from '../chat/SendButton';         // Adjusted path
 
 import { useVoicePlayback } from '../../hooks/useVoicePlayback';
@@ -23,9 +24,9 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatInputId = 'chat-input'; 
 
-  const { voiceEnabled, toggleVoice } = useVoicePlayback();
+  useVoicePlayback(); // voiceEnabled and toggleVoice are not used after removing VoiceModeToggle
   
-  const { isWalkieActive, toggleWalkie, transcript, isListening } = useWalkie(chatInputId);
+  const { transcript, isListening } = useWalkie(chatInputId); // isWalkieActive and toggleWalkie are not used after removing WalkieTalkieButton
 
   useEffect(() => {
     if (transcript) {
@@ -131,19 +132,20 @@ const ChatInput: React.FC<ChatInputProps> = ({
         {/* Lower row for other action buttons */}
         <div className="flex items-center justify-start gap-2 pt-2">
           <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
-          <VoiceModeToggle 
+          <VoiceWidget />
+          {/* <VoiceModeToggle 
             isVoiceEnabled={voiceEnabled} 
             toggleVoiceEnabled={toggleVoice} 
             disabled={isLoading} 
-            className="p-1.5" /* Compact styling */
-          />
-          <WalkieTalkieButton 
+            className="p-1.5" 
+          /> */}
+          {/* <WalkieTalkieButton 
             isVoiceEnabled={voiceEnabled} 
             isWalkieActive={isWalkieActive} 
             onClick={toggleWalkie} 
             disabled={isLoading} 
-            className="p-1.5" /* Compact styling */
-          />
+            className="p-1.5" 
+          /> */}
         </div>
       </div>
     </div>
