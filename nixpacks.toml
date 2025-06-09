@@ -1,7 +1,11 @@
 # nixpacks.toml
 
-# Explicitly state: we want Node 18
-providers = ["node@18"]
+# Specify that a Node provider is needed
+providers = ["node"]
+
+[phases.setup]
+# Guarantee Node 18
+nixPkgs = ["nodejs_18"]
 
 [phases.install]
 cmds = ["npm ci"]
