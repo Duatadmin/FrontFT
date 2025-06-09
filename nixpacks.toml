@@ -1,11 +1,13 @@
 # nixpacks.toml
+
+# Explicitly state: we want Node 18
 providers = ["node@18"]
 
+[phases.install]
+cmds = ["npm ci"]
+
 [phases.build]
-cmds = [
-  "npm ci",
-  "npm run build"
-]
+cmds = ["npm run build"]
 
 [phases.start]
 cmd = "npx serve -s dist -l $PORT"
