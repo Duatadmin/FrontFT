@@ -20,10 +20,10 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLoading = fals
   const isUser = message.role === 'user';
 
   // Common styles
-  const bubbleBaseStyle = 'px-4 py-2.5 rounded-xl text-base font-normal leading-relaxed shadow-sm';
+  const bubbleBaseStyle = 'px-4 py-2.5 rounded-xl text-base font-normal leading-relaxed shadow-sm'; // Ensure no duplicate border or bg opacity here
   
   // Specific styles
-  const userBubbleStyle = `bg-userBubble text-white ${bubbleBaseStyle}`;
+  const userBubbleStyle = `bg-[#454A1E]/45 text-white border border-white/15 backdrop-blur-md ${bubbleBaseStyle}`;
   const assistantBubbleStyle = `bg-botBubble text-text ${bubbleBaseStyle}`;
 
   const bubbleClasses = isUser ? userBubbleStyle : assistantBubbleStyle;
