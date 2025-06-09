@@ -28,7 +28,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const mediaSourceRef = useRef<MediaSource | null>(null);
   const sourceBufferRef = useRef<SourceBuffer | null>(null);
 
-  const supportsOpus = MediaSource.isTypeSupported('audio/ogg;codecs=opus');
+  const supportsOpus = (() => {
+    if (typeof window === 'undefined') return false;          // SSR или тесты
+    const MS = (window as any).MediaSource;                   // не трогаем глобал как переменную
+    return !!MS && typeof MS.isTypeSupported === 'function'
+      ? MS.isTypeSupported('audio/ogg;codecs=opus')
+      : false;
+  })();
 
   useEffect(() => {
     localStorage.setItem('voiceEnabled', JSON.stringify(voiceEnabled));
