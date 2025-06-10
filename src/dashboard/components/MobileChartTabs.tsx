@@ -46,50 +46,32 @@ const MobileChartTabs: React.FC<MobileChartTabsProps> = ({
   };
 
   return (
-    <div className="bg-[#0F1014] border border-[#1A1B20] rounded-2xl overflow-hidden">
+    <div className="overflow-hidden">
       {/* Tab Navigation */}
-      <div className="flex border-b border-[#1A1B20]">
+      <div className="flex p-2 space-x-2">
         <button
           onClick={() => setActiveTab('volume')}
-          className={`flex-1 py-3 text-sm font-medium relative ${
-            activeTab === 'volume' ? 'text-[#10a37f]' : 'text-textSecondary'
+          className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-colors ${
+            activeTab === 'volume' ? 'bg-primary text-dark-bg' : 'text-text-secondary hover:bg-white/10'
           }`}
         >
           Volume
-          {activeTab === 'volume' && (
-            <motion.div
-              layoutId="activeTabIndicator"
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#10a37f]"
-            />
-          )}
         </button>
         <button
           onClick={() => setActiveTab('pr')}
-          className={`flex-1 py-3 text-sm font-medium relative ${
-            activeTab === 'pr' ? 'text-[#10a37f]' : 'text-textSecondary'
+          className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-colors ${
+            activeTab === 'pr' ? 'bg-primary text-dark-bg' : 'text-text-secondary hover:bg-white/10'
           }`}
         >
           PRs
-          {activeTab === 'pr' && (
-            <motion.div
-              layoutId="activeTabIndicator"
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#10a37f]"
-            />
-          )}
         </button>
         <button
           onClick={() => setActiveTab('activity')}
-          className={`flex-1 py-3 text-sm font-medium relative ${
-            activeTab === 'activity' ? 'text-[#10a37f]' : 'text-textSecondary'
+          className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-colors ${
+            activeTab === 'activity' ? 'bg-primary text-dark-bg' : 'text-text-secondary hover:bg-white/10'
           }`}
         >
           Activity
-          {activeTab === 'activity' && (
-            <motion.div
-              layoutId="activeTabIndicator"
-              className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#10a37f]"
-            />
-          )}
         </button>
       </div>
       

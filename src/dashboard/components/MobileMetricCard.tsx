@@ -15,17 +15,18 @@ interface MobileMetricCardProps {
 
 const MobileMetricCard: React.FC<MobileMetricCardProps> = ({ data }) => {
   const getIcon = () => {
+    const iconProps = { size: 22, className: "text-dark-bg" };
     switch (data.icon) {
       case 'dumbbell':
-        return <Dumbbell size={24} className="text-[#10a37f]" />;
+        return <Dumbbell {...iconProps} />;
       case 'trophy':
-        return <Trophy size={24} className="text-[#5533ff]" />;
+        return <Trophy {...iconProps} />;
       case 'flame':
-        return <Flame size={24} className="text-[#ff9933]" />;
+        return <Flame {...iconProps} />;
       case 'zap':
-        return <Zap size={24} className="text-[#3366ff]" />;
+        return <Zap {...iconProps} />;
       default:
-        return <Dumbbell size={24} className="text-[#10a37f]" />;
+        return <Dumbbell {...iconProps} />;
     }
   };
 
@@ -37,28 +38,26 @@ const MobileMetricCard: React.FC<MobileMetricCardProps> = ({ data }) => {
   };
 
   return (
-    <div className="bg-[#0F1014] border border-[#1A1B20] rounded-2xl p-4 flex justify-between items-center min-h-[80px] touch-manipulation">
+    <div className="p-4 flex justify-between items-center min-h-[80px]">
       <div className="flex items-center">
-        <div className="bg-[#1A1B20] p-2 rounded-xl mr-3">
+        <div className="bg-primary w-12 h-12 flex items-center justify-center rounded-full mr-4">
           {getIcon()}
         </div>
         <div>
-          <div className="text-textSecondary text-sm">{data.label}</div>
-          <div className="text-xl font-bold">{formatValue(data.value)}</div>
+          <div className="text-text-secondary text-sm">{data.label}</div>
+          <div className="text-xl font-bold text-text">{formatValue(data.value)}</div>
         </div>
       </div>
       
-      <div className={`flex items-center text-sm px-2 py-1 rounded-full ${
-        data.changeType === 'increase' ? 'text-[#10a37f] bg-[#10a37f]/10' : 
-        data.changeType === 'decrease' ? 'text-[#ff4d4f] bg-[#ff4d4f]/10' : 
-        'text-textSecondary bg-[#1A1B20]'
+      <div className={`flex items-center text-xs font-bold px-2.5 py-1 rounded-full ${
+        data.changeType === 'increase' ? 'bg-primary/20 text-primary' : 'bg-accent-red/20 text-accent-red'
       }`}>
         {data.changeType === 'increase' ? (
-          <TrendingUp size={14} className="mr-1" />
-        ) : data.changeType === 'decrease' ? (
-          <TrendingDown size={14} className="mr-1" />
-        ) : null}
-        {data.change}%
+          <TrendingUp size={14} className="mr-1 stroke-current" />
+        ) : (
+          <TrendingDown size={14} className="mr-1 stroke-current" />
+        )}
+        {data.change}
       </div>
     </div>
   );

@@ -10,11 +10,9 @@ import {
   X,
   ArrowLeft,
   ChevronDown,
-  User,
-  Filter
+  User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import DashboardBackground from './DashboardBackground';
 
 interface MobileDashboardLayoutProps {
   children: React.ReactNode;
@@ -30,9 +28,7 @@ const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({
   const [showSearch, setShowSearch] = useState(false);
 
   return (
-    <div className="flex flex-col h-screen bg-background text-text-primary overflow-hidden">
-      {/* Background */}
-      <DashboardBackground />
+    <div className="flex flex-col h-screen bg-gradient-radial-olive text-text overflow-hidden">
       
       {/* Mobile Header */}
       <header className="h-14 bg-background-surface border-b border-border-light flex items-center px-4 sticky top-0 z-30">

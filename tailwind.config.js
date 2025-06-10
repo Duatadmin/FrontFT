@@ -8,33 +8,24 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // New Core Palette
+        // New Palette from reference
         'dark-olive': '#454A1E',
-        'dark-surface': '#242424',
         'accent-lime': '#DFF250',
         'accent-orange': '#F2A03D',
         'accent-red': '#F24949',
-        'accent-mint': '#4AA181',
+        'dark-bg': '#2A2A2A',
 
-        // Text Colors from New Palette
-        'text': '#FFFFFF',           // Replaces old 'text', aligns with new 'text-primary'
-        'text-secondary': '#BFBFBF', // Replaces old 'textSecondary'
+        // Semantic mappings for new design
+        'background': '#2A2A2A', // Main app background
+        'surface': '#3c3c3c', // For cards and elevated surfaces
+        'primary': '#DFF250',
+        'text': '#FFFFFF',
+        'text-secondary': '#BFBFBF',
+        'border': 'rgba(255, 255, 255, 0.1)', // Subtle border for glass elements
 
-        // Semantic mappings / updates to existing keys from old config
-        'primary': '#DFF250',          // Old 'primary' (#10a37f) now maps to 'accent-lime' for primary actions
-        'background': '#2A2A2A',       // Old 'background' (#202123) maps to 'dark-surface'. Olive gradient is separate.
-        'surface': '#242424',          // Old 'surface' (#343541) maps to 'dark-surface'
-        'input': '#2A2A2A',            // Old 'input' (#40414f) maps to 'dark-surface'
-        'border': 'rgba(255, 255, 255, 0.05)', // Kept as is, subtle white border
-        'userBubble': '#4AA181',        // Old 'userBubble' (#10a37f) maps to 'accent-mint'
-        'botBubble': '#2A2A2A',         // Old 'botBubble' (#343541) maps to 'dark-surface'
-
-        // Explicit semantic mappings as requested by user
-        // These ensure that if 'accent-green' etc. are used directly from preset or old habits, they map to new values.
-        'accent-green': '#4AA181',      // Maps to new 'accent-mint' value
-        'accent-yellow': '#F2A03D',     // Maps to new 'accent-orange' value
-        'accent-primary': '#DFF250',    // Maps to new 'accent-lime' value
-        // Note: 'accent-red' as a semantic key is covered by its direct definition in the New Core Palette.
+        // Legacy colors - to be phased out
+        'userBubble': '#4AA181',
+        'botBubble': '#3c3c3c',
       },
       borderRadius: {
         sm: '0.25rem',

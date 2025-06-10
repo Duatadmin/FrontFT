@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
 import MobileMetricCard from '../dashboard/components/MobileMetricCard';
+import GlassFrame from '../components/GlassFrame';
 import MobileChartTabs from '../dashboard/components/MobileChartTabs';
 import useDashboardData from '../dashboard/useDashboardData';
 import { TimeRange } from '../dashboard/types';
@@ -42,10 +43,10 @@ const MobileDashboard: React.FC = () => {
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-4 py-3 rounded-lg text-sm font-medium transition-colors whitespace-nowrap min-h-[48px] ${
-                timeRange === range 
-                  ? 'bg-[#10a37f] text-white' 
-                  : 'bg-[#1A1B20] text-textSecondary hover:text-text'
+              className={`px-4 py-3 rounded-full text-sm font-medium transition-all duration-300 whitespace-nowrap min-h-[48px] transform hover:scale-105 ${
+                timeRange === range
+                  ? 'bg-primary text-dark-bg shadow-lg'
+                  : 'bg-white/5 backdrop-blur-sm border border-white/10 text-text-secondary hover:bg-white/10 hover:text-text'
               }`}
             >
               {range.charAt(0).toUpperCase() + range.slice(1)}
@@ -55,20 +56,22 @@ const MobileDashboard: React.FC = () => {
 
         {/* Metrics - Stacked Vertically */}
         <div className="space-y-3">
-          <MobileMetricCard data={data.metrics.volume} />
-          <MobileMetricCard data={data.metrics.prs} />
-          <MobileMetricCard data={data.metrics.streak} />
-          <MobileMetricCard data={data.metrics.calories} />
+          <GlassFrame><MobileMetricCard data={data.metrics.volume} /></GlassFrame>
+          <GlassFrame><MobileMetricCard data={data.metrics.prs} /></GlassFrame>
+          <GlassFrame><MobileMetricCard data={data.metrics.streak} /></GlassFrame>
+          <GlassFrame><MobileMetricCard data={data.metrics.calories} /></GlassFrame>
         </div>
 
         {/* Charts - Tabbed Interface */}
-        <div className="mt-6">
-          <MobileChartTabs 
-            volumeData={data.volumeChart}
-            prData={data.prTimeline}
-            activityData={data.activityBreakdown}
-          />
-        </div>
+        <GlassFrame>
+          <div className="mt-2">
+            <MobileChartTabs 
+              volumeData={data.volumeChart}
+              prData={data.prTimeline}
+              activityData={data.activityBreakdown}
+            />
+          </div>
+        </GlassFrame>
       </div>
     </MobileDashboardLayout>
   );
