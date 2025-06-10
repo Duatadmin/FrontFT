@@ -17,9 +17,9 @@ function DashboardBackground({ children }: DashboardBackgroundProps) {
   
   // If used with children, wrap them with the background
   return (
-    <div className="relative w-full h-full">
-      <div className="absolute inset-0 bg-dark-bg bg-noise-olive" aria-hidden="true" />
-      <div className="relative z-10">{children}</div>
+    <div className="w-full h-full min-h-screen bg-dark-bg bg-gradient-radial-olive">
+      {/* Applied background classes directly, added min-h-screen */}
+      {children}
     </div>
   );
 }

@@ -91,7 +91,7 @@ function App() {
 
   return (
     <VoiceProvider>
-      <div className="flex flex-col h-screen bg-background text-foreground">
+      <div className="flex flex-col h-screen text-foreground">
         {/* Button to toggle SupabaseTest component */} 
         <button 
           onClick={() => setShowSupabaseTest(!showSupabaseTest)}
