@@ -20,11 +20,11 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLoading = fals
   const isUser = message.role === 'user';
 
   // Common styles inspired by ChatInput
-  const bubbleBaseStyle = 'px-4 py-2.5 rounded-3xl text-base font-normal leading-relaxed shadow-2xl backdrop-blur-lg border border-white/10';
+  const bubbleBaseStyle = 'px-4 py-2.5 rounded-3xl text-base font-normal leading-relaxed backdrop-blur-md border border-white/10 transition-all duration-150';
   
   // Specific styles
-  const userBubbleStyle = `bg-[#DFF250]/30 text-white ${bubbleBaseStyle}`; // Keeps unique color
-  const assistantBubbleStyle = `bg-[#3c3c3c] text-text ${bubbleBaseStyle}`; // Matches ChatInput bg
+  const userBubbleStyle = `bg-[#DFF250]/30 text-white ${bubbleBaseStyle}`; // Olive tint for user messages
+  const assistantBubbleStyle = `bg-white/5 text-text ${bubbleBaseStyle}`; // Matches ChatInput bg
 
   const bubbleClasses = isUser ? userBubbleStyle : assistantBubbleStyle;
   const alignmentClass = isUser ? 'self-end' : 'self-start';

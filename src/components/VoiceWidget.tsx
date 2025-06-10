@@ -81,7 +81,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
   let currentIcon;
   let currentLabel;
   let currentTitle;
-  const baseButtonClasses = "relative overflow-hidden group flex items-center justify-center min-w-[120px] bg-gradient-to-r from-[#F2A03D]/35 to-[#F24949]/35 backdrop-blur-md border border-white/20 text-[#EBCFD1] rounded-full px-2.5 py-1.5 shadow-lg transition-all duration-300 focus:outline-none hover:shadow-xl hover:scale-105 hover:from-[#F2A03D]/80 hover:to-[#F24949]/80";
+  const baseButtonClasses = "relative flex items-center justify-center bg-white/5 text-white px-4 py-2 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 hover:scale-105";
   let bgGradient = ""; // Default to empty, baseButtonClasses handles DashboardButton's default gradient
   let hoverEffects = ""; // Default to empty, baseButtonClasses and inner divs handle DashboardButton's hover
   let cursorClass;
@@ -94,27 +94,27 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
       currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-yellow-300 mr-2 flex-shrink-0" />;
       currentLabel = "Error";
       currentTitle = errorMessage || 'Microphone error';
-      bgGradient = "bg-gradient-to-r from-red-500 to-rose-600";
+      bgGradient = "";
       hoverEffects = ""; 
       cursorClass = "cursor-not-allowed";
       stateSpecificClasses = "opacity-80";
       break;
     case 'connecting':
       currentIcon = (
-        <svg className="animate-spin h-5 w-5 text-white mr-2 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin h-5 w-5 text-white/50 mr-2 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
       );
       currentLabel = "Connecting...";
       currentTitle = "Connecting...";
-      bgGradient = "bg-gradient-to-r from-sky-500 to-blue-600";
+      bgGradient = "";
       hoverEffects = ""; 
       cursorClass = "cursor-wait";
       stateSpecificClasses = "opacity-90";
       break;
     case 'active':
-      currentIcon = <Mic size={18} className="mr-2 text-white scale-110 transition-transform duration-150 flex-shrink-0" />;
+      currentIcon = <Mic size={18} className="mr-2 text-white/50 scale-110 transition-transform duration-150 flex-shrink-0" />;
       currentLabel = "Listening...";
       currentTitle = "Streaming... Release to stop";
       // bgGradient will use the hover state from baseButtonClasses or specific DashboardButton hover divs
@@ -124,7 +124,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
       // Add a subtle visual cue for audio level if desired here
       break;
     default: // idle
-      currentIcon = <Mic size={18} className="mr-2 text-white flex-shrink-0" />;
+      currentIcon = <Mic size={18} className="mr-2 text-white/50 flex-shrink-0" />;
       currentLabel = "Voice Mode";
       currentTitle = "Press and hold to talk";
       bgGradient = ""; // Let base classes and inner divs handle the idle look like DashboardButton
@@ -171,11 +171,9 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
         title={currentTitle}
         aria-label={currentTitle}
       >
-        <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-full"></div>
-        <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled ? 'group-hover:opacity-100 bg-[linear-gradient(to_right,#FFA500_0%,#FFA500_28%,#D54444_56%,#D54444_77%,#5A3131_99%)]' : ''}`}></div>
         <span className="relative flex items-center z-10">
           {currentIcon}
-          <span className="font-medium text-xs whitespace-nowrap">{currentLabel}</span>
+          <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
         </span>
       </div>
 

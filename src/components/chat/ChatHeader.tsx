@@ -6,7 +6,7 @@ import Logo from '../../../Logo.svg';
 const ChatHeader: React.FC = () => {
   return (
     <header
-      className="fixed top-0 left-0 w-full z-50 border-b border-gray-700 flex justify-between items-center px-4"
+      className="fixed top-0 left-0 w-full z-50 flex justify-between items-center px-4 bg-white/5 backdrop-blur-md transition-all duration-150 border border-white/10"
       style={{
         paddingTop: 'env(safe-area-inset-top)',
         height: 'calc(env(safe-area-inset-top) + 64px)'

@@ -5,7 +5,6 @@ import { Message } from './types';
 import chatService from './services/chatService';
 import { useUserStore } from '@/lib/stores/useUserStore'; // For currentUser selector
 import { checkApiStatus } from './services/apiService';
-import SupabaseTest from './SupabaseTest';
 import { useAuthGuard } from './hooks/useAuthGuard';
 // import VoiceWidget from './components/VoiceWidget';
 
@@ -21,7 +20,6 @@ function App() {
   ]);
   
   const [isLoading, setIsLoading] = useState(false);
-  const [showSupabaseTest, setShowSupabaseTest] = useState(false);
 
   // Check API connection on component mount
   useEffect(() => {
@@ -92,16 +90,6 @@ function App() {
   return (
     <VoiceProvider>
       <div className="flex flex-col h-screen text-foreground">
-        {/* Button to toggle SupabaseTest component */} 
-        <button 
-          onClick={() => setShowSupabaseTest(!showSupabaseTest)}
-          className="absolute top-4 right-4 bg-primary text-primary-foreground p-2 rounded z-20"
-        >
-          {showSupabaseTest ? 'Hide' : 'Show'} Supabase Test
-        </button>
-
-        {showSupabaseTest && <SupabaseTest />}
-        
         <ChatLayout 
           messages={messages} 
           onSendMessage={handleSendMessage} 

@@ -107,7 +107,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       style={{ paddingBottom: `calc(0.5rem + var(--safe-area-inset-bottom))` }}
     >
       {/* Further reduced height container */}
-      <div className="w-[min(95vw,525px)] min-w-[min(95vw,525px)] bg-[#3c3c3c] backdrop-blur-lg border border-white/10 shadow-2xl rounded-3xl px-4 py-1.5 mx-auto flex flex-col gap-1.5">
+      <div className="w-[min(95vw,525px)] min-w-[min(95vw,525px)] bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl px-4 py-1.5 mx-auto flex flex-col gap-1.5 transition-all duration-150">
         {/* Input area with SendButton - Corrected Alignment */}
         <div className="relative flex items-center w-full">
           <textarea
