@@ -6,7 +6,6 @@ import WorkoutDisplayCard from '../components/diary/WorkoutDisplayCard';
 import SessionDrawer from '../components/diary/SessionDrawer';
 import useDiaryStore from '../store/useDiaryStore';
 import useUserStore from '../store/useUserStore';
-import DashboardBackground from '../components/layout/DashboardBackground';
 import Sidebar from '../components/layout/Sidebar';
 
 const DiaryPage: React.FC = () => {
@@ -23,9 +22,8 @@ const DiaryPage: React.FC = () => {
   }, [user, fetchSessions, fetchCurrentPlan]);
   
   return (
-    <div className="flex h-screen bg-background text-text-primary">
-      {/* Background */}
-      <DashboardBackground />
+    <div className="flex h-screen text-text-primary">
+      {/* Global DashboardBackground from main.tsx will now be visible */}
       
       {/* Sidebar */}
       <Sidebar />

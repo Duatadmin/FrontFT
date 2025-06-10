@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import DashboardBackground from '../components/layout/DashboardBackground';
 import Sidebar from '../components/layout/Sidebar';
 import useDiaryStore from '../store/useDiaryStore';
 import useUserStore from '../store/useUserStore';
@@ -60,9 +59,8 @@ const EnhancedDiaryPage: React.FC = () => {
   };
   
   return (
-    <div className="flex h-screen bg-background text-text-primary">
-      {/* Background */}
-      <DashboardBackground />
+    <div className="flex h-screen text-text-primary">
+      {/* Global DashboardBackground from main.tsx will now be visible */}
       
       {/* Sidebar */}
       <Sidebar />

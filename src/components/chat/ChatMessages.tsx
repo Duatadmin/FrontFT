@@ -41,7 +41,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
 
   return (
     // Apply background, overflow, and smooth scroll
-    <div ref={containerRef} className="flex-1 overflow-y-auto bg-background scroll-smooth">
+    <div ref={containerRef} className="flex-1 overflow-y-auto scroll-smooth">
       {/* Centering container with max-width and responsive padding */}
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Spacing between messages */}

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Calendar, ChevronDown } from 'lucide-react';
 import Sidebar from './Sidebar';
-import DashboardBackground from './DashboardBackground';
 
 interface AnalyticsDashboardLayoutProps {
   children: React.ReactNode;
@@ -16,9 +15,8 @@ const AnalyticsDashboardLayout: React.FC<AnalyticsDashboardLayoutProps> = ({
   const [currentMonth, setCurrentMonth] = useState('May 2024');
   
   return (
-    <div className="flex h-screen bg-dark-bg overflow-hidden text-text-primary">
-      {/* Lavender Radial Background */}
-      <DashboardBackground />
+    <div className="flex h-screen overflow-hidden text-text-primary">
+      {/* Global DashboardBackground from main.tsx will now be visible */}
       
       {/* Sidebar */}
       <Sidebar />
