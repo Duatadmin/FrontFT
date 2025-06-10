@@ -21,8 +21,8 @@
 
   body {
   font-family: 'Inter', system-ui, sans-serif;
-    /* Use new background color and gradient */
-    @apply bg-background text-text bg-gradient-radial-olive; /* Added bg-gradient-radial-olive */
+    /* Use new background color */
+    @apply bg-background text-text;
     /* Prevent text selection */
     @apply select-none; 
     /* Ensure body takes full viewport height, accounting for virtual keyboard */

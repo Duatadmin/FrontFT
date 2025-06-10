@@ -2,6 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom'; // Keep BrowserRouter
 import AppRouter from './routes/AppRouter'; // Import AppRouter
+import DashboardBackground from './components/layout/DashboardBackground'; // Import DashboardBackground
 
 // CSS imports remain
 import './index.css';
@@ -25,7 +26,9 @@ if (rootElement) {
       ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>
           <BrowserRouter>
-            <AppRouter /> {/* AppRouter now handles all routes */}
+            <DashboardBackground>
+              <AppRouter /> {/* AppRouter now handles all routes */}
+            </DashboardBackground>
           </BrowserRouter>
         </React.StrictMode>
       );
