@@ -22,7 +22,7 @@ module.exports = {
 
         // Semantic mappings / updates to existing keys from old config
         'primary': '#DFF250',          // Old 'primary' (#10a37f) now maps to 'accent-lime' for primary actions
-        'background': '#171717',       // Old 'background' (#202123) maps to 'dark-surface'. Olive gradient is separate.
+        'background': '#2A2A2A',       // Old 'background' (#202123) maps to 'dark-surface'. Olive gradient is separate.
         'surface': '#242424',          // Old 'surface' (#343541) maps to 'dark-surface'
         'input': '#2A2A2A',            // Old 'input' (#40414f) maps to 'dark-surface'
         'border': 'rgba(255, 255, 255, 0.05)', // Kept as is, subtle white border

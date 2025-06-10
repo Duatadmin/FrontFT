@@ -19,12 +19,12 @@ interface MessageBubbleProps {
 const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLoading = false }) => {
   const isUser = message.role === 'user';
 
-  // Common styles
-  const bubbleBaseStyle = 'px-4 py-2.5 rounded-xl text-base font-normal leading-relaxed shadow-sm'; // Ensure no duplicate border or bg opacity here
+  // Common styles inspired by ChatInput
+  const bubbleBaseStyle = 'px-4 py-2.5 rounded-3xl text-base font-normal leading-relaxed shadow-2xl backdrop-blur-lg border border-white/10';
   
   // Specific styles
-  const userBubbleStyle = `bg-[#DFF250]/30 text-white border border-white/15 backdrop-blur-md ${bubbleBaseStyle}`;
-  const assistantBubbleStyle = `bg-botBubble text-text ${bubbleBaseStyle}`;
+  const userBubbleStyle = `bg-[#DFF250]/30 text-white ${bubbleBaseStyle}`; // Keeps unique color
+  const assistantBubbleStyle = `bg-[#3c3c3c] text-text ${bubbleBaseStyle}`; // Matches ChatInput bg
 
   const bubbleClasses = isUser ? userBubbleStyle : assistantBubbleStyle;
   const alignmentClass = isUser ? 'self-end' : 'self-start';

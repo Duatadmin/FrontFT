@@ -1,4 +1,5 @@
 import React from 'react';
+import GlassFrame from './GlassFrame';
 
 export interface Message {
   id: number;
@@ -15,13 +16,13 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message }) => {
 
   return (
     <div className={`flex mb-sm ${isUser ? 'justify-end' : 'justify-start'}`}>
-      <div
-        className={`message-bubble ${isUser ? 'message-bubble-user' : 'message-bubble-bot'}`}
-      >
-        {message.text}
-      </div>
+      <GlassFrame color={isUser ? '#DFF250' : undefined}>
+        <div className="px-4 py-2.5">
+          {message.text}
+        </div>
+      </GlassFrame>
     </div>
   );
 };
 
-export default MessageBubble; 
+export default MessageBubble;

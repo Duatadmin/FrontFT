@@ -81,9 +81,9 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
   let currentIcon;
   let currentLabel;
   let currentTitle;
-  const baseButtonClasses = "relative overflow-hidden group flex items-center justify-center min-w-[120px] text-white rounded-full py-2 px-3 shadow-lg transition-all duration-300 focus:outline-none";
-  let bgGradient;
-  let hoverEffects;
+  const baseButtonClasses = "relative overflow-hidden group flex items-center justify-center min-w-[120px] bg-gradient-to-r from-[#F2A03D]/35 to-[#F24949]/35 backdrop-blur-md border border-white/20 text-[#EBCFD1] rounded-full px-2.5 py-1.5 shadow-lg transition-all duration-300 focus:outline-none hover:shadow-xl hover:scale-105 hover:from-[#F2A03D]/80 hover:to-[#F24949]/80";
+  let bgGradient = ""; // Default to empty, baseButtonClasses handles DashboardButton's default gradient
+  let hoverEffects = ""; // Default to empty, baseButtonClasses and inner divs handle DashboardButton's hover
   let cursorClass;
   let stateSpecificClasses = "";
 
@@ -117,8 +117,9 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
       currentIcon = <Mic size={18} className="mr-2 text-white scale-110 transition-transform duration-150 flex-shrink-0" />;
       currentLabel = "Listening...";
       currentTitle = "Streaming... Release to stop";
-      bgGradient = "bg-[linear-gradient(to_left,#F28E3F_0%,#F28E3F_28%,#D54444_56%,#D54444_77%,#5A3131_99%)]"; 
-      hoverEffects = "hover:shadow-xl hover:scale-105";
+      // bgGradient will use the hover state from baseButtonClasses or specific DashboardButton hover divs
+      bgGradient = ""; // Let base classes and inner divs handle the active look like DashboardButton hover
+      hoverEffects = ""; // Handled by base and inner divs
       cursorClass = "cursor-pointer";
       // Add a subtle visual cue for audio level if desired here
       break;
@@ -126,8 +127,8 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
       currentIcon = <Mic size={18} className="mr-2 text-white flex-shrink-0" />;
       currentLabel = "Voice Mode";
       currentTitle = "Press and hold to talk";
-      bgGradient = "bg-[linear-gradient(to_left,#F28E3F_0%,#F28E3F_28%,#D54444_56%,#D54444_77%,#5A3131_99%)]";
-      hoverEffects = "hover:shadow-xl hover:scale-105";
+      bgGradient = ""; // Let base classes and inner divs handle the idle look like DashboardButton
+      hoverEffects = ""; // Handled by base and inner divs
       cursorClass = "cursor-pointer";
       break;
   }
@@ -171,7 +172,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
         aria-label={currentTitle}
       >
         <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300 rounded-full"></div>
-        <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled ? 'group-hover:opacity-100 bg-[linear-gradient(to_left,#FFA500_0%,#FFA500_28%,#D54444_56%,#D54444_77%,#5A3131_99%)]' : ''}`}></div>
+        <div className={`absolute inset-0 opacity-0 transition-opacity duration-500 rounded-full ${!isDisabled ? 'group-hover:opacity-100 bg-[linear-gradient(to_right,#FFA500_0%,#FFA500_28%,#D54444_56%,#D54444_77%,#5A3131_99%)]' : ''}`}></div>
         <span className="relative flex items-center z-10">
           {currentIcon}
           <span className="font-medium text-xs whitespace-nowrap">{currentLabel}</span>
