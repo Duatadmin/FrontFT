@@ -18,6 +18,10 @@ export interface DashboardData {
   monthlyStats: DashboardStats;
   currentProgram: any | null;
   upcomingWorkouts: any[];
+  // Added for full dashboard mock data compatibility
+  volumeChart: { date: string; value: number }[];
+  prTimeline: { name: string; value: number }[];
+  activityBreakdown: { name: string; value: number; color: string }[];
 }
 
 // Mock data generator for development purposes
@@ -74,8 +78,27 @@ const generateMockData = (): DashboardData => {
         scheduledFor: new Date(Date.now() + 86400000).toISOString(), // Tomorrow
         duration: 60
       }
-    ]
+    ],
+    // Added mock chart data for dashboard parity
+    volumeChart: [
+      { date: '2025-06-01', value: 5000 },
+      { date: '2025-06-02', value: 6000 },
+      { date: '2025-06-03', value: 7000 },
+      { date: '2025-06-04', value: 8000 },
+      { date: '2025-06-05', value: 9000 },
+    ],
+    prTimeline: [
+      { name: 'Bench Press', value: 120 },
+      { name: 'Squat', value: 200 },
+      { name: 'Deadlift', value: 250 },
+    ],
+    activityBreakdown: [
+      { name: 'Strength', value: 60, color: '#AFFF00' },
+      { name: 'Cardio', value: 30, color: '#84CC16' },
+      { name: 'Mobility', value: 10, color: '#A3E635' },
+    ],
   };
+
 };
 
 export interface DashboardError {
@@ -192,7 +215,11 @@ export function useDashboardData() {
             completionRate: 0 // Would need additional logic to calculate
           },
           currentProgram: null, // Will be populated by the program store
-          upcomingWorkouts: [] // Would need additional logic to generate
+          upcomingWorkouts: [], // Would need additional logic to generate
+          // Ensure all properties from DashboardData are present
+          volumeChart: [], // Initialize as empty or with actual data if available
+          prTimeline: [],  // Initialize as empty or with actual data if available
+          activityBreakdown: [] // Initialize as empty or with actual data if available
         };
         
         setData(dashboardData);

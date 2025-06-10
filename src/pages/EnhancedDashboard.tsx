@@ -58,7 +58,7 @@ const EnhancedDashboard: React.FC = () => {
     );
   }
 
-  if (error || !data) {
+  if (error && !data) { // Changed from || to && to allow mock data display on error
     return (
       <AnalyticsDashboardLayout>
         <div className="flex items-center justify-center h-[calc(100vh-100px)]">
@@ -68,6 +68,20 @@ const EnhancedDashboard: React.FC = () => {
             {error?.affectedModule && <p className="text-xs text-gray-400 mt-2">Affected: {error.affectedModule}</p>}
             {error?.missingData && <p className="text-xs text-gray-400">Missing: {error.missingData}</p>}
             {/* You could add a retry button here */}
+          </div>
+        </div>
+      </AnalyticsDashboardLayout>
+    );
+  }
+
+  // NEW: Explicitly handle if data is still null after loading and error checks
+  if (!data) {
+    return (
+      <AnalyticsDashboardLayout>
+        <div className="flex items-center justify-center h-[calc(100vh-100px)]">
+          <div className="text-center p-8 bg-white/5 backdrop-blur-md rounded-lg shadow-xl">
+            <h3 className="text-2xl font-semibold text-white mb-3">No data available</h3>
+            <p className="text-gray-300">Dashboard data could not be loaded, and no mock data is available.</p>
           </div>
         </div>
       </AnalyticsDashboardLayout>
@@ -121,6 +135,7 @@ const EnhancedDashboard: React.FC = () => {
           }}
         >
           <motion.div
+            className="h-full"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -134,6 +149,7 @@ const EnhancedDashboard: React.FC = () => {
           </motion.div>
           
           <motion.div
+            className="h-full"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
@@ -147,6 +163,7 @@ const EnhancedDashboard: React.FC = () => {
           </motion.div>
           
           <motion.div
+            className="h-full"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.2 }}
@@ -160,6 +177,7 @@ const EnhancedDashboard: React.FC = () => {
           </motion.div>
           
           <motion.div
+            className="h-full"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.3 }}

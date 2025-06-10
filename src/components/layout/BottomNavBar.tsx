@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutGrid, Wallet, ArrowRightLeft, Settings, LucideIcon } from 'lucide-react';
+import { LayoutGrid, Dumbbell, BookOpen, MessageCircle, LucideIcon } from 'lucide-react'; // Updated icons
 
 interface NavItemType {
   href: string;
@@ -9,9 +9,9 @@ interface NavItemType {
 
 const navItems: NavItemType[] = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
-  { href: '/wallet', icon: Wallet, label: 'Wallet' },
-  { href: '/trade', icon: ArrowRightLeft, label: 'Trade' },
-  { href: '/settings', icon: Settings, label: 'Settings' },
+  { href: '/programs', icon: Dumbbell, label: 'Programs' },
+  { href: '/diary', icon: BookOpen, label: 'Diary' },
+  { href: '/', icon: MessageCircle, label: 'Coach' }, // Matches desktop Coach link
 ];
 
 interface NavItemProps {
