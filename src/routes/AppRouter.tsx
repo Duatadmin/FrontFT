@@ -5,7 +5,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { LoginPage, ProtectedRoute } from "@/entry";
 import App from "../App";
 import Dashboard from '../pages/dashboard'; 
-import EnhancedDashboard from "../pages/EnhancedDashboard";
+import ResponsiveDashboard from '../pages/ResponsiveDashboard';
 import DiaryPage from '../pages/DiaryPage'; 
 import EnhancedDiaryPage from '../pages/EnhancedDiaryPage'; 
 import TestPage from '../pages/TestPage'; 
@@ -52,7 +52,7 @@ export default function AppRouter() {
         path="/dashboard"
         element={
           <ProtectedRoute>
-            <EnhancedDashboard />
+            <ResponsiveDashboard />
           </ProtectedRoute>
         }
       />
