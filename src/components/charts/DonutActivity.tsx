@@ -19,16 +19,14 @@ const DonutActivity: React.FC<DonutActivityProps> = ({
   centerText,
   onExport
 }) => {
-  // Calculate total for the center display
-  const total = data.reduce((acc, item) => acc + item.value, 0);
-  
+
   return (
-    <div className="card p-5 h-full transition-all duration-150 hover-lift">
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg p-5 h-full transition-all duration-150">
       <div className="card-header mb-4">
-        <h3 className="text-lg font-semibold">{title}</h3>
+        <h3 className="text-lg font-semibold text-white">{title}</h3>
         
         <button 
-          className="flex items-center text-text-secondary hover:text-text-primary press-effect"
+          className="flex items-center text-gray-300 hover:text-white press-effect"
           onClick={onExport}
           aria-label="Export data"
         >
@@ -59,8 +57,9 @@ const DonutActivity: React.FC<DonutActivityProps> = ({
             </Pie>
             <Tooltip
               contentStyle={{ 
-                backgroundColor: '#1C1D24', 
-                border: '1px solid #8B5CF6',
+                backgroundColor: 'rgba(30, 41, 59, 0.7)', // semi-transparent dark slate with more opacity
+                backdropFilter: 'blur(4px)', // Add blur for glass effect
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 borderRadius: '12px',
                 color: '#FFFFFF',
                 boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
@@ -72,8 +71,8 @@ const DonutActivity: React.FC<DonutActivityProps> = ({
         
         {/* Center text */}
         <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
-          <div className="text-3xl font-bold">{centerText}</div>
-          <div className="text-xs text-text-secondary">Total clients</div>
+          <div className="text-3xl font-bold text-white">{centerText}</div>
+          <div className="text-xs text-gray-400">Total clients</div>
         </div>
       </div>
       
@@ -86,9 +85,9 @@ const DonutActivity: React.FC<DonutActivityProps> = ({
                 className="w-3 h-3 rounded-sm mr-2" 
                 style={{ backgroundColor: item.color }}
               ></div>
-              <span className="text-sm">{item.name}</span>
+              <span className="text-sm text-gray-300">{item.name}</span>
             </div>
-            <span className="text-sm font-medium">{item.value}%</span>
+            <span className="text-sm font-medium text-white">{item.value}%</span>
           </div>
         ))}
       </div>

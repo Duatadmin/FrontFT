@@ -3,7 +3,7 @@ export interface MetricData {
   value: number;
   change: number;
   changeType: 'increase' | 'decrease' | 'neutral';
-  icon?: string;
+  icon?: 'heart' | 'package' | 'creditcard' | 'dollar' | 'dumbbell' | 'zap' | 'flame' | 'trophy';
 }
 
 export interface ChartData {

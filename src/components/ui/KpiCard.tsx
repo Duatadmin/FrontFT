@@ -6,15 +6,19 @@ import {
   CreditCard,
   DollarSign,
   TrendingUp,
-  TrendingDown
+  TrendingDown,
+  Dumbbell, // Added
+  Zap,      // Added
+  Flame,    // Added
+  Trophy    // Added
 } from 'lucide-react';
 
 export interface KpiCardProps {
   title: string;
   value: string | number;
   change: number;
-  icon?: 'heart' | 'package' | 'creditcard' | 'dollar';
-  color?: 'green' | 'red' | 'purple' | 'blue';
+  icon?: 'heart' | 'package' | 'creditcard' | 'dollar' | 'dumbbell' | 'zap' | 'flame' | 'trophy'; // Added new icons
+
   formatValue?: (value: string | number) => string;
 }
 
@@ -23,7 +27,6 @@ const KpiCard: React.FC<KpiCardProps> = ({
   value,
   change,
   icon = 'dollar',
-  color = 'purple',
   formatValue = (val) => val.toString()
 }) => {
   const [displayValue, setDisplayValue] = useState('0');
@@ -37,57 +40,38 @@ const KpiCard: React.FC<KpiCardProps> = ({
   // Get icon based on prop
   const renderIcon = () => {
     const iconSize = 14;
-    const iconClasses = `text-${getColorClasses().text} bg-${getColorClasses().bg} rounded-md p-1`;
+    const iconWrapperClasses = "bg-white/10 rounded-md p-1";
+    const iconItselfClasses = "text-accent-lime";
     
     switch (icon) {
       case 'heart':
-        return <Heart size={iconSize} className={iconClasses} />;
+        return <div className={iconWrapperClasses}><Heart size={iconSize} className={iconItselfClasses} /></div>;
       case 'package':
-        return <Package size={iconSize} className={iconClasses} />;
+        return <div className={iconWrapperClasses}><Package size={iconSize} className={iconItselfClasses} /></div>;
       case 'creditcard':
-        return <CreditCard size={iconSize} className={iconClasses} />;
+        return <div className={iconWrapperClasses}><CreditCard size={iconSize} className={iconItselfClasses} /></div>;
       case 'dollar':
-      default:
-        return <DollarSign size={iconSize} className={iconClasses} />;
+        return <div className={iconWrapperClasses}><DollarSign size={iconSize} className={iconItselfClasses} /></div>;
+      case 'dumbbell': // Added
+        return <div className={iconWrapperClasses}><Dumbbell size={iconSize} className={iconItselfClasses} /></div>;
+      case 'zap':      // Added
+        return <div className={iconWrapperClasses}><Zap size={iconSize} className={iconItselfClasses} /></div>;
+      case 'flame':    // Added
+        return <div className={iconWrapperClasses}><Flame size={iconSize} className={iconItselfClasses} /></div>;
+      case 'trophy':   // Added
+        return <div className={iconWrapperClasses}><Trophy size={iconSize} className={iconItselfClasses} /></div>;
+      default: // Default to dollar sign if icon is somehow undefined or not matched
+        return <div className={iconWrapperClasses}><DollarSign size={iconSize} className={iconItselfClasses} /></div>;
     }
   };
   
-  // Get color classes based on color prop
-  const getColorClasses = () => {
-    switch (color) {
-      case 'green':
-        return { 
-          text: 'accent-mint', 
-          bg: 'accent-mint/10',
-          trend: 'bg-accent-mint/10 text-accent-mint' 
-        };
-      case 'red':
-        return { 
-          text: 'red-500', 
-          bg: 'red-500/10',
-          trend: 'bg-red-500/10 text-red-500' 
-        };
-      case 'blue':
-        return { 
-          text: 'blue-500', 
-          bg: 'blue-500/10',
-          trend: 'bg-blue-500/10 text-blue-500' 
-        };
-      case 'purple':
-      default:
-        return { 
-          text: 'accent-violet', 
-          bg: 'accent-violet/10',
-          trend: 'bg-accent-violet/10 text-accent-violet' 
-        };
-    }
-  };
+  
   
   const isPositive = change > 0;
   
   return (
     <motion.div
-      className="card p-5 transition-all duration-150"
+      className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg p-5 transition-all duration-150"
       // onMouseEnter={() => setIsHovered(true)} // Removed as isHovered is not used
       // onMouseLeave={() => setIsHovered(false)} // Removed as isHovered is not used
       whileHover={{ 
@@ -96,12 +80,12 @@ const KpiCard: React.FC<KpiCardProps> = ({
       aria-live="polite"
     >
       <div className="flex items-center justify-between mb-1">
-        <div className="flex items-center text-text-secondary text-sm">
+        <div className="flex items-center text-gray-300 text-sm">
           {renderIcon()}
           <span className="ml-2">{title}</span>
         </div>
         
-        <div className={`flex items-center text-xs px-2 py-1 rounded-full ${getColorClasses().trend}`}>
+        <div className={`flex items-center text-xs px-2 py-0.5 rounded-full ${isPositive ? 'bg-accent-lime/10 text-accent-lime' : 'bg-red-400/10 text-red-400'}`}>
           {isPositive ? (
             <>
               <TrendingUp size={12} className="mr-1" />
@@ -121,7 +105,7 @@ const KpiCard: React.FC<KpiCardProps> = ({
           key={displayValue}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          className="text-3xl font-bold"
+          className="text-2xl font-bold text-white mb-1"
         >
           {displayValue}
         </motion.div>

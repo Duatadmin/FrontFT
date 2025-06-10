@@ -12,13 +12,13 @@ type DashboardBackgroundProps = {
 function DashboardBackground({ children }: DashboardBackgroundProps) {
   // If used without children, render just the background element
   if (!children) {
-    return <div className="dashboard-radial-bg" aria-hidden="true" />;
+    return <div className="absolute inset-0 bg-dark-bg bg-noise-olive" aria-hidden="true" />;
   }
   
   // If used with children, wrap them with the background
   return (
     <div className="relative w-full h-full">
-      <div className="dashboard-radial-bg" aria-hidden="true" />
+      <div className="absolute inset-0 bg-dark-bg bg-noise-olive" aria-hidden="true" />
       <div className="relative z-10">{children}</div>
     </div>
   );

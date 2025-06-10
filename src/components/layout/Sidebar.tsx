@@ -85,14 +85,14 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
     <button
       onClick={() => navigate(to)}
       onMouseEnter={handleMouseEnter}
-      className={`flex items-center w-full px-4 py-3 rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none ${
-        isActive ? 'bg-accent-mint/10 text-accent-mint' : 'text-text-secondary hover:text-text-primary hover:bg-background-card/50'
+      className={`flex items-center w-full px-4 py-3 rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:outline-none ${
+        isActive ? 'bg-accent-lime/20 text-accent-lime' : 'text-gray-300 hover:text-white hover:bg-white/10'
       }`}
     >
       <span className="w-5 h-5 mr-3">{icon}</span>
       <span className="flex-1 text-left">{label}</span>
       {hasSubmenu && (
-        <ChevronRight size={16} className="text-text-tertiary" />
+        <ChevronRight size={16} className="text-gray-400" />
       )}
     </button>
   );
@@ -144,7 +144,7 @@ const Sidebar: React.FC = () => {
   };
   
   return (
-    <aside className="w-[250px] h-full bg-background-surface border-r border-border-light flex flex-col overflow-hidden">
+    <aside className="w-[250px] h-full bg-white/5 backdrop-blur-md border-r border-white/10 flex flex-col overflow-hidden">
       {/* Logo Header */}
       <div className="px-6 py-4 flex items-center">
         <div className="h-14">

@@ -5,15 +5,11 @@
  * It provides functions to fetch and transform data from the Supabase database according to
  * the structure described in docs/database_logic.md.
  */
-import { supabase } from './client';
+import { supabase } from './browser';
 // Import types but don't use mock data generator directly
-import type { Json } from './schema.types';
 import type { 
   WorkoutSession, 
-  TrainingPlan, 
-  Goal,
-  WeeklyReflection,
-  ProgressPhoto
+  TrainingPlan
 } from './schema.types';
 
 /**
@@ -426,7 +422,7 @@ export async function fetchActiveTrainingPlan(userId: string): Promise<TrainingP
 export async function checkDatabaseStructure() {
   try {
     // Check if we can access workout_sessions directly
-    const { data: testData, error: testError } = await supabase
+    const { data: _testData, error: testError } = await supabase
       .from('workout_sessions')
       .select('id')
       .limit(1);
