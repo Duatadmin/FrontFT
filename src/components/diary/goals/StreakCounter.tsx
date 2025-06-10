@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { Flame, Trophy, Calendar, ArrowUp } from 'lucide-react';
+import { Flame, Trophy, ArrowUp } from 'lucide-react';
 import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
 import { cn } from '../../../lib/utils';
@@ -47,12 +47,12 @@ const StreakCounter: React.FC = () => {
     try {
       if (user?.id) {
         logger.debug('Calculating streak for user', { userId: user.id });
-        calculateStreak(user.id);
+        calculateStreak();
       }
     } catch (err) {
       logger.error('Error calculating streak', err);
     }
-  }, [user?.id, calculateStreak]);
+  }, [calculateStreak]);
   
   // Loading state
   if (loading.streak) {

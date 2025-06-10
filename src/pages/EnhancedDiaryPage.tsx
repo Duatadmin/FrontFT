@@ -41,10 +41,9 @@ const EnhancedDiaryPage: React.FC = () => {
       fetchGoals(user.id);
       fetchCurrentWeekReflection(user.id);
       fetchProgressPhotos(user.id);
-      calculateStreak(user.id);
+      calculateStreak();
     }
   }, [
-    user, 
     fetchSessions, 
     fetchCurrentPlan, 
     fetchGoals, 
