@@ -175,6 +175,13 @@ const Sidebar: React.FC = () => {
           to="/diary"
           isActive={location.pathname === '/diary'}
         />
+
+        <SidebarLink 
+          icon={<BookOpen size={18} />} 
+          label="Exercise Library" 
+          to="/library"
+          isActive={location.pathname === '/library'}
+        />
         
         <SidebarLink 
           icon={<BarChart2 size={18} />} 

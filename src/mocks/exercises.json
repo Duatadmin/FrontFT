@@ -1,0 +1,62 @@
+[
+  {
+    "id": "ex-bench-press",
+    "name": "Bench Press",
+    "gifUrl": "/assets/exercises/bench-press.gif",
+    "bodypart": "Chest",
+    "equipment": "Barbell",
+    "target": "Pectoralis Major",
+    "tier": "A",
+    "isCompound": true
+  },
+  {
+    "id": "ex-squat",
+    "name": "Squat",
+    "gifUrl": "/assets/exercises/squat.gif",
+    "bodypart": "Legs",
+    "equipment": "Barbell",
+    "target": "Quadriceps, Glutes",
+    "tier": "A",
+    "isCompound": true
+  },
+  {
+    "id": "ex-deadlift",
+    "name": "Deadlift",
+    "gifUrl": "/assets/exercises/deadlift.gif",
+    "bodypart": "Back",
+    "equipment": "Barbell",
+    "target": "Erector Spinae, Glutes, Hamstrings",
+    "tier": "A",
+    "isCompound": true
+  },
+  {
+    "id": "ex-bicep-curl",
+    "name": "Bicep Curl",
+    "gifUrl": "/assets/exercises/bicep-curl.gif",
+    "bodypart": "Arms",
+    "equipment": "Dumbbell",
+    "target": "Biceps Brachii",
+    "tier": "C",
+    "isCompound": false
+  },
+  {
+    "id": "ex-tricep-dip",
+    "name": "Tricep Dip",
+    "gifUrl": "/assets/exercises/tricep-dip.gif",
+    "bodypart": "Arms",
+    "equipment": "Bodyweight",
+    "target": "Triceps Brachii",
+    "tier": "B",
+    "isCompound": true
+  },
+  {
+    "id": "ex-lat-pulldown",
+    "name": "Lat Pulldown",
+    "gifUrl": "/assets/exercises/lat-pulldown.gif",
+    "bodypart": "Back",
+    "equipment": "Machine",
+    "target": "Latissimus Dorsi",
+    "tier": "B",
+    "isCompound": true
+  }
+]
