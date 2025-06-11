@@ -1,6 +1,9 @@
 const defaultTheme = require('tailwindcss/defaultTheme');
 
 /** @type {import('tailwindcss').Config} */
+const { default: flattenColorPalette } = require("tailwindcss/lib/util/flattenColorPalette");
+
+/** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class', // Keep class-based dark mode
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx,css}", "./node_modules/@supabase/**/**.{js,ts,jsx,tsx}"],
@@ -81,6 +84,16 @@ module.exports = {
   plugins: [
     require('@tailwindcss/forms'), 
     require('@tailwindcss/typography'),
+    function addVariablesForColors({ addBase, theme }) {
+      let allColors = flattenColorPalette(theme("colors"));
+      let newVars = Object.fromEntries(
+        Object.entries(allColors).map(([key, val]) => [`--${key}`, val])
+      );
+
+      addBase({
+        ":root": newVars,
+      });
+    },
     function({ addComponents, theme }) {
       addComponents({
         '.dashboard-radial-bg': {

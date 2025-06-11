@@ -4,6 +4,7 @@ import { useVoice } from '../hooks/VoiceContext';
 import { useWalkie } from '../hooks/useWalkie'; 
 import { v4 as uuid } from 'uuid';
 import { Mic } from 'lucide-react';
+import { MovingBorder } from './ui/moving-border';
 import { Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -77,6 +78,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
   };
 
   const { status, errorMessage } = walkie.state;
+  const isActivated = status === 'active';
 
   let currentIcon;
   let currentLabel;
@@ -171,6 +173,18 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
         title={currentTitle}
         aria-label={currentTitle}
       >
+        {isActivated && (
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ borderRadius: '9999px' }} // Match rounded-full
+          >
+            <MovingBorder duration={3000} rx="9999px" ry="9999px">
+              <div
+                className="h-12 w-12 opacity-75 bg-[radial-gradient(var(--accent-orange)_40%,transparent_60%)]"
+              />
+            </MovingBorder>
+          </div>
+        )}
         <span className="relative flex items-center z-10">
           {currentIcon}
           <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
