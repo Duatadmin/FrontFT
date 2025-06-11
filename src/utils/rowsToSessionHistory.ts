@@ -21,6 +21,8 @@ export type CompletedSession = {
   sessionId: string;
   sessionDate: string;
   sessionTitle: string;
+  focusArea: string | null;
+  durationMinutes: number | null;
   exercises: SessionExercise[];
 };
 
@@ -52,6 +54,8 @@ export const rowsToSessionHistory = (rows: WorkoutFullViewRow[]): CompletedSessi
         sessionDate: row.session_date,
         // Use day_label or focus_area as the title, with a fallback.
         sessionTitle: row.day_label || row.focus_area || 'Completed Workout',
+        focusArea: row.focus_area,
+        durationMinutes: row.duration_minutes,
         exercises: [],
       };
       sessionMap.set(row.session_id, session);

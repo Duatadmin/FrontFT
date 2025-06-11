@@ -3,6 +3,7 @@ import { useUserStore } from '@/lib/stores/useUserStore';
 import { fetchCompletedSessions } from '@/api/workoutPlanService';
 import { rowsToSessionHistory, type CompletedSession } from '@/utils/rowsToSessionHistory';
 
+
 export type UseCompletedSessionsResult = UseQueryResult<CompletedSession[], Error>;
 
 /**

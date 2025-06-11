@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useCompletedSessions } from '@/hooks/useCompletedSessions';
+import type { CompletedSession } from '@/utils/rowsToSessionHistory';
 import { SessionCard } from './SessionCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
+import { SessionDetailsModal } from './SessionDetailsModal';
 
 export const SessionList: React.FC = () => {
   const { data: sessions, isLoading, isError, error } = useCompletedSessions();
+  const [selectedSession, setSelectedSession] = useState<CompletedSession | null>(null);
 
   if (isLoading) {
     return (
@@ -39,10 +42,22 @@ export const SessionList: React.FC = () => {
   }
 
   return (
-    <div className="space-y-4">
-      {sessions.map(session => (
-        <SessionCard key={session.sessionId} session={session} />
-      ))}
-    </div>
+    <>
+      <div className="space-y-4">
+        {sessions.map(session => (
+          <SessionCard 
+            key={session.sessionId} 
+            session={session} 
+            onClick={() => setSelectedSession(session)} 
+          />
+        ))}
+      </div>
+      {selectedSession && (
+        <SessionDetailsModal 
+          session={selectedSession} 
+          onClose={() => setSelectedSession(null)} 
+        />
+      )}
+    </>
   );
 };
