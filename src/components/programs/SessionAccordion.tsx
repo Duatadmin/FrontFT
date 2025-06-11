@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { WorkoutSession } from '@/utils/rowsToPlanTree';
+import { cleanDayLabel } from '@/utils/TextOutputAdapter';
 import { ExerciseList } from './ExerciseList'; // Assuming ExerciseList will be created next
 
 interface SessionAccordionProps {
@@ -29,7 +30,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle
         >
           <div className="flex-grow">
             <span className="text-lg text-green-400 capitalize">
-              {session.dayLabel || `Session ${session.sessionNumber || ''}`.trim()}
+              {session.dayLabel ? cleanDayLabel(session.dayLabel) : `Session ${session.sessionNumber || ''}`.trim()}
             </span>
             {session.focusArea && (
               <span className="block text-sm text-neutral-400">

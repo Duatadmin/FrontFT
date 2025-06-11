@@ -1,7 +1,8 @@
 import React from 'react';
-import { PlanOverview } from '../../types/plan'; // Adjusted path
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { PlanOverview } from '@/types/plan';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Badge } from '../ui/Badge';
+import { cleanSplitType } from '@/utils/TextOutputAdapter';
 
 interface PlanSummaryCardProps {
   plan: PlanOverview;
@@ -75,7 +76,7 @@ export const PlanSummaryCard: React.FC<PlanSummaryCardProps> = ({ plan }) => {
       <CardHeader className="p-2">
         <div className="flex justify-between items-start">
           <CardTitle className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-            {`${plan.split_type} — ${plan.goal_type}`}
+            {`${cleanSplitType(plan.split_type)} — ${plan.goal_type}`}
           </CardTitle>
           <Badge variant={statusVariant()} className="capitalize">
             {plan.status}

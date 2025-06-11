@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useWorkoutPlan } from '@/hooks/useWorkoutPlan';
 import { WeekTabs } from './WeekTabs'; // Assuming WeekTabs will be created next
 import { useWorkoutStore } from '@/stores/useWorkoutStore';
+import { formatText } from '../../utils/TextOutputAdapter';
 
 // planId prop is no longer needed as useWorkoutPlan fetches based on user context
 // interface PlanCardProps {
@@ -47,15 +48,15 @@ export const PlanCard: React.FC = () => {
   return (
     <div className="p-6 bg-neutral-900/70 backdrop-blur-md border border-neutral-700 rounded-2xl shadow-xl text-neutral-100">
       <header className="mb-6 pb-4 border-b border-neutral-700">
-        <h2 className="text-3xl font-bold text-green-400 mb-2 capitalize">
-          {plan.goal || 'Workout Plan'}
+        <h2 className="text-3xl font-bold text-green-400 mb-2">
+          {formatText(plan.goal) || 'Workout Plan'}
         </h2>
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-neutral-400">
           <span>
-            <strong>Split:</strong> {plan.splitType || 'N/A'}
+            <strong>Split:</strong> {formatText(plan.splitType) || 'N/A'}
           </span>
           <span>
-            <strong>Level:</strong> {plan.level || 'N/A'}
+            <strong>Level:</strong> {formatText(plan.level) || 'N/A'}
           </span>
           <span>
             <strong>Status:</strong> <span className={`font-semibold ${plan.planStatus === 'active' ? 'text-green-500' : 'text-yellow-500'}`}>{plan.planStatus || 'N/A'}</span>
