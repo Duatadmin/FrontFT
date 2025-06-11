@@ -1,0 +1,15 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": ["cypress", "node"],
+    "allowJs": true
+  },
+  "include": [
+    "**/*.ts",
+    "**/*.tsx", 
+    "**/*.js",
+    "**/*.jsx",
+    "support/e2e.ts"
+  ]
+}

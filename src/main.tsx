@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom'; // Keep BrowserRouter
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // Import QueryClient and Provider
 import AppRouter from './routes/AppRouter'; // Import AppRouter
 import DashboardBackground from './components/layout/DashboardBackground'; // Import DashboardBackground
 
@@ -23,13 +24,18 @@ if (rootElement) {
           throw new Error('Supabase client failed to initialize correctly.');
       }
 
+      // Create a client
+      const queryClient = new QueryClient();
+
       ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>
-          <BrowserRouter>
-            <DashboardBackground>
-              <AppRouter /> {/* AppRouter now handles all routes */}
-            </DashboardBackground>
-          </BrowserRouter>
+          <QueryClientProvider client={queryClient}> {/* Add QueryClientProvider */}
+            <BrowserRouter>
+              <DashboardBackground>
+                <AppRouter /> {/* AppRouter now handles all routes */}
+              </DashboardBackground>
+            </BrowserRouter>
+          </QueryClientProvider>
         </React.StrictMode>
       );
     } catch (error) {
