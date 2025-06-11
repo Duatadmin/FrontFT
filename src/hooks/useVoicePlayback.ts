@@ -14,10 +14,7 @@ interface UseVoicePlayback {
 }
 
 export const useVoicePlayback = (): UseVoicePlayback => {
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
-    const initialVoiceEnabled = localStorage.getItem(VOICE_ENABLED_KEY);
-    return initialVoiceEnabled !== null ? JSON.parse(initialVoiceEnabled) : false;
-  });
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false);
   const [queue, setQueue] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
