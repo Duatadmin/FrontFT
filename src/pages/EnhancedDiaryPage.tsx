@@ -83,7 +83,7 @@ const EnhancedDiaryPage: React.FC = () => {
             <TabsList className="grid w-full grid-cols-3 mb-6">
               <TabsTrigger 
                 value="daily"
-                className="flex items-center justify-center py-3"
+                className="flex items-center justify-center w-full px-4 py-3 rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:outline-none data-[state=active]:bg-accent-lime/20 data-[state=active]:text-accent-lime"
                 data-testid="daily-tab-trigger"
               >
                 <CalendarDays size={16} className="mr-2" />
@@ -93,7 +93,7 @@ const EnhancedDiaryPage: React.FC = () => {
               
               <TabsTrigger 
                 value="weekly"
-                className="flex items-center justify-center py-3"
+                className="flex items-center justify-center w-full px-4 py-3 rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:outline-none data-[state=active]:bg-accent-lime/20 data-[state=active]:text-accent-lime"
                 data-testid="weekly-tab-trigger"
               >
                 <BarChart2 size={16} className="mr-2" />
@@ -103,7 +103,7 @@ const EnhancedDiaryPage: React.FC = () => {
               
               <TabsTrigger 
                 value="goals"
-                className="flex items-center justify-center py-3"
+                className="flex items-center justify-center w-full px-4 py-3 rounded-lg text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:outline-none data-[state=active]:bg-accent-lime/20 data-[state=active]:text-accent-lime"
                 data-testid="goals-tab-trigger"
               >
                 <Target size={16} className="mr-2" />

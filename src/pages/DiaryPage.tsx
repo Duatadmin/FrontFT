@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import CurrentPlanCard from '../components/diary/CurrentPlanCard';
 import FiltersBar from '../components/diary/FiltersBar';
-import WorkoutDisplayCard from '../components/diary/WorkoutDisplayCard';
 import SessionDrawer from '../components/diary/SessionDrawer';
 import useDiaryStore from '../store/useDiaryStore';
 import useUserStore from '../store/useUserStore';
@@ -45,7 +44,6 @@ const DiaryPage: React.FC = () => {
             {/* Workout history */}
             <div className="lg:col-span-8 flex flex-col">
               <FiltersBar />
-              <WorkoutDisplayCard />
             </div>
           </div>
         </main>
