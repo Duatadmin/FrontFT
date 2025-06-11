@@ -5,7 +5,7 @@
  * It provides functions to fetch and transform data from the Supabase database according to
  * the structure described in docs/database_logic.md.
  */
-import { supabase } from './browser';
+import { supabase } from '../supabase';
 // Import types but don't use mock data generator directly
 import type { 
   WorkoutSession, 
@@ -61,16 +61,16 @@ export async function fetchWorkoutSessions(
       .select('*')
       .eq('user_id', userId);
       
-    // Add status filter if needed (can be removed to show all sessions)
-    query = query.eq('status', 'completed');
+    // Filter for completed sessions
+    query = query.eq('session_completed', true);
     
     // Add date range filters if provided
     if (startDate) {
-      query = query.gte('completed_at', startDate);
+      query = query.gte('session_date', startDate);
     }
     
     if (endDate) {
-      query = query.lte('completed_at', endDate);
+      query = query.lte('session_date', endDate);
     }
     
     // Add focus area filter if provided
@@ -79,7 +79,7 @@ export async function fetchWorkoutSessions(
     }
     
     // Execute the query
-    const { data, error } = await query.order('completed_at', { ascending: false });
+    const { data, error } = await query.order('session_date', { ascending: false });
     
     if (error) {
       console.error('Error fetching workout sessions:', error);
@@ -112,7 +112,7 @@ export async function fetchWorkoutSessions(
           console.warn('Session missing ID:', session);
         }
         
-        if (!session.completed_at && !session.created_at) {
+        if (!session.session_date && !session.created_at) {
           console.warn('Session missing timestamp:', session);
         }
         
@@ -322,7 +322,7 @@ export async function fetchWorkoutsByWeek(
     const workoutsByWeek: Record<string, WorkoutSession[]> = {};
     
     workouts.forEach(workout => {
-      const date = workout.completed_at || workout.created_at;
+      const date = workout.session_date || workout.created_at;
       if (!date) {
         console.warn(`Missing data: timestamp for workout ${workout.id}. Cannot categorize by week.`);
         return;
@@ -373,10 +373,10 @@ export async function fetchActiveTrainingPlan(userId: string): Promise<TrainingP
     // Fallback: Check if there are any workout_sessions with plan metadata
     const { data: workouts, error: workoutsError } = await supabase
       .from('workout_sessions')
-      .select('metadata')
+      .select('metadata,session_date')
       .eq('user_id', userId)
-      .eq('status', 'completed')
-      .order('completed_at', { ascending: false })
+      .eq('session_completed', true)
+      .order('session_date', { ascending: false })
       .limit(20);
     
     if (workoutsError || !workouts?.length) {
@@ -398,11 +398,11 @@ export async function fetchActiveTrainingPlan(userId: string): Promise<TrainingP
           name: (metadata.plan_name as string) || 'Current Plan',
           description: (metadata.plan_description as string) || '',
           active: true,
-          start_date: '', // Use empty string instead of null for string type
-          end_date: '', // Use empty string instead of null for string type
-          created_at: '', // Default empty string
-          updated_at: '', // Default empty string
-          days: {} as any // Required by TrainingPlan type
+          days: metadata.days || {},
+          start_date: metadata.start_date || new Date().toISOString(),
+          end_date: metadata.end_date,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
         };
         
         return trainingPlan;

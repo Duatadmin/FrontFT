@@ -51,7 +51,7 @@ export const generateMockSessions = (count: number = 10): WorkoutSession[] => {
     const session: WorkoutSession = {
       id: `session-${i}`,
       user_id: 'mock-user-123',
-      status: 'completed',
+      session_completed: true,
       focus_area: ['Upper Body', 'Lower Body', 'Full Body', 'Core'][i % 4],
       completed_exercises: {
         'exercise-1': [
@@ -73,7 +73,7 @@ export const generateMockSessions = (count: number = 10): WorkoutSession[] => {
       },
       created_at: date.toISOString(),
       updated_at: date.toISOString(),
-      completed_at: date.toISOString(),
+      session_date: date.toISOString(),
       metadata: {
         source: 'custom',
         is_deload: false,
@@ -114,8 +114,7 @@ export const generateMockGoals = (count: number = 5): Goal[] => {
       category: categories[i % categories.length],
       deadline: deadline.toISOString().split('T')[0],
       created_at: created.toISOString(),
-      status: (['not_started', 'in_progress', 'completed', 'failed'] as const)[i % 4],
-      completed_at: i % 4 === 2 ? new Date().toISOString() : undefined
+      status: (['not_started', 'in_progress', 'completed', 'failed'] as const)[i % 4]
     };
     
     goals.push(goal);

@@ -33,38 +33,38 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          status: 'active' | 'completed';
           focus_area: string;
           completed_exercises: Json;
           metrics: Json;
           created_at: string;
           updated_at: string;
-          completed_at?: string;
           metadata: Json;
+          session_completed: boolean;
+          session_date: string;
         };
         Insert: {
           id?: string;
           user_id: string;
-          status?: 'active' | 'completed';
           focus_area: string;
           completed_exercises?: Json;
           metrics?: Json;
           created_at?: string;
           updated_at?: string;
-          completed_at?: string;
           metadata?: Json;
+          session_completed?: boolean;
+          session_date: string;
         };
         Update: {
           id?: string;
           user_id?: string;
-          status?: 'active' | 'completed';
           focus_area?: string;
           completed_exercises?: Json;
           metrics?: Json;
           created_at?: string;
           updated_at?: string;
-          completed_at?: string;
           metadata?: Json;
+          session_completed?: boolean;
+          session_date?: string;
         };
       };
       training_plans: {
@@ -118,7 +118,6 @@ export interface Database {
           deadline: string;
           created_at: string;
           status: 'not_started' | 'in_progress' | 'completed' | 'failed';
-          completed_at?: string;
         };
         Insert: {
           id?: string;
@@ -132,7 +131,6 @@ export interface Database {
           deadline: string;
           created_at?: string;
           status?: 'not_started' | 'in_progress' | 'completed' | 'failed';
-          completed_at?: string;
         };
         Update: {
           id?: string;
@@ -146,7 +144,6 @@ export interface Database {
           deadline?: string;
           created_at?: string;
           status?: 'not_started' | 'in_progress' | 'completed' | 'failed';
-          completed_at?: string;
         };
       };
       progress_photos: {

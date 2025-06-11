@@ -182,14 +182,14 @@ const useDiaryStore = create<DiaryState>()(
               .from('workout_sessions')
               .select('*')
               .eq('user_id', userId)
-              .eq('status', 'completed')
-              .order('completed_at', { ascending: false });
+              .eq('session_completed', true)
+              .order('session_date', { ascending: false });
             
             // Apply date range filter
             if (activeFilters.dateRange) {
               query = query
-                .gte('completed_at', activeFilters.dateRange.from)
-                .lte('completed_at', activeFilters.dateRange.to);
+                .gte('session_date', activeFilters.dateRange.from)
+                .lte('session_date', activeFilters.dateRange.to);
             }
             
             // Apply focus area filter
@@ -219,11 +219,7 @@ const useDiaryStore = create<DiaryState>()(
               }
             }));
             
-            // In dev mode, generate mock data
-            if (import.meta.env.DEV) {
-              const mockSessions = mockGenerator.generateMockSessions(10);
-              set({ sessions: mockSessions });
-            }
+
           }
         },
         

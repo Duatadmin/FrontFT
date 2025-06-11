@@ -6,8 +6,7 @@
  */
 import useSWR from 'swr';
 import { useCallback } from 'react';
-import { PostgrestError } from '@supabase/supabase-js';
-import { supabase, getCurrentUserId, handleSupabaseError } from './client';
+import { supabase, getCurrentUserId, handleSupabaseError } from '../supabase';
 import { 
   TrainingPlan, 
   WorkoutSession, 
@@ -81,14 +80,14 @@ export const useWorkoutSessions = (
         .from('workout_sessions')
         .select('*')
         .eq('user_id', userId)
-        .eq('status', 'completed')
-        .order('completed_at', { ascending: false });
+        .eq('session_completed', true)
+        .order('session_date', { ascending: false });
       
       // Apply date range filter if provided
       if (dateRange) {
         query = query
-          .gte('completed_at', dateRange.from)
-          .lte('completed_at', dateRange.to);
+          .gte('session_date', dateRange.from)
+          .lte('session_date', dateRange.to);
       }
       
       // Apply focus area filter if provided
@@ -111,7 +110,7 @@ export const useWorkoutSessions = (
   );
   
   return {
-    data,
+    data: data || null,
     error: error ? (error as Error).message : null,
     isLoading,
     mutate
@@ -176,7 +175,7 @@ export const useGoals = (): SupabaseResponse<Goal[]> => {
   const { data, error, isLoading, mutate } = useSWR('user-goals', fetcher);
   
   return {
-    data,
+    data: data || null,
     error: error ? (error as Error).message : null,
     isLoading,
     mutate
@@ -251,7 +250,7 @@ export const useProgressPhotos = (): SupabaseResponse<ProgressPhoto[]> => {
   const { data, error, isLoading, mutate } = useSWR('progress-photos', fetcher);
   
   return {
-    data,
+    data: data || null,
     error: error ? (error as Error).message : null,
     isLoading,
     mutate
@@ -278,17 +277,17 @@ export const useWorkoutStreak = (): SupabaseResponse<{
       
       const { data, error } = await supabase
         .from('workout_sessions')
-        .select('completed_at')
+        .select('session_date')
         .eq('user_id', userId)
-        .eq('status', 'completed')
-        .gte('completed_at', sixtyDaysAgo.toISOString())
-        .order('completed_at', { ascending: false });
-      
+        .eq('session_completed', true)
+        .gte('session_date', sixtyDaysAgo.toISOString())
+        .order('session_date', { ascending: false });
+
       if (error) throw error;
-      
+
       // Prepare workout dates - one per day (just need unique dates)
-      const workoutDates = data
-        ? [...new Set(data.map(session => session.completed_at.split('T')[0]))]
+      const workoutDates: string[] = data
+        ? [...new Set(data.map((session: { session_date: string }) => session.session_date.split('T')[0]))]
         : [];
       
       // Calculate current streak
@@ -323,13 +322,13 @@ export const useWorkoutStreak = (): SupabaseResponse<{
       // Calculate longest streak
       let longestStreak = 0;
       let currentRun = 0;
-      const sortedDates = [...workoutDates].sort();
+      const sortedDates: string[] = [...workoutDates].sort();
       
       for (let i = 0; i < sortedDates.length; i++) {
         if (i === 0) {
           currentRun = 1;
         } else {
-          const prevDate = new Date(sortedDates[i-1]);
+          const prevDate = new Date(sortedDates[i - 1]);
           prevDate.setDate(prevDate.getDate() + 1);
           const expectedDate = prevDate.toISOString().split('T')[0];
           

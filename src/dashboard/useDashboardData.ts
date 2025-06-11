@@ -33,8 +33,8 @@ const generateMockData = (): DashboardData => {
         id: '1',
         user_id: 'user123',
         focus_area: 'Upper Body',
-        status: 'completed',
-        completed_at: new Date(Date.now() - 86400000).toISOString(), // Yesterday
+        session_completed: true,
+        session_date: new Date(Date.now() - 86400000).toISOString(), // Yesterday
         metrics: { total_volume: 5000, total_duration_minutes: 45 },
         completed_exercises: { 'bench-press': [{ set: 1, reps: 10, weight: 135 }] },
         created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
@@ -45,8 +45,8 @@ const generateMockData = (): DashboardData => {
         id: '2',
         user_id: 'user123',
         focus_area: 'Lower Body',
-        status: 'completed',
-        completed_at: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
+        session_completed: true,
+        session_date: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
         metrics: { total_volume: 7500, total_duration_minutes: 60 },
         completed_exercises: { 'squat': [{ set: 1, reps: 8, weight: 225 }] },
         created_at: new Date(Date.now() - 86400000 * 4).toISOString(),
@@ -181,14 +181,14 @@ export function useDashboardData() {
         
         // Log what data we're using for each workout
         recentWorkouts.forEach(workout => {
-          console.log(`Using workout data - ID: ${workout.id}, Date: ${workout.completed_at || workout.created_at}, Focus: ${workout.focus_area}`);
+          console.log(`Using workout data - ID: ${workout.id}, Date: ${workout.session_date || workout.created_at}, Focus: ${workout.focus_area}`);
           
           // Validate critical fields
           if (!workout.id) {
             console.warn('Missing data: workout_id in a workout session');
           }
           
-          if (!workout.completed_at && !workout.created_at) {
+          if (!workout.session_date && !workout.created_at) {
             console.warn(`Missing data: timestamp for workout ${workout.id}`);
           }
           

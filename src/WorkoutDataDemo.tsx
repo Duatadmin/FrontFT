@@ -3,7 +3,7 @@ import WorkoutDataDisplay from './components/WorkoutDataDisplay';
 import { useDashboardData } from './dashboard/useDashboardData';
 
 const WorkoutDataDemo: React.FC = () => {
-  const { data, loading, error, dataSource } = useDashboardData();
+    const { data, error, dataSource } = useDashboardData();
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -77,7 +77,7 @@ const WorkoutDataDemo: React.FC = () => {
                     >
                       <p className="font-bold">{workout.focus_area || 'Workout'}</p>
                       <p className="text-sm">
-                        {new Date(workout.completed_at || workout.created_at || '').toLocaleDateString()}
+                        {new Date(workout.session_date || workout.created_at || '').toLocaleDateString()}
                       </p>
                     </div>
                   ))}

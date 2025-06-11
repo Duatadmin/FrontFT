@@ -81,7 +81,7 @@ const WorkoutDataPage: React.FC = () => {
                       >
                         <p className="font-bold">{workout.focus_area || 'Workout'}</p>
                         <p className="text-sm">
-                          {new Date(workout.completed_at || workout.created_at || '').toLocaleDateString()}
+                          {new Date(workout.session_date || workout.created_at || '').toLocaleDateString()}
                         </p>
                       </div>
                     ))}

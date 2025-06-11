@@ -38,8 +38,9 @@ export const rowsToSessionHistory = (rows: WorkoutFullViewRow[]): CompletedSessi
 
   for (const row of rows) {
     // Core data must exist to build the session history.
-    if (!row.session_id || !row.session_date || !row.exercise_row_id || !row.exercise_name || !row.set_id || typeof row.set_no !== 'number') {
-      console.warn('Skipping row due to missing essential data for history construction:', row);
+    // A session must have an ID and a date to be useful.
+    if (!row.session_id || !row.session_date) {
+      console.warn('Skipping row due to missing session_id or session_date:', row);
       continue;
     }
 
@@ -56,25 +57,31 @@ export const rowsToSessionHistory = (rows: WorkoutFullViewRow[]): CompletedSessi
       sessionMap.set(row.session_id, session);
     }
 
-    // Find or create the exercise within the current session.
-    let exercise = session.exercises.find(ex => ex.exerciseRowId === row.exercise_row_id);
-    if (!exercise) {
-      exercise = {
-        exerciseRowId: row.exercise_row_id,
-        exerciseName: row.exercise_name,
-        sets: [],
-      };
-      session.exercises.push(exercise);
+    // If we have exercise data, add it to the session.
+    if (row.exercise_row_id && row.exercise_name) {
+      let exercise = session.exercises.find(ex => ex.exerciseRowId === row.exercise_row_id);
+      if (!exercise) {
+        exercise = {
+          exerciseRowId: row.exercise_row_id,
+          exerciseName: row.exercise_name,
+          sets: [],
+        };
+        session.exercises.push(exercise);
+      }
+
+      // Add the set to the exercise if it exists.
+      if (row.set_id && typeof row.set_no === 'number') {
+        exercise.sets.push({
+          setId: row.set_id,
+          setNo: row.set_no,
+          repsDone: row.reps_done,
+          weightKg: row.weight_kg,
+          rpe: row.rpe,
+        });
+      }
     }
 
-    // Add the set to the exercise.
-    exercise.sets.push({
-      setId: row.set_id,
-      setNo: row.set_no,
-      repsDone: row.reps_done,
-      weightKg: row.weight_kg,
-      rpe: row.rpe,
-    });
+
   }
 
   return Array.from(sessionMap.values());

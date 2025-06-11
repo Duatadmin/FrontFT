@@ -5,7 +5,7 @@ import {
   ProgressPhoto,
   Challenge,
   Reflection
-} from '../store/useDiaryStore';
+} from '../store/diaryTypes';
 
 /**
  * Mock data generators for the enhanced diary features
@@ -184,12 +184,6 @@ export const generateMockFitnessGoals = (userId: string = 'user-1', count = 5): 
     
     // Randomly mark some goals as completed
     const completed = Math.random() > 0.7;
-    let completedAt = null;
-    
-    if (completed) {
-      completedAt = new Date();
-      completedAt.setDate(completedAt.getDate() - Math.floor(Math.random() * 30));
-    }
     
     goals.push({
       id: `goal-${i}`,
@@ -202,8 +196,7 @@ export const generateMockFitnessGoals = (userId: string = 'user-1', count = 5): 
       category: template.category,
       target_date: targetDate.toISOString(),
       created_at: new Date(now.getTime() - (Math.random() * 90 * 24 * 60 * 60 * 1000)).toISOString(),
-      completed,
-      completed_at: completedAt?.toISOString()
+      completed
     });
   }
   
@@ -264,7 +257,7 @@ export const generateMockWeeklyReflections = (userId: string = 'user-1', count =
     ];
     
     // Randomly select challenges and wins
-    const challenges = [...challengeOptions]
+    [...challengeOptions]
       .sort(() => 0.5 - Math.random())
       .slice(0, Math.floor(Math.random() * 3) + 1);
     
@@ -333,7 +326,6 @@ export const generateCurrentWeekReflection = (userId: string = 'user-1'): Weekly
   // For current week, base metrics on progress so far
   const plannedSessions = 5;
   const daysElapsed = dayOfWeek;
-  const daysRemaining = 7 - daysElapsed;
   
   // Estimate values based on partial week
   const completedSessions = Math.min(Math.floor(Math.random() * (daysElapsed + 1)), plannedSessions);
@@ -380,7 +372,7 @@ export const generateMockProgressPhotos = (userId: string = 'user-1', count = 6)
   ];
   
   // Caption options
-  const captionOptions = [
+  [
     'Week 4 progress - seeing definition in shoulders',
     'Starting to see abs definition',
     '12 weeks in - arms showing improvement',
