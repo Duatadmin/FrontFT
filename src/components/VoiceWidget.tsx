@@ -178,7 +178,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
             className="absolute inset-0 pointer-events-none"
             style={{ borderRadius: '9999px' }} // Match rounded-full
           >
-            <MovingBorder duration={3000} rx="9999px" ry="9999px">
+            <MovingBorder duration={2000} rx="9999px" ry="9999px">
               <div
                 className="h-20 w-20 opacity-[0.8] bg-[radial-gradient(var(--accent-orange)_40%,transparent_60%)]"
               />
