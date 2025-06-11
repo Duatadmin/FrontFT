@@ -1,37 +1,33 @@
-import { WorkoutFullViewRow } from '@/api/workoutPlanService';
+import { type WorkoutFullViewRow } from '@/api/workoutPlanService';
 
-// Define the structure for a single Set
-export interface WorkoutSet {
+// Defines the shape of the data that the UI will consume.
+// This is the single source of truth for these types.
+
+export type SessionSet = {
   setId: string;
   setNo: number;
   repsDone: number | null;
   weightKg: number | null;
   rpe: number | null;
-}
+};
 
-// Define the structure for a single Exercise within a Session
-export interface SessionExercise {
+export type SessionExercise = {
   exerciseRowId: string;
   exerciseName: string;
-  sets: WorkoutSet[];
-}
+  sets: SessionSet[];
+};
 
-// Define the structure for a single completed Session
-export interface CompletedSession {
+export type CompletedSession = {
   sessionId: string;
   sessionDate: string;
-  dayLabel: string | null;
-  focusArea: string | null;
-  overallDifficulty: number | null;
-  durationMinutes: number | null;
+  sessionTitle: string;
   exercises: SessionExercise[];
-}
+};
 
 /**
  * Transforms a flat array of workout_full_view rows into a structured array of completed sessions.
- * Each session contains a list of exercises, and each exercise contains a list of sets.
- * @param rows The flat array of rows from Supabase.
- * @returns A structured array of CompletedSession objects.
+ * @param rows The raw rows from the Supabase view.
+ * @returns A structured array of completed sessions with nested exercises and sets.
  */
 export const rowsToSessionHistory = (rows: WorkoutFullViewRow[]): CompletedSession[] => {
   if (!rows || rows.length === 0) {
@@ -39,49 +35,47 @@ export const rowsToSessionHistory = (rows: WorkoutFullViewRow[]): CompletedSessi
   }
 
   const sessionMap = new Map<string, CompletedSession>();
-  const exerciseMap = new Map<string, SessionExercise>();
 
-  rows.forEach(row => {
-    if (!row.session_id || !row.exercise_row_id || !row.set_id) {
-      return; // Skip rows with missing critical IDs
+  for (const row of rows) {
+    // Core data must exist to build the session history.
+    if (!row.session_id || !row.session_date || !row.exercise_row_id || !row.exercise_name || !row.set_id || typeof row.set_no !== 'number') {
+      console.warn('Skipping row due to missing essential data for history construction:', row);
+      continue;
     }
 
-    // Get or create the session
+    // Find or create the session.
     let session = sessionMap.get(row.session_id);
     if (!session) {
       session = {
         sessionId: row.session_id,
-        sessionDate: row.session_date!,
-        dayLabel: row.day_label,
-        focusArea: row.focus_area,
-        overallDifficulty: row.overall_difficulty,
-        durationMinutes: row.duration_minutes,
+        sessionDate: row.session_date,
+        // Use day_label or focus_area as the title, with a fallback.
+        sessionTitle: row.day_label || row.focus_area || 'Completed Workout',
         exercises: [],
       };
       sessionMap.set(row.session_id, session);
     }
 
-    // Get or create the exercise within the session
-    let exercise = exerciseMap.get(row.exercise_row_id);
+    // Find or create the exercise within the current session.
+    let exercise = session.exercises.find(ex => ex.exerciseRowId === row.exercise_row_id);
     if (!exercise) {
       exercise = {
         exerciseRowId: row.exercise_row_id,
-        exerciseName: row.exercise_name!,
+        exerciseName: row.exercise_name,
         sets: [],
       };
-      exerciseMap.set(row.exercise_row_id, exercise);
       session.exercises.push(exercise);
     }
 
-    // Add the set to the exercise
+    // Add the set to the exercise.
     exercise.sets.push({
       setId: row.set_id,
-      setNo: row.set_no!,
+      setNo: row.set_no,
       repsDone: row.reps_done,
       weightKg: row.weight_kg,
       rpe: row.rpe,
     });
-  });
+  }
 
   return Array.from(sessionMap.values());
 };
