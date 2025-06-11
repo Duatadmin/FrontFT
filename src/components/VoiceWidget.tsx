@@ -39,7 +39,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
     // }
   });
 
-  const sidRef = useRef<string>();
+  const sidRef = useRef<string | null>(null);
   const [showErrorToast, setShowErrorToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -157,39 +157,54 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
     }
   };
 
-  return (
+    return (
     <>
-      <div
-        className={dynamicButtonClasses}
-        onMouseDown={!isDisabled && status === 'idle' ? handleStart : undefined}
-        onMouseUp={!isDisabled && status === 'active' ? handleStop : undefined} // Only call stop if streaming
-        onTouchStart={!isDisabled && status === 'idle' ? handleStart : undefined}
-        onTouchEnd={!isDisabled && status === 'active' ? handleStop : undefined} // Only call stop if streaming
-        onKeyDown={handleKeyPress}
-        onKeyUp={handleKeyRelease}
-        role="button"
-        tabIndex={isDisabled ? -1 : 0}
-        aria-disabled={isDisabled}
-        title={currentTitle}
-        aria-label={currentTitle}
-      >
-        {isActivated && (
-          <div
-            className="absolute inset-0 pointer-events-none"
-            style={{ borderRadius: '9999px' }} // Match rounded-full
-          >
+      {isActivated ? (
+        // ACTIVE STATE: Two-layer structure with animation
+        <div
+          onMouseUp={!isDisabled ? handleStop : undefined}
+          onTouchEnd={!isDisabled ? handleStop : undefined}
+          onKeyUp={handleKeyRelease} // Handles space/enter key release to stop
+          role="button"
+          tabIndex={isDisabled ? -1 : 0}
+          aria-disabled={isDisabled}
+          title={currentTitle}
+          aria-label={currentTitle}
+          className="relative rounded-full p-[1.5px] overflow-hidden cursor-pointer" // Frame
+        >
+          {/* Animation Layer */}
+          <div className="absolute inset-0" style={{ borderRadius: '9999px' }}>
             <MovingBorder duration={2000} rx="50%" ry="50%">
-              <div
-                className="h-20 w-20 opacity-[0.8] bg-[radial-gradient(var(--accent-orange)_40%,transparent_60%)]"
-              />
+              <div className="h-20 w-20 opacity-[0.8] bg-[radial-gradient(var(--accent-orange)_40%,transparent_60%)]" />
             </MovingBorder>
           </div>
-        )}
-        <span className="relative flex items-center z-10">
-          {currentIcon}
-          <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
-        </span>
-      </div>
+          {/* Content Layer */}
+          <div className={dynamicButtonClasses}>
+            <span className="relative flex items-center z-10">
+              {currentIcon}
+              <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
+            </span>
+          </div>
+        </div>
+      ) : (
+        // INACTIVE/OTHER STATES: Original single-layer button
+        <div
+          className={dynamicButtonClasses}
+          onMouseDown={!isDisabled && status === 'idle' ? handleStart : undefined}
+          onTouchStart={!isDisabled && status === 'idle' ? handleStart : undefined}
+          onKeyDown={handleKeyPress} // Handles space/enter key press to start
+          role="button"
+          tabIndex={isDisabled ? -1 : 0}
+          aria-disabled={isDisabled}
+          title={currentTitle}
+          aria-label={currentTitle}
+        >
+          <span className="relative flex items-center z-10">
+            {currentIcon}
+            <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
+          </span>
+        </div>
+      )}
 
       {/* Toast Notification Area (sibling) */}
       <div
