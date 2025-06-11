@@ -34,3 +34,31 @@ export const fetchPlanRows = async (userId: string): Promise<WorkoutFullViewRow[
   // Ensure 'data' is not null; if it is, return an empty array.
   return data || [];
 };
+
+/**
+ * Fetches completed workout sessions for a given user.
+ * @param userId The ID of the user.
+ * @returns A promise that resolves to an array of completed session rows.
+ * @throws Will throw an error if the Supabase query fails.
+ */
+export const fetchCompletedSessions = async (userId: string): Promise<WorkoutFullViewRow[]> => {
+  if (!userId) {
+    console.error('fetchCompletedSessions: userId is required');
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('workout_full_view')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('session_completed', true)
+    .order('session_date', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching completed sessions for userId:', userId, error);
+    throw error;
+  }
+
+  return data || [];
+};
+
