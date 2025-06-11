@@ -161,29 +161,26 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
     <>
       {isActivated ? (
         // ACTIVE STATE: Two-layer structure with animation
-        <div
+        <div // 1. The Root Frame
           onMouseUp={!isDisabled ? handleStop : undefined}
           onTouchEnd={!isDisabled ? handleStop : undefined}
-          onKeyUp={handleKeyRelease} // Handles space/enter key release to stop
+          onKeyUp={handleKeyRelease}
           role="button"
           tabIndex={isDisabled ? -1 : 0}
           aria-disabled={isDisabled}
           title={currentTitle}
           aria-label={currentTitle}
-          className="relative rounded-full p-[1.5px] overflow-hidden cursor-pointer" // Frame
+          className="relative rounded-full p-[1.5px] overflow-hidden cursor-pointer"
         >
-          {/* Animation Layer */}
-          <div className="absolute inset-0" style={{ borderRadius: '9999px' }}>
-            <MovingBorder duration={2000} rx="50%" ry="50%">
+          <div className="absolute inset-0 rounded-full"> {/* 2. The Animation Layer */}
+            <MovingBorder duration={3000} rx="50%" ry="50%">
               <div className="h-20 w-20 opacity-[0.8] bg-[radial-gradient(var(--accent-orange)_40%,transparent_60%)]" />
             </MovingBorder>
           </div>
-          {/* Content Layer */}
-          <div className={dynamicButtonClasses}>
-            <span className="relative flex items-center z-10">
-              {currentIcon}
-              <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
-            </span>
+
+          <div className="relative bg-white/5 backdrop-blur-md text-white flex items-center justify-center w-full h-full rounded-full px-4 py-2"> {/* 3. The Content Layer */}
+            {currentIcon}
+            <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
           </div>
         </div>
       ) : (

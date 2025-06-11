@@ -7,7 +7,6 @@ import VoiceWidget from '../VoiceWidget'; // Added import for VoiceWidget
 import { SendButton } from '../chat/SendButton';         // Adjusted path
 
 import { useVoicePlayback } from '../../hooks/useVoicePlayback';
-import { useWalkie } from '../../hooks/useWalkie'; 
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -25,14 +24,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const chatInputId = 'chat-input'; 
 
   useVoicePlayback(); // voiceEnabled and toggleVoice are not used after removing VoiceModeToggle
-  
-  const { transcript, isListening } = useWalkie(chatInputId); // isWalkieActive and toggleWalkie are not used after removing WalkieTalkieButton
-
-  useEffect(() => {
-    if (transcript) {
-      setInputValue(prev => prev + transcript); 
-    }
-  }, [transcript]);
   
   useEffect(() => {
     const initVoice = async () => {
@@ -116,23 +107,25 @@ const ChatInput: React.FC<ChatInputProps> = ({
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Ask anything..."
-            className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-12 py-1.5 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
+            className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-4 py-1.5 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
             rows={1}
             disabled={isLoading}
             autoComplete="off"
             style={{ scrollbarWidth: 'none' }}
           />
-          <SendButton 
-            onClick={handleSend} 
-            disabled={!inputValue.trim() || isLoading} 
-            className="absolute right-0 top-1/2 -translate-y-1/2 h-[38px] w-[38px]"
-          />
         </div>
 
         {/* Lower row for other action buttons */}
-        <div className="flex items-center justify-start gap-2 pt-2">
-          <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
-          <VoiceWidget onFinalTranscriptCommitted={onSendMessage} />
+        <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center gap-2">
+            <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
+            <VoiceWidget onFinalTranscriptCommitted={onSendMessage} />
+          </div>
+          <SendButton 
+            onClick={handleSend} 
+            disabled={!inputValue.trim() || isLoading} 
+            className="shadow-none"
+          />
           {/* <VoiceModeToggle 
             isVoiceEnabled={voiceEnabled} 
             toggleVoiceEnabled={toggleVoice} 
