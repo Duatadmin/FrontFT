@@ -1,5 +1,4 @@
 import React from 'react';
-import FiltersBar from '../daily/FiltersBar';
 import SessionDrawer from '../SessionDrawer';
 
 /**
@@ -16,7 +15,7 @@ const DailyLogTab: React.FC = () => {
         
         {/* Workout history section */}
         <div className="lg:col-span-8 flex flex-col">
-          <FiltersBar />
+          {/* Content for workout history will go here */}
         </div>
       </div>
       

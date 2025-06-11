@@ -27,11 +27,11 @@ const ProgramsPage: React.FC = () => {
         className="w-full mb-4"
         data-testid="programs-tabs"
       >
-        <TabsList className="grid grid-cols-3 mb-6 w-full bg-background-surface">
+        <TabsList className="grid w-full grid-cols-3 mb-6">
           <TabsTrigger 
             value="current"
             data-testid="current-program-tab-trigger"
-            className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm"
+            className="flex items-center justify-center w-full px-[14px] py-2 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
           >
             <Dumbbell className="h-4 w-4" />
             <span className="hidden sm:inline">Current Program</span>
@@ -41,7 +41,7 @@ const ProgramsPage: React.FC = () => {
           <TabsTrigger 
             value="goals"
             data-testid="goals-tab-trigger"
-            className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm"
+            className="flex items-center justify-center w-full px-[14px] py-2 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
           >
             <Target className="h-4 w-4" />
             <span>Goals</span>
@@ -50,7 +50,7 @@ const ProgramsPage: React.FC = () => {
           <TabsTrigger 
             value="templates"
             data-testid="templates-tab-trigger"
-            className="flex items-center justify-center gap-1.5 px-3 py-2 text-sm"
+            className="flex items-center justify-center w-full px-[14px] py-2 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
           >
             <FileStack className="h-4 w-4" />
             <span className="hidden sm:inline">Templates & Builder</span>

@@ -43,7 +43,7 @@ export default {
         background: '#050608',     // Dark background
         'background-surface': '#0F1014', // Surface background
         'background-card': '#1C1D24',    // Card background
-        'accent-violet': '#8B5CF6',      // Primary accent
+        'accent-violet': '#DFF250',      // Primary accent
         'accent-green': '#10a37f',       // Secondary accent
         'accent-pink': '#E879F9',        // Tertiary accent
         'text-primary': '#FFFFFF',       // Primary text

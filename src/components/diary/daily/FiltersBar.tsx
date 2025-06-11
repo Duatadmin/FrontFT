@@ -63,7 +63,7 @@ const FiltersBar: React.FC = () => {
   
   return (
     <div 
-      className="bg-background-surface sticky top-0 z-10 p-4 mb-4 rounded-xl border border-border-light flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
+      className="w-full bg-neutral-900/60 backdrop-blur-xl border border-white/10 sticky top-0 z-10 p-4 mb-4 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3"
       data-testid="workout-filters"
     >
       <div className="flex flex-wrap gap-2 items-center">
@@ -73,7 +73,7 @@ const FiltersBar: React.FC = () => {
         <div className="relative">
           <button 
             onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-            className="flex items-center px-3 py-1.5 text-sm rounded-lg bg-background-card hover:bg-background-card/80"
+            className="flex items-center px-3 py-1.5 text-sm rounded-lg bg-white/10 hover:bg-white/20 border border-white/10 transition-colors"
             data-testid="date-range-filter"
             aria-expanded={isCalendarOpen}
             aria-haspopup="true"
@@ -91,7 +91,7 @@ const FiltersBar: React.FC = () => {
           
           {isCalendarOpen && (
             <div 
-              className="absolute top-full left-0 mt-1 p-3 bg-background-card rounded-lg shadow-lg border border-border-light min-w-[280px] z-20"
+              className="absolute top-full left-0 mt-1 p-3 bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg min-w-[280px] z-20"
               data-testid="date-picker-dropdown"
             >
               <div className="mb-3">
@@ -145,10 +145,10 @@ const FiltersBar: React.FC = () => {
         <div className="relative">
           <button 
             onClick={() => setIsFocusAreaOpen(!isFocusAreaOpen)}
-            className={`flex items-center px-3 py-1.5 text-sm rounded-lg hover:bg-background-card/80 ${
-              filters.focusArea 
-                ? 'bg-accent-violet/10 text-accent-violet' 
-                : 'bg-background-card'
+            className={`flex items-center px-3 py-1.5 text-sm rounded-lg border border-white/10 transition-colors ${
+              filters.focusArea
+                ? 'bg-accent-violet/20 text-accent-violet'
+                : 'bg-white/10 hover:bg-white/20'
             }`}
             data-testid="focus-area-filter"
             aria-expanded={isFocusAreaOpen}
@@ -173,7 +173,7 @@ const FiltersBar: React.FC = () => {
           
           {isFocusAreaOpen && (
             <div 
-              className="absolute top-full left-0 mt-1 p-2 bg-background-card rounded-lg shadow-lg border border-border-light w-[200px] z-20"
+              className="absolute top-full left-0 mt-1 p-2 bg-neutral-900/60 backdrop-blur-xl border border-white/10 rounded-lg shadow-lg w-[200px] z-20"
               data-testid="focus-area-dropdown"
             >
               {FOCUS_AREAS.map(area => (
@@ -197,10 +197,10 @@ const FiltersBar: React.FC = () => {
         {/* PR Achievement Filter */}
         <button 
           onClick={handlePrToggle}
-          className={`flex items-center px-3 py-1.5 text-sm rounded-lg hover:bg-background-card/80 ${
-            filters.prAchieved 
-              ? 'bg-accent-mint/10 text-accent-mint' 
-              : 'bg-background-card'
+          className={`flex items-center px-3 py-1.5 text-sm rounded-lg border border-white/10 transition-colors ${
+            filters.prAchieved
+              ? 'bg-accent-mint/20 text-accent-mint'
+              : 'bg-white/10 hover:bg-white/20'
           }`}
           data-testid="pr-filter"
           aria-pressed={filters.prAchieved ? "true" : "false"}
@@ -224,7 +224,7 @@ const FiltersBar: React.FC = () => {
       {hasActiveFilters && (
         <button 
           onClick={clearAllFilters}
-          className="text-sm text-text-secondary hover:text-red-500 flex items-center px-2 py-1 rounded hover:bg-background-card"
+          className="text-sm text-text-secondary hover:text-red-500 flex items-center px-2 py-1 rounded hover:bg-white/10 transition-colors"
           data-testid="clear-filters"
         >
           <X size={14} className="mr-1" />
