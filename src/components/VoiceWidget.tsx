@@ -83,7 +83,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
   let currentIcon;
   let currentLabel;
   let currentTitle;
-  const baseButtonClasses = "relative flex items-center justify-center bg-white/5 text-white px-4 py-2 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 hover:scale-105";
+  const baseButtonClasses = "relative flex items-center justify-center bg-white/5 text-white px-4 py-2 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 hover:scale-105 overflow-hidden";
   let bgGradient = ""; // Default to empty, baseButtonClasses handles DashboardButton's default gradient
   let hoverEffects = ""; // Default to empty, baseButtonClasses and inner divs handle DashboardButton's hover
   let cursorClass;
@@ -180,7 +180,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
           >
             <MovingBorder duration={3000} rx="9999px" ry="9999px">
               <div
-                className="h-12 w-12 opacity-75 bg-[radial-gradient(var(--accent-orange)_40%,transparent_60%)]"
+                className="h-20 w-20 opacity-[0.8] bg-[radial-gradient(var(--accent-orange)_40%,transparent_60%)]"
               />
             </MovingBorder>
           </div>
