@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { cleanDayLabel } from '@/utils/TextOutputAdapter';
 import { CompletedSession, SessionSet } from '@/utils/rowsToSessionHistory';
 import { format } from 'date-fns';
 import { Clock, ChevronRight, ChevronDown, Dumbbell, Repeat, TrendingUp } from 'lucide-react';
@@ -52,33 +53,34 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
             <div className="text-sm text-neutral-400">{format(sessionDate, 'MMM')}</div>
             <div className="text-2xl font-bold text-white">{format(sessionDate, 'dd')}</div>
           </div>
-          <div>
-            <h3 className="font-semibold text-white">{session.sessionTitle}</h3>
-            <div className="flex items-center gap-4 text-xs text-neutral-400 mt-1">
-              {(() => {
-                const exerciseMuscleGroups = session.exercises
-                  .map(ex => ex.muscle_group)
-                  .filter(mg => mg && validMuscleGroupsList.includes(mg as MuscleGroup)) as MuscleGroup[];
-                
-                const uniqueMuscleGroups = Array.from(new Set(exerciseMuscleGroups));
-
-                if (uniqueMuscleGroups.length > 0) {
-                  console.log('[SessionCard] Rendering MuscleGroupDisplay with unique groups:', uniqueMuscleGroups);
-                  return <MuscleGroupDisplay muscleGroups={uniqueMuscleGroups} iconSize={12} />;
-                }
-                return null;
-              })()}
-
-              {session.durationMinutes && (
-                <span className="flex items-center gap-1">
-                  <Clock size={12} />
-                  {session.durationMinutes} min
-                </span>
-              )}
-            </div>
+          <div> {/* This div now only contains title and duration */}
+            <h3 className="font-semibold text-white capitalize">{cleanDayLabel(session.sessionTitle)}</h3>
+            {session.durationMinutes && (
+              <div className="flex items-center gap-1 text-xs text-neutral-400 mt-0.5"> {/* Adjusted margin-top */}
+                <Clock size={12} />
+                {session.durationMinutes} min
+              </div>
+            )}
           </div>
         </div>
-        {isExpanded ? <ChevronDown className="text-neutral-500" /> : <ChevronRight className="text-neutral-500" />}
+
+        {/* Right side: Muscle Icons and Chevron */}
+        <div className="flex items-center gap-3"> {/* New container for icons and chevron */}
+          {(() => { // Logic for MuscleGroupDisplay moved here
+            const exerciseMuscleGroups = session.exercises
+              .map(ex => ex.muscle_group)
+              .filter(mg => mg && validMuscleGroupsList.includes(mg as MuscleGroup)) as MuscleGroup[];
+            
+            const uniqueMuscleGroups = Array.from(new Set(exerciseMuscleGroups));
+
+            if (uniqueMuscleGroups.length > 0) {
+              return <MuscleGroupDisplay muscleGroups={uniqueMuscleGroups} iconSize={60
+              } />; // Increased iconSize to 40
+            }
+            return null;
+          })()}
+          {isExpanded ? <ChevronDown className="text-neutral-500" /> : <ChevronRight className="text-neutral-500" />}
+        </div>
       </div>
 
       {/* Expandable Content Section */}
