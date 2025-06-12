@@ -19,6 +19,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   onSendMessage, 
   isLoading,
 }) => {
+  const [voiceWidgetStatus, setVoiceWidgetStatus] = useState<string>('idle'); // To track VoiceWidget state
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatInputId = 'chat-input'; 
@@ -109,7 +110,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             placeholder="Ask anything..."
             className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-4 py-1.5 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
             rows={1}
-            disabled={isLoading}
+            disabled={isLoading || voiceWidgetStatus === 'connecting' || voiceWidgetStatus === 'active'}
             autoComplete="off"
             style={{ scrollbarWidth: 'none' }}
           />
@@ -119,11 +120,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
             <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
-            <VoiceWidget onFinalTranscriptCommitted={onSendMessage} />
+            <VoiceWidget 
+              onFinalTranscriptCommitted={onSendMessage} 
+              isChatProcessing={isLoading} 
+              onStatusChange={setVoiceWidgetStatus} 
+            />
           </div>
           <SendButton 
             onClick={handleSend} 
-            disabled={!inputValue.trim() || isLoading} 
+            disabled={!inputValue.trim() || isLoading || voiceWidgetStatus === 'connecting' || voiceWidgetStatus === 'active'} 
             className="shadow-none"
           />
           {/* <VoiceModeToggle 

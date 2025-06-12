@@ -10,9 +10,11 @@ import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline'
 // Props for VoiceWidget, if any are needed in the future (e.g., config overrides)
 interface VoiceWidgetProps {
   onFinalTranscriptCommitted?: (transcript: string) => void;
+  isChatProcessing?: boolean; 
+  onStatusChange?: (status: string) => void; 
 }
 
-const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted }) => {
+const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange }) => {
   const { voiceEnabled, toggleVoice } = useVoice();
   const walkie = useWalkie({
     wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
@@ -49,7 +51,14 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
     }
   }, [walkie.state.status, walkie.state.errorMessage]);
 
+  useEffect(() => {
+    if (onStatusChange) {
+      onStatusChange(walkie.state.status);
+    }
+  }, [walkie.state.status, onStatusChange]);
+
   const handleStart = async () => {
+    if (isChatProcessing) return; 
     if (!sidRef.current) sidRef.current = uuid();
     try {
       setShowErrorToast(false);
@@ -88,7 +97,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
   let cursorClass;
   let stateSpecificClasses = "";
 
-  const isDisabled = status === 'connecting' || status === 'error';
+  const isDisabled = status === 'connecting' || status === 'error' || !!isChatProcessing;
 
   switch (status) {
     case 'error':

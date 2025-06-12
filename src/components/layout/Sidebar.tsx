@@ -148,7 +148,7 @@ const Sidebar: React.FC = () => {
       {/* Logo Header */}
       <div className="px-6 py-4 flex items-center">
         <div className="h-14">
-          <img src="/Logo.svg" alt="Jarvis Fitness" className="h-full invert" />
+          <img src="/logo.svg" alt="Jarvis Fitness" className="h-full invert" />
         </div>
       </div>
       
