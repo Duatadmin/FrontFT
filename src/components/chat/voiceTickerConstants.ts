@@ -16,7 +16,7 @@ export const INITIAL_DASH_COLOR = '#2e2f28';
 export const NEW_DASH_COLOR = '#97a83b';
 
 const MIN_DB = -60;       // The quietest sound we want to visualize
-const MAX_DB = -24;       // The loudest sound, corresponding to a peak RMS of ~0.06
+const MAX_DB = -14;       // The loudest sound, corresponding to a peak RMS of ~0.06
 
 /**
  * Converts a raw RMS value to its dBFS equivalent.

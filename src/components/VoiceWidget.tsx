@@ -18,6 +18,7 @@ interface VoiceWidgetProps {
 }
 
 const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange, isSendingRef, onRmsData }) => {
+  console.log('[VoiceWidget] Initializing / Re-rendering. isChatProcessing:', isChatProcessing);
   const { voiceEnabled, toggleVoice } = useVoice();
   const walkie = useWalkie({
     wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
@@ -77,18 +78,27 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   }, [walkie.state.status, onStatusChange]);
 
   const handleStart = async () => {
+    console.log(`[VoiceWidget] handleStart called. isChatProcessing: ${isChatProcessing}, isSendingRef.current: ${isSendingRef.current}, current walkie status: ${walkie.state.status}`);
     // Use both the synchronous ref and the state prop for robust locking
-    if (isSendingRef.current || isChatProcessing) return; 
+    if (isSendingRef.current || isChatProcessing) {
+      console.log('[VoiceWidget] handleStart blocked by isSendingRef or isChatProcessing.');
+      return;
+    }
 
     hasSentFinalRef.current = false; // Reset the lock for a new recording session
-    if (!sidRef.current) sidRef.current = uuid();
+    const newSid = uuid(); // Generate a new session ID for each start
+    sidRef.current = newSid; // Store it for reference if needed, though walkie.start now takes the new one
+    console.log(`[VoiceWidget] Generated new SID for walkie.start: ${newSid}`);
+
     try {
       setShowErrorToast(false);
       setToastMessage('');
       if (!voiceEnabled) {
+        console.log('[VoiceWidget] Toggling voiceEnabled on for TTS.');
         toggleVoice(); // Ensure TTS is on
       }
-      await walkie.start(sidRef.current); // Assuming start takes a session ID
+      await walkie.start(newSid); // Use the new session ID
+      console.log('[VoiceWidget] walkie.start() called successfully.');
     } catch (e: any) {
       console.error('Failed to start walkie:', e);
       setToastMessage(e.message || 'Failed to start recording.');
@@ -98,8 +108,10 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   };
 
   const handleStop = async () => {
+    console.log(`[VoiceWidget] handleStop called. Current walkie status: ${walkie.state.status}`);
     try {
       await walkie.stop();
+      console.log('[VoiceWidget] walkie.stop() called successfully.');
     } catch (e: any) {
       console.error('Failed to stop walkie:', e);
       setToastMessage(e.message || 'Failed to stop recording.');

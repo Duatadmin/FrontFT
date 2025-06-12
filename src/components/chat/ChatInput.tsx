@@ -24,6 +24,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [isDemoActive, setIsDemoActive] = useState(false); // For testing the ticker animation
   const voiceTickerRecorderRef = useRef<ISepiaVoiceRecorder>({ onResamplerData: undefined });
   const [isSending, setIsSending] = useState(false); // Local state to prevent race conditions
+  console.log('[ChatInput] Initializing: isSending = false, isLoading =', isLoading); // Initial state log
   const isSendingRef = useRef(false); // Ref for immediate synchronous check
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -83,17 +84,28 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   // When parent signals loading is done, reset our local sending state
   useEffect(() => {
+    console.log('[ChatInput] isLoading prop changed to:', isLoading);
     if (!isLoading) {
+      console.log('[ChatInput] isLoading is false, resetting lock. isSendingRef was:', isSendingRef.current);
       setIsSending(false);
       isSendingRef.current = false; // Reset the lock when parent is done
+      console.log('[ChatInput] Lock reset. isSendingRef is now:', isSendingRef.current);
+    } else {
+      console.log('[ChatInput] isLoading is true, lock remains active or will be set by send action.');
     }
   }, [isLoading]);
 
   const handleVoiceSend = (message: string) => {
-    if (isSendingRef.current) return; // Use ref for immediate synchronous lock
+    console.log('[ChatInput] handleVoiceSend called. Current isSendingRef.current:', isSendingRef.current);
+    if (isSendingRef.current) {
+      console.log('[ChatInput] Voice send blocked because isSendingRef.current is true.');
+      return;
+    }
+    console.log('[ChatInput] Setting lock: isSendingRef.current = true, setIsSending(true)');
     isSendingRef.current = true; // Set lock immediately
     setIsSending(true); // Set state to trigger UI re-render
     onSendMessage(message);
+    console.log('[ChatInput] onSendMessage called with voice message.');
   };
 
 
