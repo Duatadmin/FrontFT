@@ -1,96 +1,120 @@
-// src/components/chat/VoiceTicker.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './VoiceTicker.module.css';
 import * as Constants from './voiceTickerConstants';
 
-export interface ISepiaVoiceRecorder {
-  onResamplerData?: ((rms: number) => void) | undefined;
-}
-
 interface VoiceTickerProps {
   isRecordingActive: boolean;
-  recorder: React.RefObject<ISepiaVoiceRecorder>;
 }
 
-const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }) => {
-  const [bars, setBars] = useState<{ id: number; height: number }[]>([]);
-  const nextId = useRef(0);
-  const voiceLayerRef = useRef<HTMLDivElement>(null);
+// A simple type for our dash objects
+type Dash = {
+  id: number;
+  color: string;
+};
 
-  // Effect to set animation duration and handle resize
+const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
+  const [dashes, setDashes] = useState<Dash[]>([]);
+  const voiceLayerRef = useRef<HTMLDivElement>(null);
+  const nextId = useRef(0);
+
+  // This state will trigger the insertion of a white dash
+  const [insertWhiteDash, setInsertWhiteDash] = useState(false);
+
+  // The core logic: on each animation iteration, we cycle the array.
+  // The first element is moved to the end, and we decide its color.
+  const handleAnimationIteration = useCallback(() => {
+    setDashes(prevDashes => {
+      if (prevDashes.length === 0) return [];
+
+      const dashToMove = { ...prevDashes[0] }; // Get the leftmost dash
+
+      if (insertWhiteDash) {
+        dashToMove.color = '#fff'; // It's time, make it white
+        setInsertWhiteDash(false); // Reset the trigger
+      } else {
+        dashToMove.color = '#000'; // Otherwise, it's a standard black dash
+      }
+
+      // Return a new array with the first element moved to the end
+      return [...prevDashes.slice(1), dashToMove];
+    });
+  }, [insertWhiteDash]);
+
+  // This effect sets up the main state and observers
   useEffect(() => {
     const layer = voiceLayerRef.current;
     if (!layer) return;
 
-    const setAnimDuration = () => {
-      const containerWidth = layer.clientWidth;
-      if (containerWidth > 0) {
-        const animMs = Constants.calcAnimMs(containerWidth);
-        layer.style.setProperty('--dur', `${animMs}ms`);
-      }
-    };
+    let animationFrameId: number;
 
-    setAnimDuration(); // Initial calculation
+    const observer = new ResizeObserver(() => {
+      // Use rAF to avoid ResizeObserver loop limit errors
+      cancelAnimationFrame(animationFrameId);
+      animationFrameId = requestAnimationFrame(() => {
+        const containerWidth = layer.clientWidth;
+        if (containerWidth === 0) return;
 
-    const resizeObserver = new ResizeObserver(setAnimDuration);
-    resizeObserver.observe(layer);
+        const dashStep = Constants.DASH_W + Constants.DASH_GAP;
+        // Calculate how many dashes we need to fill the container, plus a buffer
+        const numDashes = Math.ceil(containerWidth / dashStep) + 5;
+
+        // Set CSS variables for our styles
+        layer.style.setProperty('--dash-w', `${Constants.DASH_W}px`);
+        layer.style.setProperty('--dash-gap', `${Constants.DASH_GAP}px`);
+
+        // Animation duration for one step
+        const stepDuration = (dashStep / Constants.SCROLL_SPEED_PX_SEC) * 1000;
+        layer.style.setProperty('--dur', `${stepDuration}ms`);
+
+        // Create the initial array of dashes
+        setDashes(
+          Array.from({ length: numDashes }, () => ({
+            id: nextId.current++,
+            color: '#000', // Start with all black dashes
+          }))
+        );
+      });
+    });
+
+    observer.observe(layer);
 
     return () => {
-      resizeObserver.unobserve(layer);
+      observer.disconnect();
+      cancelAnimationFrame(animationFrameId);
     };
   }, []);
 
-  // Effect to handle recorder data and create new bars
+  // This effect runs an interval to trigger the insertion of white dashes
   useEffect(() => {
-    const currentRecorder = recorder.current;
-    if (isRecordingActive && currentRecorder) {
-      currentRecorder.onResamplerData = (rms: number) => {
-        const norm = Math.max(0, Math.min(rms / Constants.AUDIO_SCALE, 1));
-        const height = Constants.MIN_H + norm * (Constants.MAX_H - Constants.MIN_H);
-        setBars(prevBars => [...prevBars, { id: nextId.current++, height }]);
-      };
-    } else if (currentRecorder) {
-      // Clear callback if not recording or recorder changed
-      currentRecorder.onResamplerData = undefined;
-    }
+    if (dashes.length === 0) return;
 
-    // Cleanup function for this effect
-    return () => {
-      if (currentRecorder) {
-        currentRecorder.onResamplerData = undefined;
-      }
-    };
-  }, [isRecordingActive, recorder]);
+    // The interval for inserting a new white dash.
+    const dashStep = Constants.DASH_W + Constants.DASH_GAP;
+    const stepDuration = (dashStep / Constants.SCROLL_SPEED_PX_SEC) * 1000;
 
-  const handleAnimationEnd = useCallback((barId: number) => {
-    setBars(prevBars => prevBars.filter(bar => bar.id !== barId));
-  }, []);
-  
-  // Effect to clear bars when recording stops and all animations are done (indirectly)
-  // This is mainly to ensure the component unmounts if it becomes empty after stopping
-  useEffect(() => {
-    if (!isRecordingActive && bars.length > 0) {
-      // Bars will be removed by their own onAnimationEnd. 
-      // If isRecordingActive becomes false, no new bars are added.
-      // The component will unmount when bars.length becomes 0 via the condition below.
-    } else if (!isRecordingActive && bars.length === 0){
-      // This condition is handled by the return null below
-    }
-  }, [isRecordingActive, bars.length]);
+    const intervalId = setInterval(() => {
+      setInsertWhiteDash(true);
+    }, stepDuration * 30); // Insert a white dash every 30 steps
 
-  if (!isRecordingActive && bars.length === 0) {
+    return () => clearInterval(intervalId);
+  }, [dashes.length]);
+
+  // The component only renders if isRecordingActive is true
+  if (!isRecordingActive) {
     return null;
   }
 
   return (
-    <div className={styles.voiceLayer} ref={voiceLayerRef}>
-      <div className={styles.baseline} />
-      {bars.map((bar) => (
+    <div
+      className={styles.voiceLayer}
+      ref={voiceLayerRef}
+      onAnimationIteration={handleAnimationIteration}
+    >
+      {dashes.map(dash => (
         <div
-          key={bar.id}
-          className={styles.bar}
-          style={{ height: `${bar.height}px` }}
-          onAnimationEnd={() => handleAnimationEnd(bar.id)}
+          key={dash.id}
+          className={styles.dash}
+          style={{ backgroundColor: dash.color }}
         />
       ))}
     </div>
@@ -98,4 +122,5 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
 };
 
 export default VoiceTicker;
+
 

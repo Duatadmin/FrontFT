@@ -1,4 +1,3 @@
-/* src/components/chat/VoiceTicker.module.css */
 .voiceLayer {
   position: absolute;
   top: 0;
@@ -6,43 +5,28 @@
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: flex-end; /* Align bars to the bottom, new bars will be added to the start of the flex container */
+  align-items: center; /* Vertically center the dashes */
   overflow: hidden;
   pointer-events: none;
-  z-index: 1;
+  /* The animation is now on this container */
+  animation: slideX var(--dur) linear infinite;
 }
 
-.baseline {
-  position: absolute;
-  /* The baseline is a single black bar that visually sits at the vertical center. 
-     Its height is defined by BASELINE_H. It animates to create the illusion of dashes when white bars move over it. */
-  top: calc(50% - (2px / 2)); /* Assuming BASELINE_H is 2px, centers it */
-  left: 0;
-  width: 100%; /* Takes full width of its parent */
-  height: 2px; /* BASELINE_H from constants */
-  background: #000; /* Solid black background */
-  animation: slideX var(--dur) linear infinite; /* Infinite scroll */
-  z-index: 1; /* Ensure baseline is rendered */
-}
-
-.bar {
-  width: 4px; /* BAR_W from constants */
-  margin-right: 2px; /* BAR_M from constants, creates BAR_STEP_PX */
-  border-radius: 1px;
-  background: #fff; /* Solid white background */
-  animation: slideX var(--dur) linear forwards; /* Animates once and stays at the end state */
-  flex-shrink: 0; /* Prevent bars from shrinking */
-  z-index: 2; /* White bars should be on top of the black baseline */
-  /* Height is set dynamically via style prop in the component */
+.dash {
+  width: var(--dash-w);
+  height: 2px; /* Fixed height for dashes */
+  margin-right: var(--dash-gap);
+  flex-shrink: 0; /* Prevent dashes from shrinking */
+  /* Color is set via inline style for dynamic changes */
 }
 
 @keyframes slideX {
   from {
-    transform: translateX(0); /* Starts at its natural position in the flex container */
+    transform: translateX(0);
   }
   to {
-    /* BASELINE_STEP_PX is 8px. This moves the element to the right by its container's width + 8px */
-    transform: translateX(calc(100% + 8px)); 
+    /* Move left by exactly one dash-step to create a perfect, seamless loop */
+    transform: translateX(calc(-1 * (var(--dash-w) + var(--dash-gap))));
   }
 }
 
