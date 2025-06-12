@@ -13,9 +13,10 @@ interface VoiceWidgetProps {
   isChatProcessing?: boolean; 
   onStatusChange?: (status: string) => void; 
   isSendingRef: React.RefObject<boolean>;
+  onRmsData?: (rms: number) => void; // Prop for RMS data
 }
 
-const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange, isSendingRef }) => {
+const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange, isSendingRef, onRmsData }) => {
   const { voiceEnabled, toggleVoice } = useVoice();
   const walkie = useWalkie({
     wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
@@ -24,6 +25,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       mono: true,
       sepiaModulesPath: '/sepia/modules/' // Path to Sepia engine modules
     },
+    // onPcmData is not a valid option for useWalkie, RMS data will be obtained from walkie.state.level
     onVadStatusChange: (isSpeaking: boolean) => {
       console.log('VAD Status changed:', isSpeaking);
       // You can add logic here if the VoiceWidget needs to react directly to VAD status
@@ -53,6 +55,19 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       setShowErrorToast(true);
     }
   }, [walkie.state.status, walkie.state.errorMessage]);
+
+  useEffect(() => {
+    if (onStatusChange) {
+      onStatusChange(walkie.state.status);
+    }
+  }, [walkie.state.status, onStatusChange]);
+
+  // Effect to send RMS data when walkie.state.level changes
+  useEffect(() => {
+    if (onRmsData && typeof walkie.state.level === 'number') {
+      onRmsData(walkie.state.level);
+    }
+  }, [walkie.state.level, onRmsData]);
 
   useEffect(() => {
     if (onStatusChange) {

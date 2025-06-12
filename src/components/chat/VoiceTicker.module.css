@@ -1,0 +1,52 @@
+/* src/components/chat/VoiceTicker.module.css */
+.voiceLayer {
+  position: absolute;
+  inset: 0; /* equivalent to top: 0; right: 0; bottom: 0; left: 0; */
+  overflow: hidden;
+  pointer-events: none; /* Makes the layer non-interactive */
+  display: flex; /* To align bars from the left */
+  align-items: center; /* Vertically center content (baseline and bars) */
+}
+
+.baseline {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 2px; /* BASELINE_H */
+  transform: translateY(-50%); /* Vertically center the baseline */
+  background: repeating-linear-gradient(
+    to right,
+    currentColor, /* Uses current text color, good for theming */
+    currentColor 4px, /* DASH_W */
+    transparent 4px,
+    transparent 8px /* DASH_W + GAP_W = BASELINE_STEP_PX */
+  );
+  z-index: 1; /* Ensure baseline is behind dynamic bars if needed, though bars are added later */
+}
+
+.bar {
+  position: absolute; /* Positioned relative to .voiceLayer */
+  left: 0; /* Start from the left edge */
+  bottom: 50%; /* Align bottom to vertical center */
+  /* transform: translateY(50%); */ /* Adjust to be truly centered - applied in keyframes for consistency */
+  width: 4px; /* BAR_W */
+  background: #fff; /* White color */
+  border-radius: 1px; /* Slight rounding */
+  /* margin-right: 2px; /* BAR_GAP - Not effective for absolutely positioned elements for spacing between each other */
+  animation-name: slideX;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards; /* Keep the state of the last keyframe */
+  animation-duration: 1300ms; /* ANIM_MS */
+  z-index: 2; /* Ensure bars are above the baseline */
+}
+
+@keyframes slideX {
+  from {
+    transform: translateX(0) translateY(50%);
+  }
+  to {
+    /* This 100% refers to the width of the containing block (.voiceLayer) for absolutely positioned elements */
+    transform: translateX(calc(100% + 6px)) translateY(50%); /* BAR_STEP_PX = 6px */
+  }
+}

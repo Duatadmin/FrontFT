@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 
 import { DashboardButton } from '../chat/DashboardButton'; // Adjusted path
 import VoiceWidget from '../VoiceWidget'; // Added import for VoiceWidget
+import VoiceTicker, { ISepiaVoiceRecorder } from './VoiceTicker'; // Import VoiceTicker and its recorder interface
 // import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
 // import { WalkieTalkieButton } from '../chat/WalkieTalkieButton';// Adjusted path
 import { SendButton } from '../chat/SendButton';         // Adjusted path
@@ -25,6 +26,11 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatInputId = 'chat-input'; 
+
+  // Ref for the recorder object to be passed to VoiceTicker.
+  // VoiceTicker will set the onResamplerData callback on this object.
+  const voiceTickerRecorderRef = useRef<ISepiaVoiceRecorder>({ onResamplerData: undefined });
+  // const chatInputId = 'chat-input'; // This was the duplicate, original is near line 25
 
   useVoicePlayback(); // voiceEnabled and toggleVoice are not used after removing VoiceModeToggle
   
@@ -90,6 +96,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
     onSendMessage(message);
   };
 
+  // Callback to receive RMS data from VoiceWidget and forward it to VoiceTicker's recorder
+  const handleRmsDataFromVoiceWidget = (rms: number) => {
+    if (voiceTickerRecorderRef.current.onResamplerData) {
+      voiceTickerRecorderRef.current.onResamplerData(rms);
+    }
+  };
+
   const handleSend = () => {
     const trimmedInput = inputValue.trim();
     if (trimmedInput && !isTextInputDisabled) {
@@ -137,7 +150,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
             autoComplete="off"
             style={{ scrollbarWidth: 'none' }}
           />
+          {/* VoiceTicker is rendered here, its internal logic handles visibility */}
+          <VoiceTicker
+            isRecordingActive={voiceWidgetStatus === 'active'}
+            recorder={voiceTickerRecorderRef.current}
+          />
         </div>
+
+        {/* Lower row for other action buttons */}
 
         {/* Lower row for other action buttons */}
         <div className="flex items-center justify-between pt-2">
@@ -147,6 +167,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
               onFinalTranscriptCommitted={handleVoiceSend} 
               isChatProcessing={isVoiceWidgetDisabled}
               isSendingRef={isSendingRef} 
+              onRmsData={handleRmsDataFromVoiceWidget} // New prop for VoiceWidget
               onStatusChange={setVoiceWidgetStatus} 
             />
           </div>
