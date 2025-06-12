@@ -18,6 +18,7 @@
   margin-right: var(--dash-gap);
   flex-shrink: 0; /* Prevent dashes from shrinking */
   /* Color is set via inline style for dynamic changes */
+  transition: height .12s linear;
 }
 
 @keyframes slideX {
