@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
 
 import { DashboardButton } from '../chat/DashboardButton'; // Adjusted path
 import VoiceWidget from '../VoiceWidget'; // Added import for VoiceWidget
-import VoiceTicker from './VoiceTicker'; // Import VoiceTicker
+import VoiceTicker, { ISepiaVoiceRecorder } from './VoiceTicker'; // Import VoiceTicker and its recorder interface
 // import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
 // import { WalkieTalkieButton } from '../chat/WalkieTalkieButton';// Adjusted path
 import { SendButton } from '../chat/SendButton';         // Adjusted path
@@ -22,6 +22,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 }) => {
   const [voiceWidgetStatus, setVoiceWidgetStatus] = useState<string>('idle'); // To track VoiceWidget state
   const [isDemoActive, setIsDemoActive] = useState(false); // For testing the ticker animation
+  const voiceTickerRecorderRef = useRef<ISepiaVoiceRecorder>({ onResamplerData: undefined });
   const [isSending, setIsSending] = useState(false); // Local state to prevent race conditions
   const isSendingRef = useRef(false); // Ref for immediate synchronous check
   const [inputValue, setInputValue] = useState('');
@@ -121,7 +122,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const isVoiceWidgetDisabled = isLoading || isSending;
 
   // Text input should be disabled if the voice widget is, OR if the voice widget is actively listening.
-  const isTickerActive = voiceWidgetStatus === 'active' || isDemoActive;
+  const isRealVoiceActive = voiceWidgetStatus === 'active';
+  const isTickerActive = isRealVoiceActive || isDemoActive;
   const isTextInputDisabled = isVoiceWidgetDisabled || isTickerActive || voiceWidgetStatus === 'connecting';
 
   return (
@@ -148,7 +150,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
           {/* VoiceTicker is rendered here, its internal logic handles visibility */}
           {isTickerActive && (
             <div className="absolute inset-0 pointer-events-none">
-              <VoiceTicker isRecordingActive={true} />
+              <VoiceTicker isRecordingActive={true} recorder={voiceTickerRecorderRef} />
             </div>
           )}
         </div>
@@ -171,7 +173,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
               isChatProcessing={isVoiceWidgetDisabled}
               isSendingRef={isSendingRef} 
 
-              onStatusChange={setVoiceWidgetStatus} 
+              onStatusChange={setVoiceWidgetStatus}
+              onRmsData={(rms) => {
+                if (voiceTickerRecorderRef.current && voiceTickerRecorderRef.current.onResamplerData) {
+                  voiceTickerRecorderRef.current.onResamplerData(rms);
+                }
+              }}
             />
           </div>
           <SendButton 

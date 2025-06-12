@@ -2,83 +2,94 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './VoiceTicker.module.css';
 import * as Constants from './voiceTickerConstants';
 
-interface VoiceTickerProps {
-  isRecordingActive: boolean;
-}
-
-// A simple type for our dash objects
-type Dash = {
+interface Dash {
   id: number;
   color: string;
-};
+  height: number;
+}
 
-const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
+export interface ISepiaVoiceRecorder {
+  onResamplerData?: (rms: number) => void;
+}
+
+interface VoiceTickerProps {
+  isRecordingActive: boolean;
+  recorder: React.RefObject<ISepiaVoiceRecorder>; // Prop to receive the recorder object
+}
+
+const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }) => {
   const [dashes, setDashes] = useState<Dash[]>([]);
   const voiceLayerRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(0);
+  const latestRms = useRef<number>(0); // Store the latest RMS value
 
-  
+  // Subscribe to RMS data from the recorder
+  useEffect(() => {
+    if (isRecordingActive && recorder.current) {
+      const currentRecorder = recorder.current;
+      currentRecorder.onResamplerData = (rms: number) => {
+        latestRms.current = rms;
+      };
+      // Cleanup function
+      return () => {
+        if (currentRecorder) {
+          currentRecorder.onResamplerData = undefined;
+        }
+      };
+    }
+  }, [isRecordingActive, recorder]);
 
   // The core logic: on each animation iteration, we cycle the array.
-  // The first element is moved to the end, and we decide its color.
+  // The first element is moved to the end, its color is updated, and height is set from RMS.
   const handleAnimationIteration = useCallback(() => {
     setDashes(prevDashes => {
       if (prevDashes.length === 0) return [];
 
-      // Get the leftmost dash and color it white for recycling.
-      const dashToMove = { 
+      const newHeight = Constants.mapRmsToHeight(latestRms.current);
+      const dashToMove: Dash = { 
         ...prevDashes[0], 
-        color: Constants.NEW_DASH_COLOR 
+        color: Constants.NEW_DASH_COLOR, 
+        height: newHeight,
       };
 
-      // Return a new array with the first element moved to the end
       return [...prevDashes.slice(1), dashToMove];
     });
-  }, []);
+  }, []); // latestRms.current is a ref, no need to include in deps for this callback
 
   // This effect sets up the main state and observers
   useEffect(() => {
-    const layer = voiceLayerRef.current;
-    if (!layer) return;
+    const voiceLayer = voiceLayerRef.current;
+    if (!voiceLayer) return;
 
-    let animationFrameId: number;
-
-    const observer = new ResizeObserver(() => {
-      // Use rAF to avoid ResizeObserver loop limit errors
-      cancelAnimationFrame(animationFrameId);
-      animationFrameId = requestAnimationFrame(() => {
-        const containerWidth = layer.clientWidth;
-        if (containerWidth === 0) return;
-
-        const dashStep = Constants.DASH_W + Constants.DASH_GAP;
-        // Calculate how many dashes we need to fill the container, plus a buffer
-        const numDashes = Math.ceil(containerWidth / dashStep) + 5;
-
-        // Set CSS variables for our styles
-        layer.style.setProperty('--dash-w', `${Constants.DASH_W}px`);
-        layer.style.setProperty('--dash-gap', `${Constants.DASH_GAP}px`);
-
-        // Animation duration for one step
-        const stepDuration = (dashStep / Constants.SCROLL_SPEED_PX_SEC) * 1000;
-        layer.style.setProperty('--dur', `${stepDuration}ms`);
-
-        // Create the initial array of dashes
+    const observer = new ResizeObserver(entries => {
+      const entry = entries[0];
+      if (entry) {
+        const containerWidth = entry.contentRect.width;
+        // +2 for buffer, ensures seamless looping
+        const numDashes = Math.ceil(containerWidth / Constants.DASH_STEP_PX) + 2; 
+        
         setDashes(
-          Array.from({ length: numDashes }, () => ({
+          Array.from({ length: numDashes }, (_) => ({
             id: nextId.current++,
-            color: Constants.INITIAL_DASH_COLOR, // Start with all black dashes
+            color: Constants.INITIAL_DASH_COLOR,
+            height: Constants.MIN_DASH_H, // Initial dashes have min height
           }))
         );
-      });
+        
+        voiceLayer.style.setProperty('--dash-w', `${Constants.DASH_W}px`);
+        voiceLayer.style.setProperty('--dash-gap', `${Constants.DASH_GAP}px`);
+        // Animation duration is now calculated based only on dash step and speed
+        voiceLayer.style.setProperty('--dur', `${Constants.calcAnimMs()}ms`);
+      }
     });
 
-    observer.observe(layer);
+    observer.observe(voiceLayer);
 
     return () => {
+      observer.unobserve(voiceLayer);
       observer.disconnect();
-      cancelAnimationFrame(animationFrameId);
     };
-  }, []);
+  }, []); // Empty dependency array: runs once on mount
 
   // The component only renders if isRecordingActive is true
   if (!isRecordingActive) {
@@ -95,7 +106,10 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
         <div
           key={dash.id}
           className={styles.dash}
-          style={{ backgroundColor: dash.color }}
+          style={{ 
+            backgroundColor: dash.color,
+            height: `${dash.height}px`, // Apply dynamic height
+          }}
         />
       ))}
     </div>
@@ -103,5 +117,3 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
 };
 
 export default VoiceTicker;
-
-

@@ -14,7 +14,7 @@
 
 .dash {
   width: var(--dash-w);
-  height: 2px; /* Fixed height for dashes */
+  /* Height is now set via inline style for dynamic changes */
   margin-right: var(--dash-gap);
   flex-shrink: 0; /* Prevent dashes from shrinking */
   /* Color is set via inline style for dynamic changes */
