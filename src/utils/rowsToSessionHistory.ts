@@ -14,6 +14,7 @@ export type SessionSet = {
 export type SessionExercise = {
   exerciseRowId: string;
   exerciseName: string;
+  muscle_group: string | null; // Added muscle_group
   sets: SessionSet[];
 };
 
@@ -68,6 +69,7 @@ export const rowsToSessionHistory = (rows: WorkoutFullViewRow[]): CompletedSessi
         exercise = {
           exerciseRowId: row.exercise_row_id,
           exerciseName: row.exercise_name,
+          muscle_group: row.muscle_group, // Populate muscle_group
           sets: [],
         };
         session.exercises.push(exercise);

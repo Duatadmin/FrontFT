@@ -101,23 +101,26 @@ export const normalizeMuscleGroups = (focusAreaString: string | null | undefined
 };
 
 interface MuscleGroupDisplayProps {
-  focusArea: string | null | undefined;
+  muscleGroups: MuscleGroup[];
   iconSize?: number;
   containerClassName?: string;
 }
 
-export const MuscleGroupDisplay: React.FC<MuscleGroupDisplayProps> = ({ focusArea, iconSize = 14, containerClassName = '' }) => {
-  const normalizedGroups = normalizeMuscleGroups(focusArea);
-
-  if (normalizedGroups.length === 0) {
-    // Optionally, render the original Target icon and text if no valid groups are found, or if it's preferred
-    // For now, returning null to hide if no specific muscle groups are identified.
+export const MuscleGroupDisplay: React.FC<MuscleGroupDisplayProps> = ({ muscleGroups, iconSize = 14, containerClassName = '' }) => {
+  if (!muscleGroups || muscleGroups.length === 0) {
     return null; 
+  }
+
+  // Ensure we only render valid muscle groups, though the input should ideally be pre-validated
+  const validDisplayGroups = muscleGroups.filter(group => validMuscleGroups.includes(group));
+
+  if (validDisplayGroups.length === 0) {
+    return null;
   }
 
   return (
     <div className={`flex items-center gap-1.5 bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full ${containerClassName}`}>
-      {normalizedGroups.map(group => (
+      {validDisplayGroups.map(group => (
         <MuscleIcon key={group} muscleGroup={group} size={iconSize} />
       ))}
     </div>

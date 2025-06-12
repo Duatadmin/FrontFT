@@ -2,7 +2,15 @@ import React, { useState } from 'react';
 import { CompletedSession, SessionSet } from '@/utils/rowsToSessionHistory';
 import { format } from 'date-fns';
 import { Clock, ChevronRight, ChevronDown, Dumbbell, Repeat, TrendingUp } from 'lucide-react';
-import { MuscleGroupDisplay } from './MuscleGroupDisplay';
+import { MuscleGroupDisplay, MuscleGroup } from './MuscleGroupDisplay'; // Import MuscleGroup type
+
+// It's good practice to have this defined in one place, e.g., in MuscleGroupDisplay.tsx and export it, 
+// or a shared types file. For now, redefining here for clarity of what SessionCard expects.
+const validMuscleGroupsList: MuscleGroup[] = [
+  'abs', 'back', 'biceps', 'calves', 'cardio', 'chest', 
+  'forearms', 'glutes', 'hamstrings', 'quads', 
+  'shoulders', 'traps', 'triceps'
+];
 
 interface SessionCardProps {
   session: CompletedSession;
@@ -48,10 +56,15 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
             <h3 className="font-semibold text-white">{session.sessionTitle}</h3>
             <div className="flex items-center gap-4 text-xs text-neutral-400 mt-1">
               {(() => {
-                if (session.focusArea) {
-                  console.log('[SessionCard] session.focusArea:', session.focusArea);
-                  console.log('[SessionCard] Rendering MuscleGroupDisplay for:', session.focusArea);
-                  return <MuscleGroupDisplay focusArea={session.focusArea} iconSize={12} />;
+                const exerciseMuscleGroups = session.exercises
+                  .map(ex => ex.muscle_group)
+                  .filter(mg => mg && validMuscleGroupsList.includes(mg as MuscleGroup)) as MuscleGroup[];
+                
+                const uniqueMuscleGroups = Array.from(new Set(exerciseMuscleGroups));
+
+                if (uniqueMuscleGroups.length > 0) {
+                  console.log('[SessionCard] Rendering MuscleGroupDisplay with unique groups:', uniqueMuscleGroups);
+                  return <MuscleGroupDisplay muscleGroups={uniqueMuscleGroups} iconSize={12} />;
                 }
                 return null;
               })()}
