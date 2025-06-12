@@ -32,11 +32,6 @@ export const WeekTabs: React.FC<WeekTabsProps> = ({ weeks }) => {
             aria-current={selectedWeekIndex === index ? 'page' : undefined}
           >
             Week {week.weekNumber || index + 1}
-            {week.weekStartDate && (
-              <span className="block text-xs text-neutral-500">
-                (Starts: {new Date(week.weekStartDate).toLocaleDateString()})
-              </span>
-            )}
           </button>
         ))}
       </nav>

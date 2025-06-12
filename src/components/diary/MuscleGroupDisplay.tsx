@@ -119,7 +119,7 @@ export const MuscleGroupDisplay: React.FC<MuscleGroupDisplayProps> = ({ muscleGr
   }
 
   return (
-    <div className={`flex items-center gap-3 bg-emerald-500/20 text-emerald-400 px-4 py-2 rounded-full ${containerClassName}`}> {/* Adjusted padding and gap for larger icons */}
+    <div className={`flex items-center gap-2 p-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl shadow-md ${containerClassName}`}>
       {validDisplayGroups.map(group => (
         <MuscleIcon key={group} muscleGroup={group} size={iconSize} />
       ))}
