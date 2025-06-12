@@ -21,6 +21,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   isLoading,
 }) => {
   const [voiceWidgetStatus, setVoiceWidgetStatus] = useState<string>('idle'); // To track VoiceWidget state
+  const [isDemoActive, setIsDemoActive] = useState(false); // For testing the ticker animation
   const [isSending, setIsSending] = useState(false); // Local state to prevent race conditions
   const isSendingRef = useRef(false); // Ref for immediate synchronous check
   const [inputValue, setInputValue] = useState('');
@@ -120,7 +121,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const isVoiceWidgetDisabled = isLoading || isSending;
 
   // Text input should be disabled if the voice widget is, OR if the voice widget is actively listening.
-  const isTextInputDisabled = isVoiceWidgetDisabled || voiceWidgetStatus === 'active' || voiceWidgetStatus === 'connecting';
+  const isTickerActive = voiceWidgetStatus === 'active' || isDemoActive;
+  const isTextInputDisabled = isVoiceWidgetDisabled || isTickerActive || voiceWidgetStatus === 'connecting';
 
   return (
     <div 
@@ -136,7 +138,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={voiceWidgetStatus === 'active' ? '' : 'Ask anything...'}
+            placeholder={isTickerActive ? '' : 'Ask anything...'}
             className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-4 py-1.5 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
             rows={1}
             disabled={isTextInputDisabled}
@@ -144,7 +146,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             style={{ scrollbarWidth: 'none' }}
           />
           {/* VoiceTicker is rendered here, its internal logic handles visibility */}
-          {voiceWidgetStatus === 'active' && (
+          {isTickerActive && (
             <div className="absolute inset-0 pointer-events-none">
               <VoiceTicker isRecordingActive={true} />
             </div>
@@ -157,6 +159,13 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
             <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
+            <button
+              onClick={() => setIsDemoActive(prev => !prev)}
+              className="px-2.5 py-1.5 text-xs bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors"
+              title="Toggle animation for testing"
+            >
+              Test Ticker
+            </button>
             <VoiceWidget 
               onFinalTranscriptCommitted={handleVoiceSend} 
               isChatProcessing={isVoiceWidgetDisabled}

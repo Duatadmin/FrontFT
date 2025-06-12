@@ -17,8 +17,7 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
   const voiceLayerRef = useRef<HTMLDivElement>(null);
   const nextId = useRef(0);
 
-  // This state will trigger the insertion of a white dash
-  const [insertWhiteDash, setInsertWhiteDash] = useState(false);
+  
 
   // The core logic: on each animation iteration, we cycle the array.
   // The first element is moved to the end, and we decide its color.
@@ -26,17 +25,16 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
     setDashes(prevDashes => {
       if (prevDashes.length === 0) return [];
 
-      const dashToMove = { ...prevDashes[0] }; // Get the leftmost dash
-
-      if (insertWhiteDash) {
-        dashToMove.color = Constants.NEW_DASH_COLOR; // It's time, make it white
-        setInsertWhiteDash(false); // Reset the trigger
-      }
+      // Get the leftmost dash and color it white for recycling.
+      const dashToMove = { 
+        ...prevDashes[0], 
+        color: Constants.NEW_DASH_COLOR 
+      };
 
       // Return a new array with the first element moved to the end
       return [...prevDashes.slice(1), dashToMove];
     });
-  }, [insertWhiteDash]);
+  }, []);
 
   // This effect sets up the main state and observers
   useEffect(() => {
@@ -81,21 +79,6 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
       cancelAnimationFrame(animationFrameId);
     };
   }, []);
-
-  // This effect runs an interval to trigger the insertion of white dashes
-  useEffect(() => {
-    if (dashes.length === 0) return;
-
-    // The interval for inserting a new white dash.
-    const dashStep = Constants.DASH_W + Constants.DASH_GAP;
-    const stepDuration = (dashStep / Constants.SCROLL_SPEED_PX_SEC) * 1000;
-
-    const intervalId = setInterval(() => {
-      setInsertWhiteDash(true);
-    }, stepDuration * 30); // Insert a white dash every 30 steps
-
-    return () => clearInterval(intervalId);
-  }, [dashes.length]);
 
   // The component only renders if isRecordingActive is true
   if (!isRecordingActive) {
