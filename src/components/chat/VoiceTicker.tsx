@@ -1,14 +1,12 @@
 // src/components/chat/VoiceTicker.tsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import styles from './VoiceTicker.module.css';
 import * as Constants from './voiceTickerConstants';
 
-// Defines the shape of the recorder object expected as a prop.
 export interface ISepiaVoiceRecorder {
   onResamplerData?: ((rms: number) => void) | undefined;
 }
 
-// Defines the props for the VoiceTicker component.
 interface VoiceTickerProps {
   isRecordingActive: boolean;
   recorder: React.RefObject<ISepiaVoiceRecorder>;
@@ -18,58 +16,67 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
   const [bars, setBars] = useState<{ id: number; height: number }[]>([]);
   const nextId = useRef(0);
   const voiceLayerRef = useRef<HTMLDivElement>(null);
-  const [maxBars, setMaxBars] = useState(0);
 
-  // Effect to calculate max bars based on container width
+  // Effect to set animation duration and handle resize
   useEffect(() => {
-    const calculateMaxBars = () => {
-      if (voiceLayerRef.current) {
-        const containerWidth = voiceLayerRef.current.clientWidth;
-        const barWidth = Constants.BAR_W + Constants.BAR_M;
-        setMaxBars(Math.floor(containerWidth / barWidth));
+    const layer = voiceLayerRef.current;
+    if (!layer) return;
+
+    const setAnimDuration = () => {
+      const containerWidth = layer.clientWidth;
+      if (containerWidth > 0) {
+        const animMs = Constants.calcAnimMs(containerWidth);
+        layer.style.setProperty('--dur', `${animMs}ms`);
       }
     };
 
-    calculateMaxBars();
-    const resizeObserver = new ResizeObserver(calculateMaxBars);
-    if (voiceLayerRef.current) {
-      resizeObserver.observe(voiceLayerRef.current);
-    }
-    return () => resizeObserver.disconnect();
+    setAnimDuration(); // Initial calculation
+
+    const resizeObserver = new ResizeObserver(setAnimDuration);
+    resizeObserver.observe(layer);
+
+    return () => {
+      resizeObserver.unobserve(layer);
+    };
   }, []);
 
-  // Effect to handle recorder data and create bars
+  // Effect to handle recorder data and create new bars
   useEffect(() => {
     const currentRecorder = recorder.current;
     if (isRecordingActive && currentRecorder) {
       currentRecorder.onResamplerData = (rms: number) => {
-        const AMPLIFICATION_FACTOR = 30;
-        const amplifiedNorm = rms * AMPLIFICATION_FACTOR;
-        const norm = Math.max(0, Math.min(1, amplifiedNorm));
+        const norm = Math.max(0, Math.min(rms / Constants.AUDIO_SCALE, 1));
         const height = Constants.MIN_H + norm * (Constants.MAX_H - Constants.MIN_H);
-        const newBar = { id: nextId.current++, height };
-
-        if (maxBars > 0) {
-          setBars(prev => [...prev, newBar].slice(-maxBars));
-        }
+        setBars(prevBars => [...prevBars, { id: nextId.current++, height }]);
       };
     } else if (currentRecorder) {
+      // Clear callback if not recording or recorder changed
       currentRecorder.onResamplerData = undefined;
     }
 
+    // Cleanup function for this effect
     return () => {
       if (currentRecorder) {
         currentRecorder.onResamplerData = undefined;
       }
     };
-  }, [isRecordingActive, recorder, maxBars]);
+  }, [isRecordingActive, recorder]);
 
-  // Effect to clear bars when recording stops
+  const handleAnimationEnd = useCallback((barId: number) => {
+    setBars(prevBars => prevBars.filter(bar => bar.id !== barId));
+  }, []);
+  
+  // Effect to clear bars when recording stops and all animations are done (indirectly)
+  // This is mainly to ensure the component unmounts if it becomes empty after stopping
   useEffect(() => {
-    if (!isRecordingActive) {
-      setBars([]);
+    if (!isRecordingActive && bars.length > 0) {
+      // Bars will be removed by their own onAnimationEnd. 
+      // If isRecordingActive becomes false, no new bars are added.
+      // The component will unmount when bars.length becomes 0 via the condition below.
+    } else if (!isRecordingActive && bars.length === 0){
+      // This condition is handled by the return null below
     }
-  }, [isRecordingActive]);
+  }, [isRecordingActive, bars.length]);
 
   if (!isRecordingActive && bars.length === 0) {
     return null;
@@ -79,10 +86,11 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
     <div className={styles.voiceLayer} ref={voiceLayerRef}>
       <div className={styles.baseline} />
       {bars.map((bar) => (
-        <span
+        <div
           key={bar.id}
           className={styles.bar}
           style={{ height: `${bar.height}px` }}
+          onAnimationEnd={() => handleAnimationEnd(bar.id)}
         />
       ))}
     </div>
@@ -90,3 +98,4 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
 };
 
 export default VoiceTicker;
+
