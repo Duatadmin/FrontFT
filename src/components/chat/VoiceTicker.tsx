@@ -28,6 +28,7 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
     if (isRecordingActive && recorder.current) {
       const currentRecorder = recorder.current;
       currentRecorder.onResamplerData = (rms: number) => {
+        console.log('RMS received:', rms);
         latestRms.current = rms;
       };
       // Cleanup function
@@ -42,6 +43,7 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
   // The core logic: on each animation iteration, we cycle the array.
   // The first element is moved to the end, its color is updated, and height is set from RMS.
   const handleAnimationIteration = useCallback(() => {
+    console.log('Animation iteration. Latest RMS:', latestRms.current);
     setDashes(prevDashes => {
       if (prevDashes.length === 0) return [];
 
