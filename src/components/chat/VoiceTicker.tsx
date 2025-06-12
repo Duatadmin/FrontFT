@@ -29,10 +29,8 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
       const dashToMove = { ...prevDashes[0] }; // Get the leftmost dash
 
       if (insertWhiteDash) {
-        dashToMove.color = '#fff'; // It's time, make it white
+        dashToMove.color = Constants.NEW_DASH_COLOR; // It's time, make it white
         setInsertWhiteDash(false); // Reset the trigger
-      } else {
-        dashToMove.color = '#000'; // Otherwise, it's a standard black dash
       }
 
       // Return a new array with the first element moved to the end
@@ -70,7 +68,7 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive }) => {
         setDashes(
           Array.from({ length: numDashes }, () => ({
             id: nextId.current++,
-            color: '#000', // Start with all black dashes
+            color: Constants.INITIAL_DASH_COLOR, // Start with all black dashes
           }))
         );
       });

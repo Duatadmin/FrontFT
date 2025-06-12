@@ -12,6 +12,13 @@ export const DASH_STEP_PX = DASH_W + DASH_GAP; // 6px, total space one dash elem
 export const BAR_STEP_PX = BAR_W + BAR_M; // 6px, total space one dynamic bar takes horizontally including its margin
 
 export const SCROLL_SPEED_PX_SEC = 30; // px/s, speed of the scrolling animation
+
+/** The color for dashes created on initial mount. */
+export const INITIAL_DASH_COLOR = '#000';
+
+/** The color for all new dashes created after the initial mount. */
+export const NEW_DASH_COLOR = '#fff';
+
 export const AUDIO_SCALE = 6000; // divisor for normalizing RMS audio levels (higher means less sensitive)
 
 /**

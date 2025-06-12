@@ -6,6 +6,7 @@ import { v4 as uuid } from 'uuid';
 import { Mic } from 'lucide-react';
 import { Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import VoiceTicker from './chat/VoiceTicker';
 
 // Props for VoiceWidget, if any are needed in the future (e.g., config overrides)
 interface VoiceWidgetProps {
@@ -201,6 +202,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
           title={currentTitle} // This is "Streaming... Release to stop"
           aria-label={currentTitle}
         >
+          <VoiceTicker isRecordingActive={isActivated} />
           <span className="relative flex items-center z-10">
             {currentIcon} {/* This is Mic icon for active state */}
             <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span> {/* This is "Listening..." */}
