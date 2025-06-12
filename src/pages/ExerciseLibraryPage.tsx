@@ -98,7 +98,7 @@ const ExerciseLibraryPage: React.FC = () => {
         <>
           <button
             onClick={handleGoBack}
-            className="mb-6 flex items-center text-lime-400 hover:text-lime-300 transition-colors duration-200 bg-neutral-800/60 hover:bg-neutral-700/80 px-4 py-2 rounded-lg shadow-md border border-lime-400/30 hover:border-lime-500/50"
+            className="mb-6 inline-flex items-center text-lime-400 hover:text-lime-300 transition-all duration-300 ease-in-out bg-neutral-700/50 hover:bg-lime-500/10 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-lime-400/60 hover:border-lime-300/80 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-opacity-70"
           >
             <ArrowLeft size={20} className="mr-2" />
             Back to Muscle Groups
