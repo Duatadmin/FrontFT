@@ -4,7 +4,6 @@ import { useVoice } from '../hooks/VoiceContext';
 import { useWalkie } from '../hooks/useWalkie'; 
 import { v4 as uuid } from 'uuid';
 import { Mic } from 'lucide-react';
-import { MovingBorder } from './ui/moving-border';
 import { Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
@@ -160,28 +159,22 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted })
     return (
     <>
       {isActivated ? (
-        // ACTIVE STATE: Two-layer structure with animation
-        <div // 1. The Root Frame
+        // ACTIVE STATE: Simplified single-layer button
+        <div
+          className={dynamicButtonClasses} // Apply base and state-specific classes
           onMouseUp={!isDisabled ? handleStop : undefined}
           onTouchEnd={!isDisabled ? handleStop : undefined}
           onKeyUp={handleKeyRelease}
           role="button"
           tabIndex={isDisabled ? -1 : 0}
           aria-disabled={isDisabled}
-          title={currentTitle}
+          title={currentTitle} // This is "Streaming... Release to stop"
           aria-label={currentTitle}
-          className="relative rounded-full p-[1.5px] overflow-hidden cursor-pointer"
         >
-          <div className="absolute inset-0 rounded-full"> {/* 2. The Animation Layer */}
-            <MovingBorder duration={3000} rx="50%" ry="50%">
-              <div className="h-20 w-20 opacity-[0.8] bg-[radial-gradient(var(--accent-orange)_40%,transparent_60%)]" />
-            </MovingBorder>
-          </div>
-
-          <div className="relative bg-white/5 backdrop-blur-md text-white flex items-center justify-center w-full h-full rounded-full px-4 py-2"> {/* 3. The Content Layer */}
-            {currentIcon}
-            <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
-          </div>
+          <span className="relative flex items-center z-10">
+            {currentIcon} {/* This is Mic icon for active state */}
+            <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span> {/* This is "Listening..." */}
+          </span>
         </div>
       ) : (
         // INACTIVE/OTHER STATES: Original single-layer button
