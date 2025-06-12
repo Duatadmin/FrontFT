@@ -98,7 +98,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   // Callback to receive RMS data from VoiceWidget and forward it to VoiceTicker's recorder
   const handleRmsDataFromVoiceWidget = (rms: number) => {
-    if (voiceTickerRecorderRef.current.onResamplerData) {
+    console.log(`[ChatInput] Received RMS data: ${rms}`);
+    if (voiceTickerRecorderRef.current && voiceTickerRecorderRef.current.onResamplerData) {
       voiceTickerRecorderRef.current.onResamplerData(rms);
     }
   };
@@ -143,7 +144,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Ask anything..."
+            placeholder={voiceWidgetStatus === 'active' ? '' : 'Ask anything...'}
             className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-4 py-1.5 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
             rows={1}
             disabled={isTextInputDisabled}

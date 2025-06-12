@@ -35,8 +35,10 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
     if (isRecordingActive && currentRecorder) {
       // console.log('VoiceTicker: Subscribing to onResamplerData');
       currentRecorder.onResamplerData = (rms: number) => {
-        const norm = Math.max(0, Math.min(1, rms / Constants.AUDIO_SCALE));
+        // The 'rms' value from useWalkie's state.level is already a normalized value (0-1).
+        const norm = rms;
         const height = Constants.MIN_H + norm * (Constants.MAX_H - Constants.MIN_H);
+        console.log(`[VoiceTicker] Received RMS: ${rms}, Calculated Height: ${height}`);
         setBars((prevBars) => [...prevBars, { id: nextId.current++, height }]);
       };
     } else if (currentRecorder && currentRecorder.onResamplerData) {
