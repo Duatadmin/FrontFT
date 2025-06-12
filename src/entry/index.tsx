@@ -43,16 +43,14 @@ export const LoginPage = () => {
   }, [isAuthenticated, isLoading, navigate]);
 
   return (
-    <div className="relative grid h-screen place-items-center overflow-hidden bg-[#121212]">
-      {/* radial glow */}
-      <div className="absolute left-1/2 top-1/2 h-[600px] w-[600px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#722e0b] opacity-60 blur-[220px]" />
+    <div className="grid h-screen place-items-center bg-dark-bg bg-gradient-radial-olive">
       {/* auth card container */}
-      <div className="relative z-10 w-[384px] rounded-[14px] border border-white/5 bg-[#1e1e1e]/90 p-8 shadow-[0_28px_68px_-10px_rgba(0,0,0,0.6)] backdrop-blur">
+      <div className="relative z-10 w-[384px] rounded-2xl border border-white/5 bg-neutral-900/60 p-8 shadow-[0_28px_68px_-10px_rgba(0,0,0,0.6)] backdrop-blur-xl">
         <div className="mb-4 flex items-center justify-center space-x-3">
           <Logo />
         </div>
         <Auth
-          supabaseClient={supabase} // This will use the shared Supabase client later
+          supabaseClient={supabase}
           providers={['google', 'facebook', 'twitter']}
           appearance={{ theme: customAuthUITheme }}
           theme="dark"
