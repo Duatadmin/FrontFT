@@ -9,7 +9,7 @@ export type MuscleGroup =
   | 'chest' | 'forearms' | 'glutes' | 'hamstrings' 
   | 'quads' | 'shoulders' | 'traps' | 'triceps';
 
-const validMuscleGroups: MuscleGroup[] = [
+export const validMuscleGroups: MuscleGroup[] = [
   'abs', 'back', 'biceps', 'calves', 'cardio', 'chest', 
   'forearms', 'glutes', 'hamstrings', 'quads', 
   'shoulders', 'traps', 'triceps'
@@ -21,7 +21,7 @@ interface MuscleIconProps {
   className?: string;
 }
 
-const MuscleIcon: React.FC<MuscleIconProps> = ({ muscleGroup, size = 16, className = '' }) => {
+const MuscleIcon: React.FC<MuscleIconProps> = ({ muscleGroup, size = 30, className = '' }) => {
   const iconPath = `/muscle_group_icons/${muscleGroup}.svg`;
 
   if (muscleGroup === 'cardio') {

@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import type { WorkoutSession } from '@/utils/rowsToPlanTree';
 import { cleanDayLabel } from '@/utils/TextOutputAdapter';
-import { ExerciseList } from './ExerciseList'; // Assuming ExerciseList will be created next
+import { ExerciseList } from './ExerciseList';
+import { MuscleGroupDisplay, MuscleGroup, validMuscleGroups } from '@/components/diary/MuscleGroupDisplay';
+import { format } from 'date-fns';
 
 interface SessionAccordionProps {
   sessions: WorkoutSession[];
@@ -13,38 +15,58 @@ interface AccordionItemProps {
   session: WorkoutSession;
   isOpen: boolean;
   onToggle: () => void;
-  // planId: string; // Removed
   weekId: string;
 }
 
+
+
 const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle, weekId }) => {
+  const sessionDate = session.sessionDate ? new Date(session.sessionDate) : null;
+
+  const exerciseMuscleGroups = (session.exercises || [])
+    .map(ex => ex.muscleGroup)
+    .filter(mg => mg && validMuscleGroups.includes(mg as MuscleGroup)) as MuscleGroup[];
+  
+  const uniqueMuscleGroups = Array.from(new Set(exerciseMuscleGroups));
+
   return (
-    <div className="border border-neutral-700 rounded-lg mb-3 bg-neutral-800/50 shadow-md">
-      <h2>
-        <button
-          type="button"
-          className="flex items-center justify-between w-full p-4 font-medium text-left text-neutral-300 hover:bg-neutral-700/50 rounded-t-lg focus:outline-none focus:ring-2 focus:ring-green-600 transition-colors duration-150"
-          onClick={onToggle}
-          aria-expanded={isOpen}
-          aria-controls={`session-content-${session.sessionId}`}
-        >
-          <div className="flex-grow">
-            <span className="text-lg text-green-400 capitalize">
+    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-lg mb-3 transition-all duration-300 ease-in-out">
+      {/* Header Section */}
+      <div 
+        className={`p-4 flex items-center justify-between cursor-pointer hover:bg-white/10 ${isOpen ? 'rounded-t-xl' : 'rounded-xl'} transition-colors duration-150`}
+        onClick={onToggle}
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onToggle()}
+        aria-expanded={isOpen}
+        aria-controls={`session-content-${session.sessionId}`}
+      >
+        <div className="flex items-center gap-3 flex-grow min-w-0">
+          {sessionDate && (
+            <div className="text-center w-10 flex-shrink-0">
+              <div className="text-xs text-neutral-400">{format(sessionDate, 'MMM')}</div>
+              <div className="text-lg font-bold text-white">{format(sessionDate, 'dd')}</div>
+            </div>
+          )}
+          <div className="flex-grow min-w-0">
+            <h3 className="font-semibold text-base text-white capitalize truncate">
               {session.dayLabel ? cleanDayLabel(session.dayLabel) : `Session ${session.sessionNumber || ''}`.trim()}
-            </span>
-            {session.focusArea && (
-              <span className="block text-sm text-neutral-400">
-                Focus: {session.focusArea}
-              </span>
-            )}
-            {session.sessionDate && (
-                 <span className="block text-xs text-neutral-500">
-                    {new Date(session.sessionDate).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                 </span>
+            </h3>
+            {sessionDate && (
+              <div className="text-xs text-neutral-500">
+                {format(sessionDate, 'eeee')}{/* Full day name, e.g., Tuesday */}
+              </div>
             )}
           </div>
+        </div>
+
+        {/* Right side: Muscle Icons and Chevron */}
+        <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+          {uniqueMuscleGroups.length > 0 && (
+            <MuscleGroupDisplay muscleGroups={uniqueMuscleGroups} iconSize={24} />
+          )}
           <svg
-            className={`w-5 h-5 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+            className={`w-5 h-5 transform transition-transform duration-200 text-neutral-400 ${isOpen ? 'rotate-180' : ''}`}
             fill="none"
             stroke="currentColor"
             viewBox="0 0 24 24"
@@ -52,12 +74,12 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
           </svg>
-        </button>
-      </h2>
+        </div>
+      </div>
       {isOpen && (
         <div
           id={`session-content-${session.sessionId}`}
-          className="p-4 border-t border-neutral-700 bg-neutral-800/30 rounded-b-lg"
+          className="px-4 pb-4 pt-2 border-t border-white/10 bg-transparent rounded-b-xl"
         >
           {session.exercises && session.exercises.length > 0 ? (
             <ExerciseList 
