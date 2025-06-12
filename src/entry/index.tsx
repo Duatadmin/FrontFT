@@ -56,6 +56,13 @@ export const LoginPage = () => {
           theme="dark"
           magicLink
           socialLayout="horizontal"
+          localization={{
+            variables: {
+              sign_in: {
+                button_label: 'SIGN IN',
+              },
+            },
+          }}
         />
       </div>
     </div>

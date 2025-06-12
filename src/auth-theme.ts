@@ -1,31 +1,40 @@
 import { ThemeSupa } from '@supabase/auth-ui-shared';
 
 export const customAuthUITheme = {
-  // Using ThemeSupa.default as a base for the light theme variant
-  default: ThemeSupa.default,
-
+  ...ThemeSupa,
   dark: {
-    ...ThemeSupa.dark, // Base dark theme properties
+    ...ThemeSupa.dark,
     colors: {
-      ...ThemeSupa.dark.colors, // Base dark theme colors
-      brand: '#f45d09',                            // Main brand color (e.g., for primary buttons)
-      brandAccent: '#ff8a1f',                      // Accent color for hover/focus states
-      brandButtonText: 'white',                   // Text color for brand buttons
-
-      defaultButtonBackground: '#242424',          // Background for social auth buttons
-      defaultButtonBackgroundHover: '#3e3e3e',    // Hover background for social auth buttons
-      defaultButtonBorder: '#2e2e2e',              // Border for social auth buttons
-      defaultButtonText: '#eaeaea',                // Text color for social auth buttons (if needed, default is often white)
-
-      inputBackground: '#131313',
-      inputBorder: '#2e2e2e',
-      inputText: '#eaeaea',                        // Text color for inputs
-      inputPlaceholder: '#6c6c6c',               // Placeholder text color for inputs
+      ...ThemeSupa.dark.colors,
+      brand: '#97a93c',
+      brandAccent: '#829336',
+      brandButtonText: 'white',
+      // Style the social buttons
+      defaultButtonBackground: 'transparent',
+      defaultButtonBackgroundHover: 'rgba(255, 255, 255, 0.1)',
+      defaultButtonBorder: 'rgba(255, 255, 255, 0.2)',
+      defaultButtonText: 'white',
+      // Other styles
+      dividerBackground: '#2e2e2e',
+      inputBackground: 'transparent',
+      inputBorder: 'rgba(255, 255, 255, 0.2)',
+      inputBorderHover: 'gray',
+      inputBorderFocus: 'gray',
+      inputText: 'white',
+      inputPlaceholder: 'darkgray',
+    },
+    fonts: {
+      ...ThemeSupa.dark.fonts,
+      buttonFontFamily: 'Montserrat, sans-serif',
+    },
+    space: {
+      ...ThemeSupa.dark.space,
+      buttonPadding: '10px 15px',
     },
     radii: {
       ...ThemeSupa.dark.radii,
-      inputBorderRadius: '0.875rem', // 14px
-      buttonBorderRadius: '0.875rem', // 14px
+      borderRadiusButton: '8px',
+      inputBorderRadius: '8px',
     },
   },
 } as const;
