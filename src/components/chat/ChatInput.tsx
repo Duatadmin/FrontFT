@@ -20,6 +20,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
   isLoading,
 }) => {
   const [voiceWidgetStatus, setVoiceWidgetStatus] = useState<string>('idle'); // To track VoiceWidget state
+  const [isSending, setIsSending] = useState(false); // Local state to prevent race conditions
+  const isSendingRef = useRef(false); // Ref for immediate synchronous check
   const [inputValue, setInputValue] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const chatInputId = 'chat-input'; 
@@ -73,9 +75,24 @@ const ChatInput: React.FC<ChatInputProps> = ({
     }
   }, [inputValue]);
 
+  // When parent signals loading is done, reset our local sending state
+  useEffect(() => {
+    if (!isLoading) {
+      setIsSending(false);
+      isSendingRef.current = false; // Reset the lock when parent is done
+    }
+  }, [isLoading]);
+
+  const handleVoiceSend = (message: string) => {
+    if (isSendingRef.current) return; // Use ref for immediate synchronous lock
+    isSendingRef.current = true; // Set lock immediately
+    setIsSending(true); // Set state to trigger UI re-render
+    onSendMessage(message);
+  };
+
   const handleSend = () => {
     const trimmedInput = inputValue.trim();
-    if (trimmedInput && !isLoading) {
+    if (trimmedInput && !isTextInputDisabled) {
       onSendMessage(trimmedInput);
       setInputValue('');
       if (textareaRef.current) {
@@ -92,6 +109,12 @@ const ChatInput: React.FC<ChatInputProps> = ({
       handleSend();
     }
   };
+
+    // Voice widget should be disabled if the parent is loading OR if we've just sent a voice message
+  const isVoiceWidgetDisabled = isLoading || isSending;
+
+  // Text input should be disabled if the voice widget is, OR if the voice widget is actively listening.
+  const isTextInputDisabled = isVoiceWidgetDisabled || voiceWidgetStatus === 'active' || voiceWidgetStatus === 'connecting';
 
   return (
     <div 
@@ -110,7 +133,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
             placeholder="Ask anything..."
             className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-4 py-1.5 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
             rows={1}
-            disabled={isLoading || voiceWidgetStatus === 'connecting' || voiceWidgetStatus === 'active'}
+            disabled={isTextInputDisabled}
             autoComplete="off"
             style={{ scrollbarWidth: 'none' }}
           />
@@ -121,14 +144,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
           <div className="flex items-center gap-2">
             <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
             <VoiceWidget 
-              onFinalTranscriptCommitted={onSendMessage} 
-              isChatProcessing={isLoading} 
+              onFinalTranscriptCommitted={handleVoiceSend} 
+              isChatProcessing={isVoiceWidgetDisabled}
+              isSendingRef={isSendingRef} 
               onStatusChange={setVoiceWidgetStatus} 
             />
           </div>
           <SendButton 
             onClick={handleSend} 
-            disabled={!inputValue.trim() || isLoading || voiceWidgetStatus === 'connecting' || voiceWidgetStatus === 'active'} 
+            disabled={!inputValue.trim() || isTextInputDisabled} 
             className="shadow-none"
           />
           {/* <VoiceModeToggle 

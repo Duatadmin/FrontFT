@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { CompletedSession, SessionSet } from '@/utils/rowsToSessionHistory';
 import { format } from 'date-fns';
-import { Clock, Target, ChevronRight, ChevronDown, Dumbbell, Repeat, TrendingUp } from 'lucide-react';
+import { Clock, ChevronRight, ChevronDown, Dumbbell, Repeat, TrendingUp } from 'lucide-react';
+import { MuscleGroupDisplay } from './MuscleGroupDisplay';
 
 interface SessionCardProps {
   session: CompletedSession;
@@ -46,12 +47,15 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
           <div>
             <h3 className="font-semibold text-white">{session.sessionTitle}</h3>
             <div className="flex items-center gap-4 text-xs text-neutral-400 mt-1">
-              {session.focusArea && (
-                <span className="flex items-center gap-1 bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-full">
-                  <Target size={12} />
-                  {session.focusArea}
-                </span>
-              )}
+              {(() => {
+                if (session.focusArea) {
+                  console.log('[SessionCard] session.focusArea:', session.focusArea);
+                  console.log('[SessionCard] Rendering MuscleGroupDisplay for:', session.focusArea);
+                  return <MuscleGroupDisplay focusArea={session.focusArea} iconSize={12} />;
+                }
+                return null;
+              })()}
+
               {session.durationMinutes && (
                 <span className="flex items-center gap-1">
                   <Clock size={12} />

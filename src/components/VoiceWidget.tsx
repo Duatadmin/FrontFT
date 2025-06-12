@@ -12,9 +12,10 @@ interface VoiceWidgetProps {
   onFinalTranscriptCommitted?: (transcript: string) => void;
   isChatProcessing?: boolean; 
   onStatusChange?: (status: string) => void; 
+  isSendingRef: React.RefObject<boolean>;
 }
 
-const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange }) => {
+const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange, isSendingRef }) => {
   const { voiceEnabled, toggleVoice } = useVoice();
   const walkie = useWalkie({
     wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
@@ -29,10 +30,11 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     },
     onTranscription: (transcript: { text: string; final: boolean; type: string }) => {
       console.log('VoiceWidget received transcript:', transcript);
-      if (transcript.final && transcript.text.trim() && onFinalTranscriptCommitted) {
+      // Use a ref to ensure we only commit the final transcript once per session
+      if (transcript.final && transcript.text.trim() && onFinalTranscriptCommitted && !hasSentFinalRef.current) {
+        hasSentFinalRef.current = true; // Set the lock
         onFinalTranscriptCommitted(transcript.text);
       }
-      // You can add logic here, e.g., display transcript or send to another component
     },
     // onError: (error) => {
     //   console.error('VoiceWidget received error from useWalkie:', error);
@@ -41,6 +43,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   });
 
   const sidRef = useRef<string | null>(null);
+  const hasSentFinalRef = useRef(false);
   const [showErrorToast, setShowErrorToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -58,7 +61,10 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   }, [walkie.state.status, onStatusChange]);
 
   const handleStart = async () => {
-    if (isChatProcessing) return; 
+    // Use both the synchronous ref and the state prop for robust locking
+    if (isSendingRef.current || isChatProcessing) return; 
+
+    hasSentFinalRef.current = false; // Reset the lock for a new recording session
     if (!sidRef.current) sidRef.current = uuid();
     try {
       setShowErrorToast(false);
