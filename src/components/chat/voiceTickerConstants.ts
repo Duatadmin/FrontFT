@@ -3,7 +3,8 @@ export const DASH_W = 4; // px, width of a black dash in the baseline
 export const GAP_W = 4; // px, gap between black dashes in the baseline
 export const BASELINE_H = 2; // px, thickness of the baseline
 
-export const BAR_W = 4; // px, width of a white animated bar
+export const BAR_W = 4; // bar width
+export const BAR_M = 2; // bar margin of a white animated bar
 export const BAR_GAP = 2; // px, right margin of a white animated bar
 export const MIN_H = 2; // px, minimum height of a white animated bar
 export const MAX_H = 24; // px, maximum height of a white animated bar

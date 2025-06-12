@@ -98,7 +98,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   // Callback to receive RMS data from VoiceWidget and forward it to VoiceTicker's recorder
   const handleRmsDataFromVoiceWidget = (rms: number) => {
-    console.log(`[ChatInput] Received RMS data: ${rms}`);
     if (voiceTickerRecorderRef.current && voiceTickerRecorderRef.current.onResamplerData) {
       voiceTickerRecorderRef.current.onResamplerData(rms);
     }

@@ -65,7 +65,6 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   // Effect to send RMS data when walkie.state.level changes
   useEffect(() => {
     if (onRmsData && typeof walkie.state.level === 'number') {
-      console.log(`[VoiceWidget] walkie.state.level changed: ${walkie.state.level}`);
       onRmsData(walkie.state.level);
     }
   }, [walkie.state.level, onRmsData]);

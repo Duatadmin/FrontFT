@@ -1,81 +1,88 @@
 // src/components/chat/VoiceTicker.tsx
 import React, { useState, useEffect, useRef } from 'react';
-import * as Constants from './voiceTickerConstants';
 import styles from './VoiceTicker.module.css';
+import * as Constants from './voiceTickerConstants';
 
-// Placeholder: Define this more accurately based on the actual SepiaVoiceRecorder
-export interface ISepiaVoiceRecorder { // Exporting for potential use in ChatInput
-  onResamplerData?: (rms: number) => void;
+// Defines the shape of the recorder object expected as a prop.
+export interface ISepiaVoiceRecorder {
+  onResamplerData?: ((rms: number) => void) | undefined;
 }
 
+// Defines the props for the VoiceTicker component.
 interface VoiceTickerProps {
-  isRecordingActive: boolean; // True when microphone is active and we should listen for RMS data
-  recorder?: ISepiaVoiceRecorder | null; // The voice recorder instance
-}
-
-interface Bar {
-  id: number;
-  height: number;
+  isRecordingActive: boolean;
+  recorder: React.RefObject<ISepiaVoiceRecorder>;
 }
 
 const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }) => {
-  const [bars, setBars] = useState<Bar[]>([]);
-  const nextId = useRef<number>(0);
-  const internalRecorderRef = useRef<ISepiaVoiceRecorder | null | undefined>(null);
+  const [bars, setBars] = useState<{ id: number; height: number }[]>([]);
+  const nextId = useRef(0);
+  const voiceLayerRef = useRef<HTMLDivElement>(null);
+  const [maxBars, setMaxBars] = useState(0);
 
+  // Effect to calculate max bars based on container width
   useEffect(() => {
-    // Store the recorder instance in a ref to ensure the callback always references the latest one
-    // if the recorder prop instance changes, though ideally it should be stable.
-    internalRecorderRef.current = recorder;
-  }, [recorder]);
+    const calculateMaxBars = () => {
+      if (voiceLayerRef.current) {
+        const containerWidth = voiceLayerRef.current.clientWidth;
+        const barWidth = Constants.BAR_W + Constants.BAR_M;
+        setMaxBars(Math.floor(containerWidth / barWidth));
+      }
+    };
 
+    calculateMaxBars();
+    const resizeObserver = new ResizeObserver(calculateMaxBars);
+    if (voiceLayerRef.current) {
+      resizeObserver.observe(voiceLayerRef.current);
+    }
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  // Effect to handle recorder data and create bars
   useEffect(() => {
-    const currentRecorder = internalRecorderRef.current;
-
+    const currentRecorder = recorder.current;
     if (isRecordingActive && currentRecorder) {
-      // console.log('VoiceTicker: Subscribing to onResamplerData');
       currentRecorder.onResamplerData = (rms: number) => {
-        // The 'rms' value from useWalkie's state.level is already a normalized value (0-1).
-        const norm = rms;
+        const AMPLIFICATION_FACTOR = 30;
+        const amplifiedNorm = rms * AMPLIFICATION_FACTOR;
+        const norm = Math.max(0, Math.min(1, amplifiedNorm));
         const height = Constants.MIN_H + norm * (Constants.MAX_H - Constants.MIN_H);
-        console.log(`[VoiceTicker] Received RMS: ${rms}, Calculated Height: ${height}`);
-        setBars((prevBars) => [...prevBars, { id: nextId.current++, height }]);
+        const newBar = { id: nextId.current++, height };
+
+        if (maxBars > 0) {
+          setBars(prev => [...prev, newBar].slice(-maxBars));
+        }
       };
-    } else if (currentRecorder && currentRecorder.onResamplerData) {
-      // console.log('VoiceTicker: Unsubscribing from onResamplerData because recording stopped or no recorder');
+    } else if (currentRecorder) {
       currentRecorder.onResamplerData = undefined;
     }
 
-    // Cleanup function for when isRecordingActive changes or component unmounts
     return () => {
-      const activeRecorderOnCleanup = internalRecorderRef.current;
-      if (activeRecorderOnCleanup && activeRecorderOnCleanup.onResamplerData) {
-        // console.log('VoiceTicker: Cleanup - Unsubscribing from onResamplerData');
-        activeRecorderOnCleanup.onResamplerData = undefined;
+      if (currentRecorder) {
+        currentRecorder.onResamplerData = undefined;
       }
     };
-  }, [isRecordingActive]); // Rerun effect if isRecordingActive changes
+  }, [isRecordingActive, recorder, maxBars]);
 
-  const handleAnimationEnd = (barId: number) => {
-    setBars((prevBars) => prevBars.filter((bar) => bar.id !== barId));
-  };
+  // Effect to clear bars when recording stops
+  useEffect(() => {
+    if (!isRecordingActive) {
+      setBars([]);
+    }
+  }, [isRecordingActive]);
 
   if (!isRecordingActive && bars.length === 0) {
     return null;
   }
 
   return (
-    <div className={styles.voiceLayer} aria-hidden="true">
-      <div className={styles.baseline}></div>
+    <div className={styles.voiceLayer} ref={voiceLayerRef}>
+      <div className={styles.baseline} />
       {bars.map((bar) => (
         <span
           key={bar.id}
           className={styles.bar}
-          style={{
-            height: `${bar.height}px`,
-            // animationDuration: `${Constants.ANIM_MS}ms`, // Already set in CSS module
-          }}
-          onAnimationEnd={() => handleAnimationEnd(bar.id)}
+          style={{ height: `${bar.height}px` }}
         />
       ))}
     </div>
