@@ -79,15 +79,33 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
 
   const handleStart = async () => {
     console.log(`[VoiceWidget] handleStart called. isChatProcessing: ${isChatProcessing}, isSendingRef.current: ${isSendingRef.current}, current walkie status: ${walkie.state.status}`);
-    // Use both the synchronous ref and the state prop for robust locking
     if (isSendingRef.current || isChatProcessing) {
       console.log('[VoiceWidget] handleStart blocked by isSendingRef or isChatProcessing.');
       return;
     }
 
+    // If walkie is stuck in active state from a previous run (and we're not chat processing),
+    // attempt to stop it first to ensure a clean start for the new session.
+    if (walkie.state.status === 'active') {
+      console.warn('[VoiceWidget] Walkie is already active. Attempting to stop before starting new session.');
+      try {
+        await walkie.stop();
+        console.log('[VoiceWidget] walkie.stop() called successfully during pre-start cleanup.');
+        // Optional: Brief pause to allow state to potentially transition, though not strictly necessary
+        // await new Promise(resolve => setTimeout(resolve, 50)); 
+      } catch (e) {
+        console.error('[VoiceWidget] Error stopping walkie during pre-start cleanup:', e);
+        // Decide if we should still proceed or show an error and bail.
+        // For now, we'll proceed, as start() might still work or reset things.
+      }
+    }
+    // It's also possible status is 'error' or 'connecting'. If 'error', starting might be problematic.
+    // If 'connecting', starting is definitely problematic. The UI condition `status === 'idle'` for mousedown
+    // should prevent this, but this internal handleStart might be called from elsewhere in future.
+
     hasSentFinalRef.current = false; // Reset the lock for a new recording session
     const newSid = uuid(); // Generate a new session ID for each start
-    sidRef.current = newSid; // Store it for reference if needed, though walkie.start now takes the new one
+    sidRef.current = newSid;
     console.log(`[VoiceWidget] Generated new SID for walkie.start: ${newSid}`);
 
     try {
