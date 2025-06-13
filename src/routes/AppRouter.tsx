@@ -1,7 +1,7 @@
 // src/routes/AppRouter.tsx
 import React, { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
 import { LoginPage, ProtectedRoute } from "@/entry";
 import App from "../App";
 import Dashboard from '../pages/dashboard'; 
@@ -19,6 +19,23 @@ import SupabaseTest from '../SupabaseTest';
 const ProgramsPage = React.lazy(() => {
   return import('../pages/programs');
 });
+
+// Wrapper component to handle props for ExerciseDetailPage
+const ExerciseDetailWrapper = () => {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+
+  const handleClose = () => {
+    navigate('/library'); // Or to the previous page, if more appropriate
+  };
+
+  if (!id) {
+    // Handle case where ID is not present, perhaps redirect or show an error
+    return <Navigate to="/library" replace />;
+  }
+
+  return <ExerciseDetailPage exerciseId={id} onClose={handleClose} />;
+};
 
 export default function AppRouter() {
   const { boot } = useUserStore.getState(); // Get boot function directly
@@ -112,7 +129,9 @@ export default function AppRouter() {
         path="/exercise-details/:id"
         element={
           <ProtectedRoute>
-            <ExerciseDetailPage />
+            <AnalyticsDashboardLayout title="Exercise Details"> {/* Or a dynamic title if preferred */}
+              <ExerciseDetailWrapper />
+            </AnalyticsDashboardLayout>
           </ProtectedRoute>
         }
       />

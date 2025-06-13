@@ -2,9 +2,9 @@
 
 .gv-wrapper {
   position: relative;
-  width: 640px;          /* can be 100% / use aspect-ratio */
+  /* width is controlled by Tailwind's w-full class on the component */
   aspect-ratio: 16/9;
-  border-radius: 24px;
+  /* border-radius is controlled by Tailwind's rounded-t-2xl class on the component */
   overflow: hidden;
   isolation: isolate;    /* keeps blend-mode inside wrapper */
 }
@@ -45,8 +45,11 @@
 
   /* ---------- WebKit (Chrome ≤116 / Safari) ---------- */
   -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
   -webkit-mask-position: center;
+  mask-position: center;
   -webkit-mask-size: cover;
+  mask-size: cover;
   -webkit-mask-composite: xor;
 
   /* Std / Firefox / Chrome 117+ */

@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 // useParams removed as ID will come from props
 import { supabase } from '@/lib/supabase'; 
 import ExerciseDetailView, { ExerciseDetailViewProps as ExerciseDetailViewComponentProps } from '@/components/ExerciseDetailView'; // Renamed to avoid conflict
+import UseAnimations from 'react-useanimations';
+import loadingAnimation from 'react-useanimations/lib/loading';
 
 // react-loader-spinner removed, install if needed
 
@@ -26,6 +28,8 @@ const ExerciseDetailPage: React.FC<ExerciseDetailPageProps> = ({ exerciseId, onC
 
       try {
         setLoading(true);
+        // Simulate loading delay for 2 seconds to see the animation
+        // await new Promise(resolve => setTimeout(resolve, 2000)); 
         const { data, error: supabaseError } = await supabase
           .from('exrcwiki') // Your table name
           .select('*') // Select all fields, or specify needed ones
@@ -78,8 +82,12 @@ const ExerciseDetailPage: React.FC<ExerciseDetailPageProps> = ({ exerciseId, onC
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-neutral-900 text-white">
-        Loading exercise details...
+      <div className="flex justify-center items-center h-full w-full py-20"> {/* py-20 for some vertical spacing */}
+        <UseAnimations 
+          animation={loadingAnimation} 
+          size={60} 
+          strokeColor="#DFF250" // Brand color
+        />
       </div>
     );
   }
