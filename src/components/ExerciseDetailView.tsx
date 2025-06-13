@@ -11,6 +11,7 @@ export interface ExerciseDetailViewProps extends ExerciseCardProps {
   safety_notes?: string[];
   alternatives?: Array<{ id: string; name: string; gifUrl?: string }>; // Example structure
   onClose?: () => void; // Added onClose prop
+  exerciseId: string; // Added exerciseId prop
   // user_notes?: string; // If implementing user notes
 }
 
@@ -29,53 +30,85 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
   safety_notes,
   alternatives,
   onClose, // Destructure onClose
+  exerciseId, // Destructure exerciseId
 }) => {
   return (
-    <div className="p-4 md:p-8 bg-neutral-900 text-white rounded-lg shadow-xl max-w-4xl mx-auto relative">
+    <div className="bg-neutral-900 text-white rounded-t-2xl shadow-2xl shadow-black/30 max-w-4xl w-full mx-auto relative my-8">
       {/* Close Button */} 
       {onClose && (
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 md:top-6 md:right-6 z-10 text-neutral-400 hover:text-lime-400 transition-colors"
-          aria-label="Close exercise details"
+          className="absolute top-4 right-4 z-30 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white font-semibold py-2 px-5 rounded-lg transition-colors text-sm"
+          aria-label="Go back to exercise list"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          Back
         </button>
       )}
-      {/* Header Section */}
-      <div className="mb-6">
-        <h2 className="text-3xl md:text-4xl font-bold mb-2 text-lime-400">{name}</h2>
-        <div className="flex flex-wrap gap-2 text-sm mb-4">
-          {bodypart && <span className="bg-lime-900/70 text-lime-300 px-3 py-1 rounded-full">{bodypart}</span>}
-          {equipment && <span className="bg-neutral-700 text-neutral-300 px-3 py-1 rounded-full">{equipment}</span>}
-          <span className={`px-3 py-1 rounded-full ${isCompound ? 'bg-purple-900/70 text-purple-300' : 'bg-sky-900/70 text-sky-300'}`}>
-            {isCompound ? 'Compound' : 'Isolation'}
-          </span>
-          {tier && <span className={`px-3 py-1 rounded-full font-semibold ${tier === 'A' ? 'text-yellow-400 bg-yellow-900/50' : tier === 'B' ? 'text-cyan-400 bg-cyan-900/50' : 'text-gray-400 bg-gray-700/50'}`}>Tier {tier}</span>}
-        </div>
+
+      {/* Gradient Video Container */}
+      <div className="gv-wrapper w-full rounded-t-2xl"> {/* Applied w-full and rounded-t-2xl as requested */}
+        {/* gradient below the video */}
+        <div className="gv-gradient base" />
+
+        {(() => {
+          let videoSrc: string | undefined;
+          if (exerciseId === '1133') {
+            videoSrc = "/videos/1.mp4";
+          } else {
+            videoSrc = gifUrl;
+          }
+
+          if (videoSrc) {
+            return (
+              <video
+                id="gv-video" // ID is crucial for the CSS mask to work
+                className="gv-video"
+                src={videoSrc}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+              />
+            );
+          } else {
+            return (
+              <div 
+                id="gv-video" // ID is crucial for the CSS mask to work
+                className="gv-video bg-neutral-800 flex items-center justify-center text-neutral-500"
+              >
+                Media not available
+              </div>
+            );
+          }
+        })()}
+
+        {/* gradient tint that masks over white areas */}
+        <div className="gv-gradient mask" />
+
+        {/* Exercise Title Overlay - ensure it's on top of the gv-gradient.mask */}
+        <h2 className="absolute top-4 left-4 md:left-6 text-2xl md:text-3xl font-bold text-white drop-shadow-lg tracking-tight z-10">
+          {name}
+        </h2>
       </div>
 
-      {/* Main Content: Media and Details */}
-      <div className="md:grid md:grid-cols-2 md:gap-8 items-start">
-        {/* Media Column (GIF/Video) */}
-        <div className="mb-6 md:mb-0">
-          {gifUrl ? (
-            <video src={gifUrl} controls autoPlay loop muted className="w-full rounded-lg shadow-lg aspect-video bg-black">
-              Your browser does not support the video tag.
-            </video>
-          ) : (
-            <div className="w-full aspect-video bg-neutral-800 flex items-center justify-center rounded-lg text-neutral-500">
-              Media not available
-            </div>
-          )}
+      {/* Content Body */}
+      <div className="p-6 md:p-8">
+        <div className="flex flex-wrap gap-3 text-sm mb-6">
+          {bodypart && <span className="bg-lime-500/20 border border-lime-500/30 text-lime-300 px-3 py-1.5 rounded-lg text-xs font-medium">{bodypart}</span>}
+          {equipment && <span className="bg-neutral-700/40 border border-neutral-600/50 text-neutral-300 px-3 py-1.5 rounded-lg text-xs font-medium">{equipment}</span>}
+          <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${isCompound ? 'bg-purple-500/20 border border-purple-500/30 text-purple-300' : 'bg-sky-500/20 border border-sky-500/30 text-sky-300'}`}>
+            {isCompound ? 'Compound' : 'Isolation'}
+          </span>
+          {tier && <span className={`px-3 py-1.5 rounded-lg text-xs font-medium ${tier === 'A' ? 'text-yellow-300 bg-yellow-500/10 border border-yellow-500/20' : tier === 'B' ? 'text-cyan-300 bg-cyan-500/10 border border-cyan-500/20' : 'text-gray-400 bg-gray-600/20 border border-gray-500/30'}`}>Tier {tier}</span>}
         </div>
 
-        {/* Details Column */}
-        <div className="space-y-6">
+        {/* Details Section */}
+        <div className="space-y-8">
           {maintarget && maintarget.length > 0 && (
             <div>
-              <h3 className="text-xl font-semibold mb-2 text-lime-300">Main Target Muscles</h3>
-              <ul className="list-disc list-inside pl-2 space-y-1 text-neutral-300">
+              <h3 className="text-xl font-semibold mb-3 text-lime-300">Main Target Muscles</h3>
+              <ul className="list-disc list-inside pl-3 space-y-1.5 text-neutral-200">
                 {maintarget.map((muscle, index) => <li key={index}>{muscle}</li>)}
               </ul>
             </div>
@@ -83,8 +116,8 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
           {secondarymuscles && secondarymuscles.length > 0 && (
             <div>
-              <h3 className="text-xl font-semibold mb-2 text-lime-300">Secondary Muscles</h3>
-              <ul className="list-disc list-inside pl-2 space-y-1 text-neutral-300">
+              <h3 className="text-xl font-semibold mb-3 text-lime-300">Secondary Muscles</h3>
+              <ul className="list-disc list-inside pl-3 space-y-1.5 text-neutral-200">
                 {secondarymuscles.map((muscle, index) => <li key={index}>{muscle}</li>)}
               </ul>
             </div>
@@ -92,17 +125,15 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
           {instructions && (
             <div>
-              <h3 className="text-xl font-semibold mb-2 text-lime-300">Instructions</h3>
-              {/* Assuming instructions is a simple string for now. For markdown, a parser would be needed. */}
-              <p className="text-neutral-300 whitespace-pre-line">{instructions}</p>
+              <h3 className="text-xl font-semibold mb-3 text-lime-300">Instructions</h3>
+              <p className="text-neutral-200 whitespace-pre-line leading-relaxed">{instructions}</p>
             </div>
           )}
 
-          {/* Placeholder for other sections like Benefits, Common Mistakes, etc. */}
           {benefits && benefits.length > 0 && (
              <div>
-              <h3 className="text-xl font-semibold mb-2 text-lime-300">Benefits</h3>
-              <ul className="list-disc list-inside pl-2 space-y-1 text-neutral-300">
+              <h3 className="text-xl font-semibold mb-3 text-lime-300">Benefits</h3>
+              <ul className="list-disc list-inside pl-3 space-y-1.5 text-neutral-200">
                 {benefits.map((benefit, index) => <li key={index}>{benefit}</li>)}
               </ul>
             </div>
@@ -110,8 +141,8 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
           {common_mistakes && common_mistakes.length > 0 && (
             <div>
-              <h3 className="text-xl font-semibold mb-2 text-lime-300">Common Mistakes</h3>
-              <ul className="list-disc list-inside pl-2 space-y-1 text-neutral-300">
+              <h3 className="text-xl font-semibold mb-3 text-lime-300">Common Mistakes</h3>
+              <ul className="list-disc list-inside pl-3 space-y-1.5 text-neutral-200">
                 {common_mistakes.map((mistake, index) => <li key={index}>{mistake}</li>)}
               </ul>
             </div>
@@ -119,8 +150,8 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
           {safety_notes && safety_notes.length > 0 && (
             <div>
-              <h3 className="text-xl font-semibold mb-2 text-lime-300">Safety Notes</h3>
-              <ul className="list-disc list-inside pl-2 space-y-1 text-neutral-300">
+              <h3 className="text-xl font-semibold mb-3 text-lime-300">Safety Notes</h3>
+              <ul className="list-disc list-inside pl-3 space-y-1.5 text-neutral-200">
                 {safety_notes.map((note, index) => <li key={index}>{note}</li>)}
               </ul>
             </div>
@@ -128,30 +159,23 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
           {alternatives && alternatives.length > 0 && (
             <div>
-              <h3 className="text-xl font-semibold mb-2 text-lime-300">Alternatives</h3>
+              <h3 className="text-xl font-semibold mb-3 text-lime-300">Alternatives</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {alternatives.map(alt => (
-                  <div key={alt.id} className="bg-neutral-800/70 p-3 rounded-lg hover:bg-neutral-700/70 transition-colors">
-                    {alt.gifUrl && <img src={alt.gifUrl} alt={alt.name} className="w-full h-24 object-cover rounded mb-2"/>}
-                    <p className="text-sm font-semibold text-lime-400 truncate">{alt.name}</p>
+                  <div key={alt.id} className="bg-neutral-700/50 border border-neutral-600/60 p-4 rounded-xl hover:bg-neutral-700/80 transition-colors shadow-lg hover:shadow-lime-500/10">
+                    {alt.gifUrl && <img src={alt.gifUrl} alt={alt.name} className="w-full h-28 object-cover rounded-md mb-3 shadow-md"/>}
+                    <p className="text-base font-semibold text-lime-300 truncate">{alt.name}</p>
                   </div>
                 ))}
               </div>
             </div>
           )}
+        </div>
 
-          {/* Log Set Button - Placeholder */}
-          <div className="mt-8 text-center">
-            <button className="bg-lime-500 hover:bg-lime-600 text-neutral-900 font-bold py-3 px-6 rounded-lg transition-colors duration-150">
-              Log Set
-            </button>
-          </div>
 
-        </div> {/* End Details Column */}
-      </div> {/* End Main Content Grid */}
-    </div> /* End Component Root */
+      </div>
+    </div>
   );
 };
 
 export default ExerciseDetailView;
-

@@ -1,0 +1,63 @@
+/* Extra-silky brand gradient version — ready to paste */
+
+.gv-wrapper {
+  position: relative;
+  width: 640px;          /* can be 100% / use aspect-ratio */
+  aspect-ratio: 16/9;
+  border-radius: 24px;
+  overflow: hidden;
+  isolation: isolate;    /* keeps blend-mode inside wrapper */
+}
+
+/* shared gradient layer */
+.gv-gradient {
+  position: absolute;
+  inset: 0;
+  /* ───────────────────────── smooth 7-stop gradient ───────────────────────── */
+  background: linear-gradient(
+    0deg,
+    #152500 0%,
+    #1E3400 12%,
+    #263900 28%,
+    #3B4F04 45%,
+    #485D07 63%,
+    #627816 82%,
+    #7C881F 100%
+  );
+  pointer-events: none;
+}
+
+/* layer below the video — always visible */
+.gv-gradient.base {
+  z-index: 0;
+}
+
+/* layer above the video — only tints pure-white */
+.gv-gradient.mask {
+  z-index: 2;
+  mix-blend-mode: multiply;          /* fallback tinting */
+  opacity: .9;
+
+  /* ---------- Firefox / Chrome 117+ ---------- */
+  mask-image: element('#gv-video');
+  mask-mode: alpha;
+  mask-composite: exclude;
+
+  /* ---------- WebKit (Chrome ≤116 / Safari) ---------- */
+  -webkit-mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  -webkit-mask-size: cover;
+  -webkit-mask-composite: xor;
+
+  /* Std / Firefox / Chrome 117+ */
+  mask-type: luminance;
+  mask-composite: subtract;
+}
+
+.gv-video {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

@@ -39,6 +39,7 @@ const ExerciseDetailPage: React.FC<ExerciseDetailPageProps> = ({ exerciseId, onC
         if (data) {
           // Map Supabase data (snake_case) to ExerciseDetailViewProps (camelCase)
           const mappedData: ExerciseDetailViewComponentProps = {
+            exerciseId: data.exercise_id, // Pass the exerciseId
             id: data.exercise_id,
             name: data.name,
             gifUrl: data.gifurl,
