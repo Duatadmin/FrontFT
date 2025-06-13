@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Image as ImageIcon } from 'lucide-react';
 
 export interface ExerciseCardProps {
@@ -11,8 +12,9 @@ export interface ExerciseCardProps {
   isCompound: boolean;
 }
 
-const ExerciseCard: React.FC<ExerciseCardProps> = ({ name, bodypart, equipment, tier, isCompound, gifUrl }) => {
-  return (
+const ExerciseCard: React.FC<ExerciseCardProps> = ({ id, name, bodypart, equipment, tier, isCompound, gifUrl }) => {
+
+  const cardContent = (
     <div className="group relative bg-neutral-950/70 backdrop-blur-lg border border-lime-400/20 rounded-2xl overflow-hidden flex flex-col text-white transition-all duration-300 hover:border-lime-400/60 hover:shadow-xl hover:shadow-lime-500/10">
       <div className="aspect-video w-full flex items-center justify-center overflow-hidden">
         {gifUrl ? (
@@ -27,22 +29,33 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ name, bodypart, equipment, 
       
       <div className="p-4 flex flex-col flex-grow justify-between">
         <div>
-          <h3 className="text-lg font-bold mb-3 truncate" title={name}>{name}</h3>
+          <h4 className="text-lg font-bold mb-3 truncate" title={name}>{name}</h4>
           <div className="flex flex-wrap gap-2 mb-4">
-            <span className="bg-lime-900/50 text-lime-300 text-xs font-semibold px-2.5 py-1 rounded-full">{bodypart}</span>
-            <span className="bg-neutral-700 text-neutral-300 text-xs font-semibold px-2.5 py-1 rounded-full">{equipment}</span>
+            {bodypart && <span className="bg-lime-900/50 text-lime-300 text-xs font-semibold px-2.5 py-1 rounded-full">{bodypart}</span>}
+            {equipment && <span className="bg-neutral-700 text-neutral-300 text-xs font-semibold px-2.5 py-1 rounded-full">{equipment}</span>}
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${isCompound ? 'bg-purple-900/60 text-purple-300' : 'bg-sky-900/60 text-sky-300'}`}>
               {isCompound ? 'Compound' : 'Isolation'}
             </span>
           </div>
         </div>
         <div className="text-right">
-          <span className={`text-sm font-bold ${tier === 'A' ? 'text-yellow-400' : tier === 'B' ? 'text-cyan-400' : 'text-gray-400'}`}>
+          {tier && <span className={`text-sm font-bold ${tier === 'A' ? 'text-yellow-400' : tier === 'B' ? 'text-cyan-400' : 'text-gray-400'}`}>
             Tier {tier}
-          </span>
+          </span>}
         </div>
       </div>
     </div>
+  );
+
+  if (!id) {
+    console.warn('ExerciseCard rendered without an ID. Card will not be a link.');
+    return cardContent;
+  }
+
+  return (
+    <Link to={`/exercise-details/${id}`} className="block h-full">
+      {cardContent}
+    </Link>
   );
 };
 

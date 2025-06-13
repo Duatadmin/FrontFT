@@ -8,7 +8,8 @@ import Dashboard from '../pages/dashboard';
 import ResponsiveDashboard from '../pages/ResponsiveDashboard';
 import DiaryPage from '../pages/DiaryPage'; 
 import EnhancedDiaryPage from '../pages/EnhancedDiaryPage'; 
-import TestPage from '../pages/TestPage';
+import TestPage from '@/pages/TestPage';
+import ExerciseDetailPage from '@/pages/ExerciseDetailPage';
 import ExerciseLibraryPage from '../pages/ExerciseLibraryPage';
 import AnalyticsDashboardLayout from '../components/layout/AnalyticsDashboardLayout'; 
 import ProgramsPageSkeleton from '../components/skeletons/ProgramsPageSkeleton'; 
@@ -107,7 +108,14 @@ export default function AppRouter() {
           </ProtectedRoute>
         }
       />
-
+      <Route
+        path="/exercise-details/:id"
+        element={
+          <ProtectedRoute>
+            <ExerciseDetailPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/programs"
         element={

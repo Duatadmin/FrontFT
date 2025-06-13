@@ -138,7 +138,10 @@ const ExerciseLibraryPage: React.FC = () => {
           {!loading && !error && exercises.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {exercises.map((exercise) => (
-                <ExerciseCard key={exercise.id} {...exercise} />
+                <ExerciseCard
+                  key={exercise.id} // Use exercise.id as the key
+                  {...exercise} // Spread all properties from the exercise object
+                />
               ))}
             </div>
           )}

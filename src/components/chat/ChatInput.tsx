@@ -173,13 +173,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-2">
             <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
-            <button
-              onClick={() => setIsDemoActive(prev => !prev)}
-              className="px-2.5 py-1.5 text-xs bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors"
-              title="Toggle animation for testing"
-            >
-              Test Ticker
-            </button>
+            
             <VoiceWidget 
               onFinalTranscriptCommitted={handleVoiceSend} 
               isChatProcessing={isVoiceWidgetDisabled}

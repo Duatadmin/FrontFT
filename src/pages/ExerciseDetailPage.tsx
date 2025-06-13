@@ -1,0 +1,92 @@
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { supabase } from '@/lib/supabase'; 
+import ExerciseDetailView, { ExerciseDetailViewProps } from '@/components/ExerciseDetailView';
+
+// react-loader-spinner removed, install if needed
+
+const ExerciseDetailPage: React.FC = () => {
+  const { id } = useParams<{ id: string }>();
+  const [exercise, setExercise] = useState<ExerciseDetailViewProps | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchExercise = async () => {
+      if (!id) {
+        setError('Exercise ID is missing.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const { data, error: supabaseError } = await supabase
+          .from('exrcwiki') // Your table name
+          .select('*') // Select all fields, or specify needed ones
+          .eq('exercise_id', id) // Use 'id' from useParams
+          .single();
+
+        if (supabaseError) {
+          throw supabaseError;
+        }
+
+        if (data) {
+          // Map Supabase data (snake_case) to ExerciseDetailViewProps (camelCase)
+          const mappedData: ExerciseDetailViewProps = {
+            id: data.exercise_id,
+            name: data.name,
+            gifUrl: data.gifurl,
+            bodypart: data.bodypart || data.muscle_group,
+            equipment: data.equipment,
+            tier: data.tier,
+            isCompound: data.is_compound !== undefined ? data.is_compound : (data.compound !== undefined ? data.compound : false),
+            
+            maintarget: typeof data.maintarget === 'string' ? data.maintarget.split(',').map((s: string) => s.trim()).filter((s: string) => s) : (Array.isArray(data.maintarget) ? data.maintarget : []),
+            secondarymuscles: Array.isArray(data.secondarymuscles) ? data.secondarymuscles : [], // Assuming Supabase returns JSONB array as JS array
+            instructions: typeof data.instructions === 'string' ? data.instructions : (data.instructions ? JSON.stringify(data.instructions) : undefined), // Handle if instructions is JSON object/array in DB
+            
+            // Assuming pros, cons, tips from schema are JSONB arrays of strings, or simple text needing split
+            benefits: Array.isArray(data.pros) ? data.pros : (typeof data.pros === 'string' ? data.pros.split(',').map((s: string) => s.trim()).filter((s: string) => s) : []),
+            common_mistakes: Array.isArray(data.cons) ? data.cons : (typeof data.cons === 'string' ? data.cons.split(',').map((s: string) => s.trim()).filter((s: string) => s) : []),
+            safety_notes: Array.isArray(data.tips) ? data.tips : (typeof data.tips === 'string' ? data.tips.split(',').map((s: string) => s.trim()).filter((s: string) => s) : []),
+            
+            // Alternatives: Assuming it's a JSONB array of objects {id, name, gifUrl}
+            // or needs specific transformation if stored differently.
+            // For now, pass as is if it's an array, otherwise default to empty array.
+            alternatives: Array.isArray(data.alternatives) ? data.alternatives : [],
+          };
+          setExercise(mappedData);
+        } else {
+          setError('Exercise not found.');
+        }
+      } catch (err: any) {
+        console.error('Error fetching exercise:', err);
+        setError(err.message || 'Failed to fetch exercise details.');
+      }
+      setLoading(false);
+    };
+
+    fetchExercise();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-screen bg-neutral-900 text-white">
+        Loading exercise details...
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="flex justify-center items-center h-screen bg-neutral-900 text-red-500 p-8">Error: {error}</div>;
+  }
+
+  if (!exercise) {
+    return <div className="flex justify-center items-center h-screen bg-neutral-900 text-white p-8">Exercise not found.</div>;
+  }
+
+  return <ExerciseDetailView {...exercise} />;
+};
+
+export default ExerciseDetailPage;
