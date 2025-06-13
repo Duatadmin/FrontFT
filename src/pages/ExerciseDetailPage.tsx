@@ -1,19 +1,24 @@
 import React, { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+// useParams removed as ID will come from props
 import { supabase } from '@/lib/supabase'; 
-import ExerciseDetailView, { ExerciseDetailViewProps } from '@/components/ExerciseDetailView';
+import ExerciseDetailView, { ExerciseDetailViewProps as ExerciseDetailViewComponentProps } from '@/components/ExerciseDetailView'; // Renamed to avoid conflict
 
 // react-loader-spinner removed, install if needed
 
-const ExerciseDetailPage: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const [exercise, setExercise] = useState<ExerciseDetailViewProps | null>(null);
+export interface ExerciseDetailPageProps {
+  exerciseId: string;
+  onClose: () => void;
+}
+
+const ExerciseDetailPage: React.FC<ExerciseDetailPageProps> = ({ exerciseId, onClose }) => {
+  // const { id } = useParams<{ id: string }>(); // Replaced by exerciseId prop
+  const [exercise, setExercise] = useState<ExerciseDetailViewComponentProps | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchExercise = async () => {
-      if (!id) {
+      if (!exerciseId) { // Use exerciseId from props
         setError('Exercise ID is missing.');
         setLoading(false);
         return;
@@ -24,7 +29,7 @@ const ExerciseDetailPage: React.FC = () => {
         const { data, error: supabaseError } = await supabase
           .from('exrcwiki') // Your table name
           .select('*') // Select all fields, or specify needed ones
-          .eq('exercise_id', id) // Use 'id' from useParams
+          .eq('exercise_id', exerciseId) // Use exerciseId from props
           .single();
 
         if (supabaseError) {
@@ -33,7 +38,7 @@ const ExerciseDetailPage: React.FC = () => {
 
         if (data) {
           // Map Supabase data (snake_case) to ExerciseDetailViewProps (camelCase)
-          const mappedData: ExerciseDetailViewProps = {
+          const mappedData: ExerciseDetailViewComponentProps = {
             id: data.exercise_id,
             name: data.name,
             gifUrl: data.gifurl,
@@ -68,7 +73,7 @@ const ExerciseDetailPage: React.FC = () => {
     };
 
     fetchExercise();
-  }, [id]);
+  }, [exerciseId]); // Depend on exerciseId from props
 
   if (loading) {
     return (
@@ -86,7 +91,7 @@ const ExerciseDetailPage: React.FC = () => {
     return <div className="flex justify-center items-center h-screen bg-neutral-900 text-white p-8">Exercise not found.</div>;
   }
 
-  return <ExerciseDetailView {...exercise} />;
+  return <ExerciseDetailView {...exercise} onClose={onClose} />; // Pass onClose to ExerciseDetailView
 };
 
 export default ExerciseDetailPage;

@@ -5,13 +5,15 @@ import { useExerciseLibrary } from '@/hooks/useExerciseLibrary';
 import MuscleGroupSelector from '@/components/MuscleGroupSelector';
 import EquipmentFilter, { EquipmentCategory } from '@/components/EquipmentFilter';
 import { ArrowLeft } from 'lucide-react';
+import ExerciseDetailPage from './ExerciseDetailPage'; // Import ExerciseDetailPage
 
 const ExerciseLibraryPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null); // This might also come from URL in a more complex routing setup
+  const [selectedMuscleGroup, setSelectedMuscleGroup] = useState<string | null>(null); 
   const [selectedEquipmentCategory, setSelectedEquipmentCategory] = useState<EquipmentCategory | null>(
     () => (searchParams.get('equipment') as EquipmentCategory) || null
   );
+  const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null); // State for selected exercise ID
   const { exercises, loading, error } = useExerciseLibrary(selectedMuscleGroup, selectedEquipmentCategory);
   const [pageTitle, setPageTitle] = useState('Exercise Library');
 
@@ -54,7 +56,23 @@ const ExerciseLibraryPage: React.FC = () => {
       title = 'Select Muscle Group';
     }
     setPageTitle(title);
-  }, [selectedMuscleGroup, selectedEquipmentCategory]);
+  }, [selectedMuscleGroup, selectedEquipmentCategory, selectedExerciseId]); // Add selectedExerciseId to dependencies
+
+  const handleSelectExercise = (id: string) => {
+    setSelectedExerciseId(id);
+  };
+
+  const handleCloseExerciseDetail = () => {
+    setSelectedExerciseId(null);
+    // Potentially update pageTitle here if needed when closing detail view
+    if (selectedMuscleGroup) {
+      let title = `${selectedMuscleGroup.charAt(0).toUpperCase() + selectedMuscleGroup.slice(1)} Exercises`;
+      if (selectedEquipmentCategory) {
+        title += ` – ${selectedEquipmentCategory}`;
+      }
+      setPageTitle(title);
+    }
+  };
 
   // Helper to import equipmentCategories for the effect above
   const equipmentCategories = [
@@ -90,9 +108,13 @@ const ExerciseLibraryPage: React.FC = () => {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 h-full overflow-y-auto text-white">
-      <h1 className="text-3xl font-bold mb-6 text-lime-400">{pageTitle}</h1>
-
-      {!selectedMuscleGroup ? (
+      {/* Render ExerciseDetailPage if an exercise is selected */}
+      {selectedExerciseId ? (
+        <ExerciseDetailPage exerciseId={selectedExerciseId} onClose={handleCloseExerciseDetail} />
+      ) : (
+        <>
+          <h1 className="text-3xl font-bold mb-6 text-lime-400">{pageTitle}</h1>
+          {!selectedMuscleGroup ? (
         <MuscleGroupSelector onSelectGroup={handleSelectGroup} />
       ) : (
         <>
@@ -139,14 +161,18 @@ const ExerciseLibraryPage: React.FC = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {exercises.map((exercise) => (
                 <ExerciseCard
-                  key={exercise.id} // Use exercise.id as the key
-                  {...exercise} // Spread all properties from the exercise object
+                  key={exercise.id} 
+                  {...exercise} 
+                  onSelect={handleSelectExercise} // Pass onSelect handler
                 />
               ))}
             </div>
           )}
         </>
       )}
+      </> 
+      // Closing tag for the fragment when selectedExerciseId is null
+    )}
     </div>
   );
 };

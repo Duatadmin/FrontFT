@@ -1,5 +1,4 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
 import { Image as ImageIcon } from 'lucide-react';
 
 export interface ExerciseCardProps {
@@ -10,12 +9,22 @@ export interface ExerciseCardProps {
   equipment: string;
   tier?: 'A' | 'B' | 'C';
   isCompound: boolean;
+  onSelect?: (id: string) => void; // Added onSelect prop
 }
 
-const ExerciseCard: React.FC<ExerciseCardProps> = ({ id, name, bodypart, equipment, tier, isCompound, gifUrl }) => {
+const ExerciseCard: React.FC<ExerciseCardProps> = ({ id, name, bodypart, equipment, tier, isCompound, gifUrl, onSelect }) => {
 
-  const cardContent = (
-    <div className="group relative bg-neutral-950/70 backdrop-blur-lg border border-lime-400/20 rounded-2xl overflow-hidden flex flex-col text-white transition-all duration-300 hover:border-lime-400/60 hover:shadow-xl hover:shadow-lime-500/10">
+  const handleSelect = () => {
+    if (onSelect && id) {
+      onSelect(id);
+    }
+  };
+
+  return (
+    <div 
+      className="group relative bg-neutral-950/70 backdrop-blur-lg border border-lime-400/20 rounded-2xl overflow-hidden flex flex-col text-white transition-all duration-300 hover:border-lime-400/60 hover:shadow-xl hover:shadow-lime-500/10 cursor-pointer h-full"
+      onClick={handleSelect} // Added onClick handler
+    >
       <div className="aspect-video w-full flex items-center justify-center overflow-hidden">
         {gifUrl ? (
           <img src={gifUrl} alt={name} className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" />
@@ -45,17 +54,6 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({ id, name, bodypart, equipme
         </div>
       </div>
     </div>
-  );
-
-  if (!id) {
-    console.warn('ExerciseCard rendered without an ID. Card will not be a link.');
-    return cardContent;
-  }
-
-  return (
-    <Link to={`/exercise-details/${id}`} className="block h-full">
-      {cardContent}
-    </Link>
   );
 };
 
