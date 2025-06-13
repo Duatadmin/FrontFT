@@ -1,25 +1,26 @@
-.voiceLayer {
+.voiceLayer{
   position: absolute;
   top: 0;
   left: 0;
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: flex-end; /* Vertically align dashes to the bottom, prevents vertical wobble */
+  align-items: center;   /* center-anchor = волна ↑↓ */
   overflow: hidden;
   pointer-events: none;
   will-change: transform; /* Promote to its own compositor layer for GPU acceleration */
   animation: slideX var(--dur) steps(1, start) infinite; /* Use steps(1,start) with inverted keyframes */
 }
 
-.dash {
-  width: var(--dash-w);
-  /* Height is now set via inline style by JS for dynamic changes */
-  margin-right: var(--dash-gap);
-  flex-shrink: 0; /* Prevent dashes from shrinking */
-  /* Color is set via inline style by JS for dynamic changes */
-  /* CSS transition removed for stability, JS controls height directly (Option B) */
-  contain: strict; /* Optimize rendering, isolate layout/paint */
+.dash{
+   width: var(--dash-w);
+   /* Height is now set via inline style by JS for dynamic changes */
+   margin-right: var(--dash-gap);
+   flex-shrink: 0; /* Prevent dashes from shrinking */
+   /* Color is set via inline style by JS for dynamic changes */
+   /* CSS transition removed for stability, JS controls height directly (Option B) */
+   contain: strict; /* Optimize rendering, isolate layout/paint */
+   transform-origin: center; /* ensure growth/scaling is symmetrical */
 }
 
 @keyframes slideX {
