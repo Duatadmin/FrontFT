@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styles from './VoiceTicker.module.css';
 import * as Constants from './voiceTickerConstants';
 
@@ -41,22 +41,7 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
 
   // The core logic: on each animation iteration, we cycle the array.
   // The first element is moved to the end, its color is updated, and height is set from RMS.
-  const handleAnimationIteration = useCallback(() => {
-    setDashes(prevDashes => {
-      if (prevDashes.length === 0) return [];
-
-      const newHeight = Constants.mapRmsToHeight(latestRms.current);
-      const dashToMove: Dash = { 
-        ...prevDashes[0], 
-        color: Constants.NEW_DASH_COLOR, 
-        height: newHeight,
-      };
-
-      return [...prevDashes.slice(1), dashToMove];
-    });
-  }, []); // latestRms.current is a ref, no need to include in deps for this callback
-
-  // This effect sets up the main state and observers
+  // This effect sets up the main state and observers for initial dash population
   useEffect(() => {
     const voiceLayer = voiceLayerRef.current;
     if (!voiceLayer) return;
@@ -91,16 +76,46 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
     };
   }, []); // Empty dependency array: runs once on mount
 
+  const rotateDash = () => {
+    const layer = voiceLayerRef.current;
+    if (!layer) return;
+    const first = layer.firstElementChild as HTMLElement;
+    if (!first) return;
+
+    // 1. Update only the recycled dash
+    first.style.height = `${Constants.mapRmsToHeight(latestRms.current)}px`;
+    first.style.backgroundColor = Constants.NEW_DASH_COLOR;
+
+    // 2. Move it to the end – one cheap DOM op, no React reconciliation
+    layer.appendChild(first);
+  };
+
+  // Effect to handle animation iteration via direct DOM manipulation
+  useEffect(() => {
+    const layer = voiceLayerRef.current;
+    if (!layer || !isRecordingActive) return;
+
+    const onIter = () => requestAnimationFrame(rotateDash);
+    layer.addEventListener('animationiteration', onIter);
+
+    return () => {
+      layer.removeEventListener('animationiteration', onIter);
+    };
+    // Re-run if isRecordingActive changes to attach/detach listener
+    // voiceLayerRef.current should be stable after first render with isRecordingActive=true
+  }, [isRecordingActive]);
+
   // The component only renders if isRecordingActive is true
   if (!isRecordingActive) {
     return null;
   }
 
+  // Initial render of dashes is handled by React. Subsequent updates are DOM-manual.
   return (
     <div
       className={styles.voiceLayer}
       ref={voiceLayerRef}
-      onAnimationIteration={handleAnimationIteration}
+      // onAnimationIteration prop removed, handled by addEventListener
     >
       {dashes.map(dash => (
         <div

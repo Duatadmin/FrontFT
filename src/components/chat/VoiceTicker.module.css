@@ -5,20 +5,20 @@
   width: 100%;
   height: 100%;
   display: flex;
-  align-items: center; /* Vertically center the dashes */
+  align-items: flex-end; /* Vertically align dashes to the bottom, prevents vertical wobble */
   overflow: hidden;
   pointer-events: none;
-  /* The animation is now on this container */
-  animation: slideX var(--dur) linear infinite;
+  will-change: transform; /* Promote to its own compositor layer for GPU acceleration */
+  animation: slideX var(--dur) steps(1, end) infinite; /* Use steps for crisp movement, no sub-pixel issues */
 }
 
 .dash {
   width: var(--dash-w);
-  /* Height is now set via inline style for dynamic changes */
+  /* Height is now set via inline style by JS for dynamic changes */
   margin-right: var(--dash-gap);
   flex-shrink: 0; /* Prevent dashes from shrinking */
-  /* Color is set via inline style for dynamic changes */
-  transition: height .12s linear;
+  /* Color is set via inline style by JS for dynamic changes */
+  /* CSS transition removed for stability, JS controls height directly (Option B) */
 }
 
 @keyframes slideX {
