@@ -95,7 +95,9 @@ const VoiceTicker: React.FC<VoiceTickerProps> = ({ isRecordingActive, recorder }
     const layer = voiceLayerRef.current;
     if (!layer || !isRecordingActive) return;
 
-    const onIter = () => requestAnimationFrame(rotateDash);
+    // Call rotateDash directly (synchronously) within the event handler
+    // This ensures the DOM reorder happens before the browser proceeds to compositing for this frame.
+    const onIter = () => rotateDash(); 
     layer.addEventListener('animationiteration', onIter);
 
     return () => {

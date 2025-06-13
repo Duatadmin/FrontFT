@@ -9,7 +9,7 @@
   overflow: hidden;
   pointer-events: none;
   will-change: transform; /* Promote to its own compositor layer for GPU acceleration */
-  animation: slideX var(--dur) steps(1, end) infinite; /* Use steps for crisp movement, no sub-pixel issues */
+  animation: slideX var(--dur) steps(1, start) infinite; /* Use steps(1,start) with inverted keyframes */
 }
 
 .dash {
@@ -19,15 +19,17 @@
   flex-shrink: 0; /* Prevent dashes from shrinking */
   /* Color is set via inline style by JS for dynamic changes */
   /* CSS transition removed for stability, JS controls height directly (Option B) */
+  contain: strict; /* Optimize rendering, isolate layout/paint */
 }
 
 @keyframes slideX {
-  from {
-    transform: translateX(0);
-  }
-  to {
-    /* Move left by exactly one dash-step to create a perfect, seamless loop */
+  0% {
+    /* Start with the layer already shifted as if the first element moved */
     transform: translateX(calc(-1 * (var(--dash-w) + var(--dash-gap))));
+  }
+  100% {
+    /* Animate towards the origin */
+    transform: translateX(0);
   }
 }
 
