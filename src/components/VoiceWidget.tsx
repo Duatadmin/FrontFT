@@ -7,14 +7,13 @@ import { Mic } from 'lucide-react';
 import { Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
-
-// Props for VoiceWidget, if any are needed in the future (e.g., config overrides)
+// Props for VoiceWidget
 interface VoiceWidgetProps {
   onFinalTranscriptCommitted?: (transcript: string) => void;
   isChatProcessing?: boolean; 
   onStatusChange?: (status: string) => void; 
   isSendingRef: React.RefObject<boolean>;
-  onRmsData?: (rms: number) => void; // Prop for RMS data
+  onRmsData?: (rms: number) => void;
 }
 
 const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange, isSendingRef, onRmsData }) => {
@@ -22,32 +21,23 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   const { voiceEnabled, toggleVoice } = useVoice();
   const walkie = useWalkie({
     wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
-    recorderConfig: { // Maps to CreateRecorderOptions from sepiaRecorder.ts
+    recorderConfig: {
       targetSampleRate: 16000,
       mono: true,
-      sepiaModulesPath: '/sepia/modules/' // Path to Sepia engine modules
+      sepiaModulesPath: '/sepia/modules/'
     },
-    // onPcmData is not a valid option for useWalkie, RMS data will be obtained from walkie.state.level
     onVadStatusChange: (isSpeaking: boolean) => {
       console.log('VAD Status changed:', isSpeaking);
-      // You can add logic here if the VoiceWidget needs to react directly to VAD status
     },
     onTranscription: (transcript: { text: string; final: boolean; type: string }) => {
       console.log('VoiceWidget received transcript:', transcript);
-      // Use a ref to ensure we only commit the final transcript once per session
-      if (transcript.final && transcript.text.trim() && onFinalTranscriptCommitted && !hasSentFinalRef.current) {
-        hasSentFinalRef.current = true; // Set the lock
+      if (transcript.final && transcript.text.trim() && onFinalTranscriptCommitted) {
         onFinalTranscriptCommitted(transcript.text);
       }
     },
-    // onError: (error) => {
-    //   console.error('VoiceWidget received error from useWalkie:', error);
-    //   // Custom handling if needed, though useEffect already handles toast for state.errorMessage
-    // }
   });
 
   const sidRef = useRef<string | null>(null);
-  const hasSentFinalRef = useRef(false);
   const [showErrorToast, setShowErrorToast] = useState(false);
   const [toastMessage, setToastMessage] = useState('');
 
@@ -64,18 +54,11 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     }
   }, [walkie.state.status, onStatusChange]);
 
-  // Effect to send RMS data when walkie.state.level changes
   useEffect(() => {
     if (onRmsData && typeof walkie.state.level === 'number') {
       onRmsData(walkie.state.level);
     }
   }, [walkie.state.level, onRmsData]);
-
-  useEffect(() => {
-    if (onStatusChange) {
-      onStatusChange(walkie.state.status);
-    }
-  }, [walkie.state.status, onStatusChange]);
 
   const handleStart = async () => {
     console.log(`[VoiceWidget] handleStart called. isChatProcessing: ${isChatProcessing}, isSendingRef.current: ${isSendingRef.current}, current walkie status: ${walkie.state.status}`);
@@ -84,27 +67,17 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       return;
     }
 
-    // If walkie is stuck in active state from a previous run (and we're not chat processing),
-    // attempt to stop it first to ensure a clean start for the new session.
     if (walkie.state.status === 'active') {
       console.warn('[VoiceWidget] Walkie is already active. Attempting to stop before starting new session.');
       try {
         await walkie.stop();
         console.log('[VoiceWidget] walkie.stop() called successfully during pre-start cleanup.');
-        // Optional: Brief pause to allow state to potentially transition, though not strictly necessary
-        // await new Promise(resolve => setTimeout(resolve, 50)); 
       } catch (e) {
         console.error('[VoiceWidget] Error stopping walkie during pre-start cleanup:', e);
-        // Decide if we should still proceed or show an error and bail.
-        // For now, we'll proceed, as start() might still work or reset things.
       }
     }
-    // It's also possible status is 'error' or 'connecting'. If 'error', starting might be problematic.
-    // If 'connecting', starting is definitely problematic. The UI condition `status === 'idle'` for mousedown
-    // should prevent this, but this internal handleStart might be called from elsewhere in future.
 
-    hasSentFinalRef.current = false; // Reset the lock for a new recording session
-    const newSid = uuid(); // Generate a new session ID for each start
+    const newSid = uuid();
     sidRef.current = newSid;
     console.log(`[VoiceWidget] Generated new SID for walkie.start: ${newSid}`);
 
@@ -113,15 +86,14 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       setToastMessage('');
       if (!voiceEnabled) {
         console.log('[VoiceWidget] Toggling voiceEnabled on for TTS.');
-        toggleVoice(); // Ensure TTS is on
+        toggleVoice();
       }
-      await walkie.start(newSid); // Use the new session ID
+      await walkie.start(newSid);
       console.log('[VoiceWidget] walkie.start() called successfully.');
     } catch (e: any) {
       console.error('Failed to start walkie:', e);
       setToastMessage(e.message || 'Failed to start recording.');
       setShowErrorToast(true);
-      // The hook should ideally set its status to 'error' upon such failures
     }
   };
 
@@ -140,24 +112,22 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   const { status, errorMessage } = walkie.state;
   const isActivated = status === 'active';
 
+  // Determine button state and appearance
   let currentIcon;
   let currentLabel;
   let currentTitle;
   const baseButtonClasses = "relative flex items-center justify-center bg-white/5 text-white px-4 py-2 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 hover:scale-105 overflow-hidden";
-  let bgGradient = ""; // Default to empty, baseButtonClasses handles DashboardButton's default gradient
-  let hoverEffects = ""; // Default to empty, baseButtonClasses and inner divs handle DashboardButton's hover
-  let cursorClass;
+  let cursorClass = "cursor-pointer";
   let stateSpecificClasses = "";
 
-  const isDisabled = status === 'connecting' || status === 'error' || !!isChatProcessing;
+  // Combined isDisabled logic for clarity and use in event handlers and ARIA attributes
+  const effectiveIsDisabled = status === 'connecting' || status === 'error' || !!isChatProcessing || !!isSendingRef.current;
 
   switch (status) {
     case 'error':
       currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-yellow-300 mr-2 flex-shrink-0" />;
       currentLabel = "Error";
       currentTitle = errorMessage || 'Microphone error';
-      bgGradient = "";
-      hoverEffects = ""; 
       cursorClass = "cursor-not-allowed";
       stateSpecificClasses = "opacity-80";
       break;
@@ -170,8 +140,6 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       );
       currentLabel = "Connecting...";
       currentTitle = "Connecting...";
-      bgGradient = "";
-      hoverEffects = ""; 
       cursorClass = "cursor-wait";
       stateSpecificClasses = "opacity-90";
       break;
@@ -179,74 +147,88 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       currentIcon = <Mic size={18} className="mr-2 text-white/50 scale-110 transition-transform duration-150 flex-shrink-0" />;
       currentLabel = "Listening...";
       currentTitle = "Streaming... Release to stop";
-      // bgGradient will use the hover state from baseButtonClasses or specific DashboardButton hover divs
-      bgGradient = ""; // Let base classes and inner divs handle the active look like DashboardButton hover
-      hoverEffects = ""; // Handled by base and inner divs
-      cursorClass = "cursor-pointer";
-      // Add a subtle visual cue for audio level if desired here
       break;
-    default: // idle
+    default: // idle or other unhandled states
       currentIcon = <Mic size={18} className="mr-2 text-white/50 flex-shrink-0" />;
       currentLabel = "Voice Mode";
       currentTitle = "Press and hold to talk";
-      bgGradient = ""; // Let base classes and inner divs handle the idle look like DashboardButton
-      hoverEffects = ""; // Handled by base and inner divs
-      cursorClass = "cursor-pointer";
+      if (effectiveIsDisabled && status === 'idle') { // Specifically for idle but otherwise disabled (e.g. chat processing)
+        cursorClass = "cursor-not-allowed";
+        stateSpecificClasses = "opacity-50";
+      }
       break;
   }
 
-  const dynamicButtonClasses = `${baseButtonClasses} ${bgGradient} ${hoverEffects} ${cursorClass} ${stateSpecificClasses}`.replace(/\s+/g, ' ').trim();
+  if (effectiveIsDisabled) {
+    cursorClass = "cursor-not-allowed";
+    stateSpecificClasses = stateSpecificClasses ? `${stateSpecificClasses} opacity-50` : "opacity-50"; // Keep existing opacity if error/connecting
+  }
+
+  const dynamicButtonClasses = `${baseButtonClasses} ${cursorClass} ${stateSpecificClasses}`.replace(/\s+/g, ' ').trim();
 
   const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (isDisabled) return;
+    if (effectiveIsDisabled) return;
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
-      if (status === 'idle') {
+      if (status === 'idle' || status === 'active') { // Allow starting if idle or active (handleStart will stop if active)
         handleStart();
       }
     }
   };
 
   const handleKeyRelease = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (isDisabled) return;
-    if (e.key === ' ' || e.key === 'Enter') {
-      e.preventDefault();
-      if (status === 'active') {
+    // Stop only if it was active and we are not generally disabled
+    if (status === 'active' && !effectiveIsDisabled) { 
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
         handleStop();
       }
     }
   };
 
-    return (
+  return (
     <>
       {isActivated ? (
-        // ACTIVE STATE: Simplified single-layer button
+        // ACTIVE STATE BUTTON
         <div
-          className={dynamicButtonClasses} // Apply base and state-specific classes
-          onMouseUp={!isDisabled ? handleStop : undefined}
-          onTouchEnd={!isDisabled ? handleStop : undefined}
-          onKeyUp={handleKeyRelease}
+          className={dynamicButtonClasses}
+          onMouseUp={effectiveIsDisabled ? undefined : handleStop} // Only allow stop if not generally disabled
+          onTouchEnd={effectiveIsDisabled ? undefined : handleStop}
+          onKeyUp={handleKeyRelease} // handleKeyRelease has its own disabled check
           role="button"
-          tabIndex={isDisabled ? -1 : 0}
-          aria-disabled={isDisabled}
-          title={currentTitle} // This is "Streaming... Release to stop"
+          tabIndex={effectiveIsDisabled ? -1 : 0}
+          aria-disabled={effectiveIsDisabled}
+          title={currentTitle}
           aria-label={currentTitle}
         >
           <span className="relative flex items-center z-10">
-            {currentIcon} {/* This is Mic icon for active state */}
-            <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span> {/* This is "Listening..." */}
+            {currentIcon}
+            <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
           </span>
         </div>
       ) : (
-        // INACTIVE/OTHER STATES: Original single-layer button
+        // INACTIVE/OTHER STATES BUTTON
         <div
           className={dynamicButtonClasses}
-          onMouseDown={!isDisabled && status === 'idle' ? handleStart : undefined}
-          onTouchStart={!isDisabled && status === 'idle' ? handleStart : undefined}
-          onKeyDown={handleKeyPress} // Handles space/enter key press to start
+          onMouseDown={() => {
+            if (!effectiveIsDisabled && (status === 'idle' || status === 'active')) {
+              handleStart();
+            } else {
+              console.log(`[VoiceWidget] InactiveButton onMouseDown: handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
+            }
+          }}
+          onTouchStartCapture={(e) => {
+            if (!effectiveIsDisabled && (status === 'idle' || status === 'active')) {
+              e.preventDefault();
+              handleStart();
+            } else {
+              console.log(`[VoiceWidget] InactiveButton onTouchStart: handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
+            }
+          }}
+          onKeyDown={handleKeyPress} // handleKeyPress has its own disabled check
           role="button"
-          tabIndex={isDisabled ? -1 : 0}
-          aria-disabled={isDisabled}
+          tabIndex={effectiveIsDisabled ? -1 : 0}
+          aria-disabled={effectiveIsDisabled}
           title={currentTitle}
           aria-label={currentTitle}
         >
@@ -257,7 +239,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
         </div>
       )}
 
-      {/* Toast Notification Area (sibling) */}
+      {/* Toast Notification Area */} 
       <div
         aria-live="assertive"
         className="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6 z-50"
