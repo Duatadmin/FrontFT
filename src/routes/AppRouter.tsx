@@ -1,5 +1,5 @@
 // src/routes/AppRouter.tsx
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { Routes, Route, Navigate, useParams, useNavigate } from "react-router-dom";
 import { LoginPage, ProtectedRoute } from "@/entry";
@@ -7,21 +7,23 @@ import App from "../App";
 import Dashboard from '../pages/dashboard'; 
 import ResponsiveDashboard from '../pages/ResponsiveDashboard';
 import DiaryPage from '../pages/DiaryPage'; 
-import EnhancedDiaryPage from '../pages/EnhancedDiaryPage'; 
-import TestPage from '@/pages/TestPage';
+import ResponsiveEnhancedDiaryPage from '../pages/ResponsiveEnhancedDiaryPage'; 
+import ResponsiveTestPage from '@/pages/ResponsiveTestPage';
 import ExerciseDetailPage from '@/pages/ExerciseDetailPage';
-import ExerciseLibraryPage from '../pages/ExerciseLibraryPage';
+import ResponsiveExerciseLibraryPage from '../pages/ResponsiveExerciseLibraryPage';
 import AnalyticsDashboardLayout from '../components/layout/AnalyticsDashboardLayout'; 
-import ProgramsPageSkeleton from '../components/skeletons/ProgramsPageSkeleton'; 
-import SupabaseTest from '../SupabaseTest'; 
+ 
+import ResponsiveSupabaseTest from '@/pages/ResponsiveSupabaseTest'; 
+import ResponsiveAnalyticsDashboardPage from '@/pages/ResponsiveAnalyticsDashboardPage';
 
-// Import ProgramsPage with proper lazy-loading (copied from main.tsx)
-const ProgramsPage = React.lazy(() => {
-  return import('../pages/programs');
-});
+import ResponsiveProgramsPage from '../pages/ResponsiveProgramsPage'; // New responsive wrapper
 
 // Wrapper component to handle props for ExerciseDetailPage
+import useMediaQuery from '../hooks/useMediaQuery'; // Added for responsiveness
+import MobileDashboardLayout from '../components/layout/MobileDashboardLayout'; // Added for responsiveness
+
 const ExerciseDetailWrapper = () => {
+  const isMobile = useMediaQuery('(max-width: 768px)'); // Added for responsiveness
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
@@ -31,10 +33,24 @@ const ExerciseDetailWrapper = () => {
 
   if (!id) {
     // Handle case where ID is not present, perhaps redirect or show an error
+    // If ID is not present, redirect. This part is outside the mobile/desktop layout logic.
     return <Navigate to="/library" replace />;
   }
 
-  return <ExerciseDetailPage exerciseId={id} onClose={handleClose} />;
+  if (isMobile) {
+    return (
+      <MobileDashboardLayout>
+        <ExerciseDetailPage exerciseId={id} onClose={handleClose} />
+      </MobileDashboardLayout>
+    );
+  }
+
+  // Desktop layout
+  return (
+    <AnalyticsDashboardLayout title="Exercise Details">
+      <ExerciseDetailPage exerciseId={id} onClose={handleClose} />
+    </AnalyticsDashboardLayout>
+  );
 };
 
 export default function AppRouter() {
@@ -88,7 +104,7 @@ export default function AppRouter() {
         path="/diary"
         element={
           <ProtectedRoute>
-            <EnhancedDiaryPage />
+            <ResponsiveEnhancedDiaryPage />
           </ProtectedRoute>
         }
       />
@@ -104,7 +120,7 @@ export default function AppRouter() {
         path="/test"
         element={
           <ProtectedRoute>
-            <TestPage />
+            <ResponsiveTestPage />
           </ProtectedRoute>
         }
       />
@@ -112,16 +128,14 @@ export default function AppRouter() {
         path="/supabase-test"
         element={
           <ProtectedRoute>
-            <SupabaseTest />
+            <ResponsiveSupabaseTest />
           </ProtectedRoute>
         }
       />
       <Route
         path="/library"
         element={          <ProtectedRoute>
-            <AnalyticsDashboardLayout title="Exercise Library">
-              <ExerciseLibraryPage />
-            </AnalyticsDashboardLayout>
+            <ResponsiveExerciseLibraryPage />
           </ProtectedRoute>
         }
       />
@@ -139,9 +153,15 @@ export default function AppRouter() {
         path="/programs"
         element={
           <ProtectedRoute>
-            <React.Suspense fallback={<ProgramsPageSkeleton />}>
-              <ProgramsPage />
-            </React.Suspense>
+            <ResponsiveProgramsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/analytics"
+        element={
+          <ProtectedRoute>
+            <ResponsiveAnalyticsDashboardPage />
           </ProtectedRoute>
         }
       />

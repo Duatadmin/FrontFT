@@ -16,7 +16,8 @@ import {
   BookOpen,
   Dumbbell,
   LogOut,
-  LogIn
+  LogIn,
+  TrendingUp // Added for Analytics icon
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase'; // Corrected path
 import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
@@ -202,6 +203,14 @@ const Sidebar: React.FC = () => {
           label="Supabase Test" 
           to="/supabase-test"
           isActive={location.pathname === '/supabase-test'}
+        />
+
+        {/* ADDED: SidebarLink for Analytics Dashboard */}
+        <SidebarLink 
+          icon={<TrendingUp size={18} />} 
+          label="Analytics" 
+          to="/analytics"
+          isActive={location.pathname === '/analytics'}
         />
       </nav>
       
