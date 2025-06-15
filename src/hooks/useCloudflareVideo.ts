@@ -21,7 +21,7 @@ const fetchCloudflareVideoUrl = async (exerciseId: string | null | undefined): P
   let response: Response;
   try {
     console.log(`[useCloudflareVideo] Fetching from /functions/v1/stream-video/${exerciseId}`);
-    response = await fetch(`/functions/v1/stream-video/${exerciseId}`, {
+    response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/stream-video/${exerciseId}`, {
       headers: {
         'Authorization': `Bearer ${session.access_token}`,
       },
