@@ -59,7 +59,9 @@
     "cypress": "^14.4.1",
     "date-fns": "^4.1.0",
     "framer-motion": "^11.18.2",
+    "hls.js": "^1.6.5",
     "js-cookie": "^3.0.5",
+    "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.488.0",
     "react": "^19.1.0",
     "react-date-range": "^2.0.1",
@@ -73,6 +75,7 @@
     "tailwind-merge": "^3.2.0",
     "tailwindcss-noise": "^1.0.6",
     "uuid": "^11.1.0",
+    "zod": "^3.25.64",
     "zustand": "^4.5.6"
   }
 }

@@ -1,6 +1,9 @@
 import React from 'react';
 import { ExerciseCardProps } from './ExerciseCard'; // Assuming similar base props
 import { normalizeInstructions } from "@/utils/normalizers";
+import { useCloudflareVideo } from '@/hooks/useCloudflareVideo';
+import VideoPlayer from './VideoPlayer'; // Assuming VideoPlayer.tsx is in the same directory
+import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
 // Extend or define new props specific to Full View based on docs/exercise_card.md
 export interface ExerciseDetailViewProps extends ExerciseCardProps {
@@ -34,6 +37,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
   exerciseId, // Destructure exerciseId
 }) => {
   const steps = normalizeInstructions(instructions);
+  const { data: videoData, isLoading: isVideoLoading, error: videoError } = useCloudflareVideo(exerciseId);
 
   return (
     <div className="bg-neutral-900 text-white rounded-2xl shadow-2xl shadow-black/30 max-w-4xl w-full mx-auto relative my-8 border border-neutral-700/50">
@@ -54,24 +58,49 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
         <div className="gv-gradient base" />
 
         {(() => {
-          let videoSrc: string | undefined;
-          if (exerciseId === '1133') {
-            videoSrc = "/videos/1.mp4";
-          } else {
-            videoSrc = gifUrl;
+          if (isVideoLoading) {
+            return (
+              <div id="gv-video" className="gv-video bg-neutral-800 flex items-center justify-center">
+                <Skeleton className="h-full w-full bg-neutral-700" />
+              </div>
+            );
           }
 
-          if (videoSrc) {
+          if (videoError) {
             return (
-              <video
+              <div 
+                id="gv-video"
+                className="gv-video bg-neutral-800 flex flex-col items-center justify-center text-red-400 p-4"
+              >
+                <p>Error loading video.</p>
+                <p className='text-xs text-neutral-500'>{videoError.message}</p>
+                 {gifUrl && <img src={gifUrl} alt={name} className="mt-4 w-full h-auto max-h-60 object-contain rounded-md" />} 
+              </div>
+            );
+          }
+
+          if (videoData?.url) {
+            return (
+              <VideoPlayer
                 id="gv-video" // ID is crucial for the CSS mask to work
                 className="gv-video"
-                src={videoSrc}
+                hlsSrc={videoData.url}
                 autoPlay
                 muted
-                loop
+                loop={videoData.loop} // Use loop property from API response
                 playsInline
-                preload="auto"
+                preload="metadata"
+                poster={gifUrl} // Use gifUrl as poster
+              />
+            );
+          } else if (gifUrl) {
+            // Fallback to GIF if no video URL but gifUrl exists
+            return (
+              <img 
+                id="gv-video" // ID is crucial for the CSS mask to work
+                src={gifUrl} 
+                alt={name} 
+                className="gv-video object-cover" 
               />
             );
           } else {
