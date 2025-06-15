@@ -2,6 +2,7 @@
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import jwt from 'https://esm.sh/jsonwebtoken@9.0.2' // Ensure this is the correct ESM import for Deno
+import { Buffer } from 'https://deno.land/std@0.177.0/io/buffer.ts';
 import { z } from 'https://esm.sh/zod@3.22.4'
 
 // Define the Zod schema for the response (consistent with src/types/video.ts)
@@ -84,9 +85,22 @@ serve(async (req: Request) => {
 
     const cfVideoUid = exerciseData.cf_video_uid
     const keyId = Deno.env.get('CF_STREAM_KEY_ID')
-    const signKey = Deno.env.get('CF_STREAM_SIGN_KEY') 
+    const base64SignKey = Deno.env.get('CF_STREAM_SIGN_KEY') 
     const deliveryHost = Deno.env.get('CF_STREAM_DELIVERY') || 'https://videodelivery.net'
     const tokenTtl = parseInt(Deno.env.get('CF_STREAM_TOKEN_TTL') || '3600', 10)
+
+    let signKey: string;
+    try {
+      if (!base64SignKey) throw new Error('CF_STREAM_SIGN_KEY is not set.');
+      // Decode the base64 encoded PEM key to its raw PEM string format
+      signKey = new TextDecoder().decode(Buffer.from(base64SignKey, 'base64').bytes());
+    } catch (e) {
+      console.error('Failed to decode CF_STREAM_SIGN_KEY:', e.message);
+      return new Response(JSON.stringify({ error: 'Server configuration error: Invalid signing key format.' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 500,
+      });
+    }
 
     if (!keyId || !signKey) {
       console.error('Cloudflare Stream signing key ID or secret key is not configured.')
@@ -103,7 +117,7 @@ serve(async (req: Request) => {
       exp: expiry,
     }
 
-    const signedJwt = jwt.sign(unsignedToken, signKey, { algorithm: 'HS256', header: { kid: keyId } })
+    const signedJwt = jwt.sign(unsignedToken, signKey, { algorithm: 'RS256', header: { kid: keyId } })
     const streamUrl = `${deliveryHost}/${cfVideoUid}/manifest/video.m3u8?token=${signedJwt}`
     
     const responsePayload: PlayResponseType = { url: streamUrl, loop: true }

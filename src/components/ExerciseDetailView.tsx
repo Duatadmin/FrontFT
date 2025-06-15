@@ -74,7 +74,6 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
               >
                 <p>Error loading video.</p>
                 <p className='text-xs text-neutral-500'>{videoError.message}</p>
-                 {gifUrl && <img src={gifUrl} alt={name} className="mt-4 w-full h-auto max-h-60 object-contain rounded-md" />} 
               </div>
             );
           }
