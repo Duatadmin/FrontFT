@@ -1,4 +1,4 @@
-import React, { ReactNode } from 'react';
+import { ReactNode } from 'react';
 
 type DashboardBackgroundProps = {
   children?: ReactNode;
@@ -17,7 +17,7 @@ function DashboardBackground({ children }: DashboardBackgroundProps) {
   
   // If used with children, wrap them with the background
   return (
-    <div className="w-full h-full min-h-screen bg-dark-bg bg-gradient-radial-olive">
+    <div className="w-full h-full min-h-screen bg-dark-bg bg-gradient-radial-olive overflow-x-hidden">
       {/* Applied background classes directly, added min-h-screen */}
       {children}
     </div>

@@ -50,7 +50,23 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
   const [hasVideoStartedPlaying, setHasVideoStartedPlaying] = React.useState(false);
 
   return (
-    <div className="relative text-white min-h-dvh w-screen overflow-x-hidden md:bg-neutral-900/60 md:backdrop-blur-xl md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:max-w-4xl md:w-full md:mx-auto md:my-8 md:border md:border-neutral-700/50 md:min-h-fit">
+    <div 
+      className="relative text-white min-h-dvh w-full overflow-x-hidden md:bg-neutral-900/60 md:backdrop-blur-xl md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:max-w-4xl md:mx-auto md:my-8 md:border md:border-neutral-700/50 md:min-h-fit"
+      style={{
+        // TEMPORARY DEBUGGING STYLES FOR MOBILE - REMOVE AFTER DIAGNOSIS
+        // These will apply on all screen sizes, but we're checking mobile effect.
+        // The md: Tailwind classes should ideally override these for larger screens if specificity allows.
+        maxWidth: 'none !important',
+        margin: '0 !important',
+        padding: '0 !important', // Added to see if padding is part of the card effect
+        borderRadius: '0 !important',
+        border: 'none !important',
+        boxShadow: 'none !important', // Added to remove shadows contributing to card look
+        // Ensure background is transparent on mobile, overriding md: classes if they somehow apply
+        // This might be too aggressive and hide the md: background, but it's for testing mobile first.
+        // On second thought, let Tailwind handle the background for now based on md: prefix.
+      }}
+    >
       {/* Close Button */} 
       {onClose && (
         <button 
