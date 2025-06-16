@@ -2,7 +2,7 @@ import React from 'react';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
 import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
-import MainLayout from '../../components/layout/MainLayout';
+
 import { Dumbbell, Target, FileStack } from 'lucide-react';
 import CurrentProgramTab from '../../components/programs/CurrentProgramTab';
 
@@ -15,7 +15,7 @@ import CurrentProgramTab from '../../components/programs/CurrentProgramTab';
 const ProgramsPage: React.FC = () => {
   useAuthGuard();
   return (
-    <MainLayout>
+    <>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl font-bold text-text-primary" data-testid="programs-page-title">
           Training Programs & Goals
@@ -84,7 +84,7 @@ const ProgramsPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </MainLayout>
+    </>
   );
 };
 

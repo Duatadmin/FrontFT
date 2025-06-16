@@ -103,3 +103,13 @@
 /* Keyframes are now defined in tailwind.config.js */
 /* @keyframes fade-in { ... } */
 /* @keyframes bounce { ... } */
+
+/* Styles for lazy-loaded images to fade in */
+.fade-in {
+  opacity: 0;
+}
+
+.fade-in.loaded {
+  opacity: 1;
+  transition: opacity 0.5s ease-in-out;
+}

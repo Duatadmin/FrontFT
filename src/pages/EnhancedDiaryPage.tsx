@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import Sidebar from '../components/layout/Sidebar';
 import useDiaryStore from '../store/useDiaryStore';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
 import { CalendarDays, BarChart2, Target } from 'lucide-react';
@@ -30,9 +29,6 @@ const EnhancedDiaryPage: React.FC = () => {
   return (
     <div className="flex h-screen text-text-primary">
       {/* Global DashboardBackground from main.tsx will now be visible */}
-      
-      {/* Sidebar */}
-      <Sidebar />
       
       {/* Main content */}
       <div className="flex-1 overflow-auto">

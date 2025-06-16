@@ -5,16 +5,23 @@ import { useCloudflareVideo } from '@/hooks/useCloudflareVideo';
 import VideoPlayer from './VideoPlayer'; // Assuming VideoPlayer.tsx is in the same directory
 import UseAnimations from 'react-useanimations';
 import loadingAnimation from 'react-useanimations/lib/loading'; // Adjust path if necessary
+import { cfImg } from '@/lib/cf'; // Import cfImg
 
 // Extend or define new props specific to Full View based on docs/exercise_card.md
-export interface ExerciseDetailViewProps extends ExerciseCardProps {
+export interface ExerciseDetailViewProps extends Omit<ExerciseCardProps, 'gifUrl' | 'name' | 'bodypart' | 'equipment' | 'tier' | 'isCompound' | 'onSelect'> { // Omit props now handled by ExerciseCard or not directly used by DetailView, ensure id is still available if ExerciseCardProps had it as mandatory
+  id: string; // Ensure id is explicitly part of DetailViewProps if needed for cfImg or other logic
+  name?: string; // Keep name if DetailView displays it
+  bodypart?: string;
+  equipment?: string;
+  tier?: 'A' | 'B' | 'C';
+  isCompound?: boolean;
   maintarget?: string[];
   secondarymuscles?: string[];
   instructions?: string; // Could be markdown or structured content
   benefits?: string[];
   common_mistakes?: string[];
   safety_notes?: string[];
-  alternatives?: Array<{ id: string; name: string; gifUrl?: string }>; // Example structure
+  alternatives?: Array<{ id: string; name: string; }>; // gifUrl removed
   onClose?: () => void; // Added onClose prop
   exerciseId: string; // Added exerciseId prop
   // user_notes?: string; // If implementing user notes
@@ -22,7 +29,7 @@ export interface ExerciseDetailViewProps extends ExerciseCardProps {
 
 const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
   name,
-  gifUrl,
+  // gifUrl, // Removed
   bodypart,
   equipment,
   tier,
@@ -37,6 +44,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
   onClose, // Destructure onClose
   exerciseId, // Destructure exerciseId
 }) => {
+  const mainImagePosterUrl = cfImg(exerciseId); // Image for poster and fallback
   const steps = normalizeInstructions(instructions);
   const { data: videoData, isLoading: isVideoLoading, error: videoError } = useCloudflareVideo(exerciseId);
   const [hasVideoStartedPlaying, setHasVideoStartedPlaying] = React.useState(false);
@@ -87,17 +95,17 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
             loop={videoData.loop} // Use loop property from API response
             playsInline
             preload="metadata"
-            poster={gifUrl} // Use gifUrl as poster
+            poster={mainImagePosterUrl} // Use cfImg for poster
             onPlaying={() => setHasVideoStartedPlaying(true)}
             // onError or onStalled could be used to revert to shimmer if needed
           />
         )}
 
         {/* Fallback to GIF if no videoData.url but gifUrl exists, and not loading */}
-        {!isVideoLoading && !videoData?.url && gifUrl && (
+        {!isVideoLoading && !videoData?.url && mainImagePosterUrl && (
           <img 
             id="gv-video" // ID is crucial for the CSS mask to work
-            src={gifUrl} 
+            src={mainImagePosterUrl} 
             alt={name} 
             className="gv-video object-cover" 
           />
@@ -115,7 +123,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
         )}
 
         {/* Media not available display */}
-        {!isVideoLoading && !videoData?.url && !gifUrl && !videoError && (
+        {!isVideoLoading && !videoData?.url && !videoError && !mainImagePosterUrl && (
           <div 
             id="gv-video-unavailable"
             className="gv-video bg-neutral-800 flex items-center justify-center text-neutral-500 absolute inset-0 z-[1]"
@@ -211,12 +219,15 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
             <div className="pt-6 border-t border-neutral-700/50 first:border-t-0 first:pt-0">
               <h3 className="text-xl font-semibold mb-3 text-lime-300">Alternatives</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {alternatives.map(alt => (
-                  <div key={alt.id} className="bg-neutral-700/30 backdrop-blur-md border border-neutral-600/40 p-4 rounded-xl hover:bg-neutral-600/50 transition-colors shadow-lg hover:shadow-lime-500/20">
-                    {alt.gifUrl && <img src={alt.gifUrl} alt={alt.name} className="w-full h-28 object-cover rounded-md mb-3 shadow-md"/>}
-                    <p className="text-base font-semibold text-lime-300 truncate">{alt.name}</p>
-                  </div>
-                ))}
+                {alternatives.map(alt => { // Use curly braces for a block
+                  const altImageUrl = cfImg(alt.id); // Define before returning JSX
+                  return (
+                    <div key={alt.id} className="bg-neutral-700/30 backdrop-blur-md border border-neutral-600/40 p-4 rounded-xl hover:bg-neutral-600/50 transition-colors shadow-lg hover:shadow-lime-500/20">
+                      {altImageUrl && <img src={altImageUrl} alt={alt.name} className="w-full h-28 object-cover rounded-md mb-3 shadow-md"/>}
+                      <p className="text-base font-semibold text-lime-300 truncate">{alt.name}</p>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

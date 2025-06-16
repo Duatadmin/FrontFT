@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutGrid, Dumbbell, BookOpen, MessageCircle, LucideIcon } from 'lucide-react'; // Updated icons
+import { LayoutGrid, Dumbbell, BookOpen, MessageCircle, BarChart3, Library, LucideIcon } from 'lucide-react'; // Updated icons
 
 interface NavItemType {
   href: string;
@@ -11,6 +11,8 @@ const navItems: NavItemType[] = [
   { href: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
   { href: '/programs', icon: Dumbbell, label: 'Programs' },
   { href: '/diary', icon: BookOpen, label: 'Diary' },
+  { href: '/library', icon: Library, label: 'Library' },
+  { href: '/analytics', icon: BarChart3, label: 'Analytics' },
   { href: '/', icon: MessageCircle, label: 'Coach' }, // Matches desktop Coach link
 ];
 
@@ -23,7 +25,7 @@ const NavItem = ({ item, isActive }: NavItemProps) => {
   return (
     <Link 
       to={item.href} 
-      className="flex flex-col items-center justify-center w-1/4 h-full text-text-secondary hover:text-white transition-colors duration-300 group"
+      className="flex flex-col items-center justify-center flex-1 h-full text-text-secondary hover:text-white transition-colors duration-300 group"
     >
       <div className={`relative p-2 rounded-full transition-all duration-300 ${isActive ? 'bg-primary/10' : 'group-hover:bg-white/10'}`}>
         <item.icon size={24} className={`${isActive ? 'text-primary' : ''}`} />

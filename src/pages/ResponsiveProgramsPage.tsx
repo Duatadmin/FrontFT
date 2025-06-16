@@ -3,6 +3,7 @@ import React from 'react';
 import useMediaQuery from '../hooks/useMediaQuery';
 import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
 import ProgramsPageSkeleton from '../components/skeletons/ProgramsPageSkeleton';
+import AnalyticsDashboardLayout from '../components/layout/AnalyticsDashboardLayout';
 
 // Lazy load ProgramsPage
 const ProgramsPage = React.lazy(() => import('./programs'));
@@ -20,11 +21,13 @@ const ResponsiveProgramsPage: React.FC = () => {
     );
   }
 
-  // For larger screens, render ProgramsPage as is, wrapped in Suspense
+  // For larger screens, render ProgramsPage within AnalyticsDashboardLayout
   return (
-    <React.Suspense fallback={<ProgramsPageSkeleton />}>
-      <ProgramsPage />
-    </React.Suspense>
+    <AnalyticsDashboardLayout title="Training Programs & Goals">
+      <React.Suspense fallback={<ProgramsPageSkeleton />}>
+        <ProgramsPage />
+      </React.Suspense>
+    </AnalyticsDashboardLayout>
   );
 };
 

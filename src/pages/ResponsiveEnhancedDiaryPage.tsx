@@ -3,6 +3,7 @@ import React from 'react';
 import useMediaQuery from '../hooks/useMediaQuery';
 import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
 import EnhancedDiaryPage from './EnhancedDiaryPage'; // The actual page content
+import AnalyticsDashboardLayout from '../components/layout/AnalyticsDashboardLayout'; // Import AnalyticsDashboardLayout
 
 const ResponsiveEnhancedDiaryPage: React.FC = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -15,9 +16,12 @@ const ResponsiveEnhancedDiaryPage: React.FC = () => {
     );
   }
 
-  // For larger screens, render EnhancedDiaryPage as is, or with its specific desktop layout if it had one.
-  // Assuming EnhancedDiaryPage doesn't have its own full-screen layout component like AnalyticsDashboardLayout.
-  return <EnhancedDiaryPage />;
+  // For larger screens, render EnhancedDiaryPage within AnalyticsDashboardLayout
+  return (
+    <AnalyticsDashboardLayout title="Training Diary">
+      <EnhancedDiaryPage />
+    </AnalyticsDashboardLayout>
+  );
 };
 
 export default ResponsiveEnhancedDiaryPage;
