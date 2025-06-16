@@ -181,7 +181,7 @@ const TemplateGallery: React.FC<TemplateGalleryProps> = ({ onSelectTemplate }) =
       {/* Template preview drawer */}
       {previewTemplate && (
         <div 
-          className="fixed inset-0 bg-black/50 z-50 flex justify-end"
+          className="fixed inset-0 bg-black/50 z-50 flex justify-end safe-top safe-bot safe-left safe-right"
           onClick={handleClosePreview}
           data-testid="template-preview-backdrop"
         >

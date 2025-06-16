@@ -110,7 +110,7 @@ const ExerciseLibraryPage: React.FC = () => {
     <div className={`h-full overflow-y-auto text-white ${!selectedExerciseId ? 'p-4 sm:p-6 md:p-8' : ''}`.trim()}>
       {/* Render ExerciseDetailPage if an exercise is selected */}
       {selectedExerciseId ? (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto safe-top safe-bot safe-left safe-right">
           <ExerciseDetailPage exerciseId={selectedExerciseId} onClose={handleCloseExerciseDetail} />
         </div>
       ) : (

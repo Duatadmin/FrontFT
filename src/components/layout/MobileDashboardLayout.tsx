@@ -7,8 +7,8 @@ interface MobileDashboardLayoutProps {
 
 const MobileDashboardLayout: React.FC<MobileDashboardLayoutProps> = ({ children }) => {
   return (
-    <div className="flex flex-col h-screen text-text overflow-hidden">
-      <main className="flex-1 overflow-y-auto p-4 pb-28">
+    <div className="flex flex-col h-screen text-text overflow-hidden safe-top"> {/* Added safe-top */}
+      <main className="flex-1 overflow-y-auto px-4 pb-28 safe-left safe-right"> {/* Changed p-4 to px-4, added safe-left, safe-right */}
         {children}
       </main>
       <BottomNavBar />

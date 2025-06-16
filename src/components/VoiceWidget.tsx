@@ -242,7 +242,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       {/* Toast Notification Area */} 
       <div
         aria-live="assertive"
-        className="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6 z-50"
+        className="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6 z-50 safe-top safe-bot safe-left safe-right"
       >
         <div className="flex w-full flex-col items-center space-y-4 sm:items-end">
           <Transition

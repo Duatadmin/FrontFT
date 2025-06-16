@@ -15,7 +15,7 @@ const AnalyticsDashboardLayout: React.FC<AnalyticsDashboardLayoutProps> = ({
   const [currentMonth, setCurrentMonth] = useState('May 2024');
   
   return (
-    <div className="flex h-screen overflow-hidden text-text-primary">
+    <div className="flex h-screen overflow-hidden text-text-primary safe-top"> {/* Added safe-top */}
       {/* Global DashboardBackground from main.tsx will now be visible */}
       
       {/* Sidebar */}
@@ -24,7 +24,7 @@ const AnalyticsDashboardLayout: React.FC<AnalyticsDashboardLayoutProps> = ({
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Bar */}
-        <header className="h-14 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center px-6 sticky top-0 z-10">
+        <header className="h-14 bg-white/5 backdrop-blur-md border-b border-white/10 flex items-center px-6 sticky top-0 z-10 sticky-safe-top sticky-safe-left"> {/* Added sticky-safe-top, sticky-safe-left */}
           <h1 className="text-xl font-bold text-white">{title}</h1>
           
           <div className="ml-auto flex items-center space-x-4">
@@ -52,7 +52,7 @@ const AnalyticsDashboardLayout: React.FC<AnalyticsDashboardLayoutProps> = ({
         </header>
 
         {/* Dashboard Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-6 safe-left safe-right"> {/* Added safe-left, safe-right */}
           {children}
         </main>
       </div>
