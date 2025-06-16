@@ -50,7 +50,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
   const [hasVideoStartedPlaying, setHasVideoStartedPlaying] = React.useState(false);
 
   return (
-    <div className="bg-neutral-900 text-white rounded-2xl shadow-2xl shadow-black/30 max-w-4xl w-full mx-auto relative my-8 border border-neutral-700/50">
+    <div className="bg-neutral-900 text-white md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:max-w-4xl w-full md:mx-auto relative md:my-8 md:border md:border-neutral-700/50 min-h-screen md:min-h-0 w-screen md:w-full overflow-x-hidden">
       {/* Close Button */} 
       {onClose && (
         <button 
@@ -63,7 +63,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
       )}
 
       {/* Gradient Video Container */}
-      <div className="gv-wrapper w-full rounded-t-2xl"> {/* Applied w-full and rounded-t-2xl as requested */}
+      <div className="gv-wrapper relative w-full aspect-video md:rounded-t-2xl overflow-hidden"> {/* Applied w-full and rounded-t-2xl as requested */}
         {/* gradient below the video */}
         <div className="gv-gradient base" />
 
@@ -88,7 +88,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
         {videoData?.url && (
           <VideoPlayer
             id="gv-video" // ID is crucial for the CSS mask to work
-            className={`gv-video ${hasVideoStartedPlaying ? 'opacity-100' : 'opacity-0'}`}
+            className={`gv-video w-full h-full ${hasVideoStartedPlaying ? 'opacity-100' : 'opacity-0'}`}
             hlsSrc={videoData.url}
             autoPlay
             muted
@@ -107,7 +107,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
             id="gv-video" // ID is crucial for the CSS mask to work
             src={mainImagePosterUrl} 
             alt={name} 
-            className="gv-video object-cover" 
+            className="gv-video object-cover w-full h-full" 
           />
         )}
 
@@ -145,7 +145,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
       </div>
 
       {/* Content Body */}
-      <div className="p-6 md:p-8 bg-neutral-800/60 backdrop-blur-md border-t border-neutral-700/50 rounded-b-2xl">
+      <div className="p-4 sm:p-6 md:p-8 bg-neutral-800/60 backdrop-blur-md border-t border-neutral-700/50 md:rounded-b-2xl">
         <div className="flex flex-wrap gap-3 text-sm mb-6">
           {bodypart && <span className="bg-lime-600/20 backdrop-blur-sm border border-lime-500/40 text-lime-300 px-3 py-1.5 rounded-lg text-xs font-medium">{bodypart}</span>}
           {equipment && <span className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/40 text-neutral-300 px-3 py-1.5 rounded-lg text-xs font-medium">{equipment}</span>}
