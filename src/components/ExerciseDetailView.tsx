@@ -50,7 +50,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
   const [hasVideoStartedPlaying, setHasVideoStartedPlaying] = React.useState(false);
 
   return (
-    <div className="bg-neutral-900 text-white md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:max-w-4xl w-full md:mx-auto relative md:my-8 md:border md:border-neutral-700/50 min-h-screen md:min-h-0 w-screen md:w-full overflow-x-hidden">
+    <div className="relative text-white min-h-dvh w-screen overflow-x-hidden md:bg-neutral-900/60 md:backdrop-blur-xl md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:max-w-4xl md:w-full md:mx-auto md:my-8 md:border md:border-neutral-700/50 md:min-h-fit">
       {/* Close Button */} 
       {onClose && (
         <button 
@@ -145,7 +145,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
       </div>
 
       {/* Content Body */}
-      <div className="p-4 sm:p-6 md:p-8 bg-neutral-800/60 backdrop-blur-md border-t border-neutral-700/50 md:rounded-b-2xl">
+      <div className="w-full p-4 sm:p-6 md:p-8 bg-neutral-800/60 backdrop-blur-md md:border-t md:border-neutral-700/50 md:rounded-b-2xl">
         <div className="flex flex-wrap gap-3 text-sm mb-6">
           {bodypart && <span className="bg-lime-600/20 backdrop-blur-sm border border-lime-500/40 text-lime-300 px-3 py-1.5 rounded-lg text-xs font-medium">{bodypart}</span>}
           {equipment && <span className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/40 text-neutral-300 px-3 py-1.5 rounded-lg text-xs font-medium">{equipment}</span>}
