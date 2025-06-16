@@ -107,10 +107,12 @@ const ExerciseLibraryPage: React.FC = () => {
   // For simplicity in this step, we'll render the title here and adjust AppRouter later if needed.
 
   return (
-    <div className="p-4 sm:p-6 md:p-8 h-full overflow-y-auto text-white">
+    <div className={`h-full overflow-y-auto text-white ${!selectedExerciseId ? 'p-4 sm:p-6 md:p-8' : ''}`.trim()}>
       {/* Render ExerciseDetailPage if an exercise is selected */}
       {selectedExerciseId ? (
-        <ExerciseDetailPage exerciseId={selectedExerciseId} onClose={handleCloseExerciseDetail} />
+        <div className="fixed inset-0 z-50 bg-neutral-900 overflow-y-auto">
+          <ExerciseDetailPage exerciseId={selectedExerciseId} onClose={handleCloseExerciseDetail} />
+        </div>
       ) : (
         <>
           <h1 className="text-3xl font-bold mb-6 text-lime-400">{pageTitle}</h1>

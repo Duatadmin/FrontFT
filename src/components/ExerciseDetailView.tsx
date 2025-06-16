@@ -52,20 +52,6 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
   return (
     <div 
       className="relative text-white min-h-dvh w-full overflow-x-hidden md:bg-neutral-900/60 md:backdrop-blur-xl md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:max-w-4xl md:mx-auto md:my-8 md:border md:border-neutral-700/50 md:min-h-fit"
-      style={{
-        // TEMPORARY DEBUGGING STYLES FOR MOBILE - REMOVE AFTER DIAGNOSIS
-        // These will apply on all screen sizes, but we're checking mobile effect.
-        // The md: Tailwind classes should ideally override these for larger screens if specificity allows.
-        maxWidth: 'none !important',
-        margin: '0 !important',
-        padding: '0 !important', // Added to see if padding is part of the card effect
-        borderRadius: '0 !important',
-        border: 'none !important',
-        boxShadow: 'none !important', // Added to remove shadows contributing to card look
-        // Ensure background is transparent on mobile, overriding md: classes if they somehow apply
-        // This might be too aggressive and hide the md: background, but it's for testing mobile first.
-        // On second thought, let Tailwind handle the background for now based on md: prefix.
-      }}
     >
       {/* Close Button */} 
       {onClose && (
@@ -154,14 +140,14 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
           style={{ opacity: 0.9 }} // Fallback inline style
         />
 
-        {/* Exercise Title Overlay - ensure it's on top of the gv-gradient.mask */}
-        <h2 className="absolute top-4 left-4 md:left-6 text-2xl md:text-3xl font-bold text-white drop-shadow-lg tracking-tight z-10">
-          {name}
-        </h2>
       </div>
 
       {/* Content Body */}
       <div className="w-full p-4 sm:p-6 md:p-8 bg-neutral-800/60 backdrop-blur-md md:border-t md:border-neutral-700/50 md:rounded-b-2xl">
+        {/* New Exercise Title Location */}
+        <h2 className="text-3xl md:text-4xl font-bold text-lime-300 text-center mb-6 tracking-tight drop-shadow-md">
+          {name}
+        </h2>
         <div className="flex flex-wrap gap-3 text-sm mb-6">
           {bodypart && <span className="bg-lime-600/20 backdrop-blur-sm border border-lime-500/40 text-lime-300 px-3 py-1.5 rounded-lg text-xs font-medium">{bodypart}</span>}
           {equipment && <span className="bg-neutral-700/30 backdrop-blur-sm border border-neutral-600/40 text-neutral-300 px-3 py-1.5 rounded-lg text-xs font-medium">{equipment}</span>}
