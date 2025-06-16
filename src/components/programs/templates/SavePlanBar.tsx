@@ -80,7 +80,7 @@ const SavePlanBar: React.FC<SavePlanBarProps> = ({ hasChanges, onSave, userId })
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 bg-background-default border-t border-border p-4 z-20 shadow-md"
+      className="fixed left-0 right-0 bg-background-default border-t border-border p-4 z-20 shadow-md sticky-safe-bot sticky-safe-left sticky-safe-right"
       data-testid="save-plan-bar"
     >
       <div className="container mx-auto flex flex-wrap justify-between items-center gap-4">

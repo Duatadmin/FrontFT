@@ -150,7 +150,7 @@ const GoalForm: React.FC<GoalFormProps> = ({ isOpen, onClose, userId, editGoal }
   
   return (
     <div 
-      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+      className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 safe-top safe-bot safe-left safe-right"
       onClick={handleBackdropClick}
       data-testid="goal-form-modal"
     >

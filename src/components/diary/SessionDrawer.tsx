@@ -89,7 +89,7 @@ const SessionDrawer: React.FC = () => {
   
   return (
     <div 
-      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-end"
+      className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-end safe-top safe-bot safe-left safe-right"
       onClick={handleBackdropClick}
       aria-modal="true"
       role="dialog"

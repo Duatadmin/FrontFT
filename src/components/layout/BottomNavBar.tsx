@@ -41,7 +41,7 @@ const BottomNavBar = () => {
   const location = useLocation();
 
   return (
-    <nav className="fixed left-1/2 -translate-x-1/2 w-[95%] max-w-md h-24 bg-black/20 backdrop-blur-xl border border-white/10 rounded-2xl z-50 shadow-2xl sticky-safe-bot mb-4">
+    <nav className="fixed left-1/2 -translate-x-1/2 w-[95%] max-w-md h-24 bg-black/20 backdrop-blur-xl border border-white/10 rounded-2xl z-50 bottom-4 sticky-safe-bot sticky-safe-left sticky-safe-right">
       <div className="flex justify-around items-center h-full mx-auto">
         {navItems.map((item) => (
           <NavItem 

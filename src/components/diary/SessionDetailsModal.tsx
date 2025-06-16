@@ -9,7 +9,7 @@ interface SessionDetailsModalProps {
 
 export const SessionDetailsModal: React.FC<SessionDetailsModalProps> = ({ session, onClose }) => {
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50" onClick={onClose}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex justify-center items-center z-50 safe-top safe-bot safe-left safe-right" onClick={onClose}>
       <div className="bg-neutral-900 border border-neutral-700 rounded-2xl p-6 w-full max-w-2xl relative max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-neutral-500 hover:text-white">
           <X size={24} />
