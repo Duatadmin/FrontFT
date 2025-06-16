@@ -51,7 +51,7 @@ export const LoginPage = () => {
         </div>
         <Auth
           supabaseClient={supabase}
-          providers={['google', 'facebook', 'twitter']}
+          providers={['google', 'apple']}
           appearance={{ theme: customAuthUITheme }}
           theme="dark"
           magicLink
