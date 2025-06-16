@@ -3,6 +3,8 @@ import { ExerciseCardProps } from './ExerciseCard'; // Assuming similar base pro
 import { normalizeInstructions } from "@/utils/normalizers";
 import { useCloudflareVideo } from '@/hooks/useCloudflareVideo';
 import VideoPlayer from './VideoPlayer'; // Assuming VideoPlayer.tsx is in the same directory
+import UseAnimations from 'react-useanimations';
+import loadingAnimation from 'react-useanimations/lib/loading'; // Adjust path if necessary
 
 // Extend or define new props specific to Full View based on docs/exercise_card.md
 export interface ExerciseDetailViewProps extends ExerciseCardProps {
@@ -63,8 +65,15 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
         {(isVideoLoading || (videoData?.url && !hasVideoStartedPlaying)) && (
           <div 
             id="gv-video-placeholder" 
-            className="gv-video bg-white absolute inset-0 z-[1]" 
-          />
+            className="gv-video bg-white absolute inset-0 z-[1] flex items-center justify-center" 
+          >
+            <UseAnimations 
+              animation={loadingAnimation} 
+              size={50} // Slightly smaller than programs page, adjust as needed
+              strokeColor="#DFF250"
+              className="z-[3]" // Ensure it's above the placeholder's bg (z-1) and mask (z-2)
+            />
+          </div>
         )}
 
         {/* Video Player - rendered when URL is available, opacity controlled by hasVideoStartedPlaying */}
