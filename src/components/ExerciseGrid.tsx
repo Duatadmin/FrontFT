@@ -80,7 +80,7 @@ export const ExerciseGrid: React.FC = () => {
                 boxSizing: 'border-box',
               }}
             >
-              {exercisesInThisRow.map((exercise) => (
+              {exercisesInThisRow.map((exercise, idx) => (
                 <div
                   key={exercise.id}
                   style={{
@@ -92,7 +92,7 @@ export const ExerciseGrid: React.FC = () => {
                     justifyContent: 'center',
                   }}
                 >
-                  <ExerciseCard id={exercise.id} />
+                  <ExerciseCard id={exercise.id} absoluteIndex={startIndex + idx} />
                 </div>
               ))}
             </div>

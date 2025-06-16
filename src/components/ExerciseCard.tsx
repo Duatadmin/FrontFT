@@ -6,15 +6,17 @@ import { cfImg } from '@/lib/cf'; // Assuming cf.ts is in src/lib
 export interface ExerciseCardProps {
   id: string; // This will be used as the image ID for Cloudflare
   name?: string; // Made optional as it might not be available or needed for display logic
-  // gifUrl?: string; // Removed, as we'll use cfImg
   bodypart?: string; // Uncommented
   equipment?: string; // Uncommented
   tier?: 'A' | 'B' | 'C'; // Uncommented
   isCompound?: boolean; // Uncommented
   onSelect?: (id: string) => void;
+  absoluteIndex?: number; // Added for preloading logic
 }
 
 const CARD_HEIGHT_PX = 540; // Define card height as a constant
+
+const PRELOAD_COUNT = 4; // How many initial cards to eagerly load
 
 const ExerciseCard: React.FC<ExerciseCardProps> = ({
   id,
@@ -24,23 +26,30 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
   tier,
   isCompound,
   onSelect,
+  absoluteIndex,
 }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
+
+  // Determine if this card is one of the initial cards to preload
+  const isPreloadCandidate = absoluteIndex !== undefined && absoluteIndex < PRELOAD_COUNT;
+
+  // useInView hook:
+  // - skip: if it's a preload candidate (we'll load it regardless of view)
+  // - triggerOnce: true (load once when it comes into view, if not preloaded)
   const { ref, inView } = useInView({
+    skip: isPreloadCandidate,
     triggerOnce: true,
-    threshold: 0.1,
+    threshold: 0.1, // Standard threshold
   });
+
+  // An image should attempt to load if it's a preload candidate OR if it has come into view
+  const shouldAttemptLoad = isPreloadCandidate || inView;
 
   const imageUrl = cfImg(id);
 
-  const handleImageLoad = () => {
-    setIsLoaded(true);
-  };
-
-  const handleImageError = () => {
-    setImageError(true);
-  };
+  const handleImageLoad = () => setIsLoaded(true);
+  const handleImageError = () => setImageError(true);
 
   const handleSelect = () => {
     if (onSelect) {
@@ -56,22 +65,22 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
       onClick={handleSelect}
     >
       {/* Image Area */}
-      <div 
+      <div
         className="relative w-full overflow-hidden bg-neutral-900"
         style={{ height: '340px' }}
       >
         {/* Layer 0 Content: White Placeholder OR Image */}
         
         {/* White placeholder background: 
-            Shown if inView AND (image is not yet loaded OR image has an error) */}
-        {inView && (!isLoaded || imageError) && (
+            Shown if shouldAttemptLoad AND (image is not yet loaded OR image has an error) */}
+        {shouldAttemptLoad && (!isLoaded || imageError) && (
           <div className="absolute inset-0 bg-white z-0"></div>
         )}
 
         {/* Actual Image: 
-            Attempted to render if inView. 
+            Attempted to render if shouldAttemptLoad. 
             Opacity handles fade-in. Sits at z-0. */}
-        {inView && (
+        {shouldAttemptLoad && (
           <img
             src={imageUrl}
             alt={name}
