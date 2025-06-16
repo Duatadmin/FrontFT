@@ -3,7 +3,6 @@ import { ExerciseCardProps } from './ExerciseCard'; // Assuming similar base pro
 import { normalizeInstructions } from "@/utils/normalizers";
 import { useCloudflareVideo } from '@/hooks/useCloudflareVideo';
 import VideoPlayer from './VideoPlayer'; // Assuming VideoPlayer.tsx is in the same directory
-import { Skeleton } from '@/components/ui/skeleton'; // For loading state
 
 // Extend or define new props specific to Full View based on docs/exercise_card.md
 export interface ExerciseDetailViewProps extends ExerciseCardProps {
@@ -38,6 +37,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 }) => {
   const steps = normalizeInstructions(instructions);
   const { data: videoData, isLoading: isVideoLoading, error: videoError } = useCloudflareVideo(exerciseId);
+  const [hasVideoStartedPlaying, setHasVideoStartedPlaying] = React.useState(false);
 
   return (
     <div className="bg-neutral-900 text-white rounded-2xl shadow-2xl shadow-black/30 max-w-4xl w-full mx-auto relative my-8 border border-neutral-700/50">
@@ -57,65 +57,69 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
         {/* gradient below the video */}
         <div className="gv-gradient base" />
 
-        {(() => {
-          if (isVideoLoading) {
-            return (
-              <div id="gv-video" className="gv-video bg-neutral-800 flex items-center justify-center">
-                <Skeleton className="h-full w-full bg-neutral-700" />
-              </div>
-            );
-          }
+        {/* Shimmer Placeholder - visible when loading or before video has started playing */}
+        {/* Static Placeholder: White background, will be tinted by the .gv-gradient.mask */}
+        {/* Visible when loading or before video has started playing */}
+        {(isVideoLoading || (videoData?.url && !hasVideoStartedPlaying)) && (
+          <div 
+            id="gv-video-placeholder" 
+            className="gv-video bg-white absolute inset-0 z-[1]" 
+          />
+        )}
 
-          if (videoError) {
-            return (
-              <div 
-                id="gv-video"
-                className="gv-video bg-neutral-800 flex flex-col items-center justify-center text-red-400 p-4"
-              >
-                <p>Error loading video.</p>
-                <p className='text-xs text-neutral-500'>{videoError.message}</p>
-              </div>
-            );
-          }
+        {/* Video Player - rendered when URL is available, opacity controlled by hasVideoStartedPlaying */}
+        {videoData?.url && (
+          <VideoPlayer
+            id="gv-video" // ID is crucial for the CSS mask to work
+            className={`gv-video ${hasVideoStartedPlaying ? 'opacity-100' : 'opacity-0'}`}
+            hlsSrc={videoData.url}
+            autoPlay
+            muted
+            loop={videoData.loop} // Use loop property from API response
+            playsInline
+            preload="metadata"
+            poster={gifUrl} // Use gifUrl as poster
+            onPlaying={() => setHasVideoStartedPlaying(true)}
+            // onError or onStalled could be used to revert to shimmer if needed
+          />
+        )}
 
-          if (videoData?.url) {
-            return (
-              <VideoPlayer
-                id="gv-video" // ID is crucial for the CSS mask to work
-                className="gv-video"
-                hlsSrc={videoData.url}
-                autoPlay
-                muted
-                loop={videoData.loop} // Use loop property from API response
-                playsInline
-                preload="metadata"
-                poster={gifUrl} // Use gifUrl as poster
-              />
-            );
-          } else if (gifUrl) {
-            // Fallback to GIF if no video URL but gifUrl exists
-            return (
-              <img 
-                id="gv-video" // ID is crucial for the CSS mask to work
-                src={gifUrl} 
-                alt={name} 
-                className="gv-video object-cover" 
-              />
-            );
-          } else {
-            return (
-              <div 
-                id="gv-video" // ID is crucial for the CSS mask to work
-                className="gv-video bg-neutral-800 flex items-center justify-center text-neutral-500"
-              >
-                Media not available
-              </div>
-            );
-          }
-        })()}
+        {/* Fallback to GIF if no videoData.url but gifUrl exists, and not loading */}
+        {!isVideoLoading && !videoData?.url && gifUrl && (
+          <img 
+            id="gv-video" // ID is crucial for the CSS mask to work
+            src={gifUrl} 
+            alt={name} 
+            className="gv-video object-cover" 
+          />
+        )}
 
-        {/* gradient tint that masks over white areas */}
-        <div className="gv-gradient mask" />
+        {/* Error display */}
+        {videoError && (
+          <div 
+            id="gv-video-error"
+            className="gv-video bg-neutral-800 flex flex-col items-center justify-center text-red-400 p-4 absolute inset-0 z-[1]"
+          >
+            <p>Error loading video.</p>
+            <p className='text-xs text-neutral-500'>{videoError.message}</p>
+          </div>
+        )}
+
+        {/* Media not available display */}
+        {!isVideoLoading && !videoData?.url && !gifUrl && !videoError && (
+          <div 
+            id="gv-video-unavailable"
+            className="gv-video bg-neutral-800 flex items-center justify-center text-neutral-500 absolute inset-0 z-[1]"
+          >
+            Media not available
+          </div>
+        )}
+
+        {/* gradient tint that masks over white areas - always visible when placeholder or video is shown */}
+        <div 
+          className="gv-gradient mask opacity-90" // Assuming opacity-90 is configured in Tailwind for 0.9
+          style={{ opacity: 0.9 }} // Fallback inline style
+        />
 
         {/* Exercise Title Overlay - ensure it's on top of the gv-gradient.mask */}
         <h2 className="absolute top-4 left-4 md:left-6 text-2xl md:text-3xl font-bold text-white drop-shadow-lg tracking-tight z-10">
