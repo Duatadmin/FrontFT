@@ -51,7 +51,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
   return (
     <div 
-      className="relative text-white min-h-dvh w-full overflow-x-hidden md:bg-neutral-900/60 md:backdrop-blur-xl md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:max-w-4xl md:mx-auto md:my-8 md:border md:border-neutral-700/50 md:min-h-fit"
+      className="relative text-white w-full bg-transparent flex flex-col h-dvh md:h-auto md:max-w-4xl md:mx-auto md:my-8 md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:border md:border-white/10"
     >
       {/* Close Button */} 
       {onClose && (
@@ -65,7 +65,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
       )}
 
       {/* Gradient Video Container */}
-      <div className="gv-wrapper relative w-full aspect-video md:rounded-t-2xl overflow-hidden"> {/* Applied w-full and rounded-t-2xl as requested */}
+      <div className="gv-wrapper relative w-full aspect-video md:rounded-t-2xl overflow-hidden sticky top-0 z-20 md:sticky-none"> {/* Applied w-full and rounded-t-2xl as requested */}
         {/* gradient below the video */}
         <div className="gv-gradient base" />
 
@@ -142,8 +142,10 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
       </div>
 
-      {/* Content Body */}
-      <div className="w-full p-4 sm:p-6 md:p-8 bg-neutral-800/60 backdrop-blur-md md:border-t md:border-neutral-700/50 md:rounded-b-2xl">
+      {/* Scrollable Content Wrapper */}
+      <div className="flex-1 overflow-y-auto pb-28">
+        {/* Content Body */}
+        <div className="w-full p-4 sm:p-6 md:p-8 bg-black/20 backdrop-blur-xl md:border-t md:border-white/10 md:rounded-b-2xl">
         {/* New Exercise Title Location */}
         <h2 className="text-3xl md:text-4xl font-bold text-lime-300 text-center mb-6 tracking-tight drop-shadow-md">
           {name}
@@ -234,8 +236,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
             </div>
           )}
         </div>
-
-
+        </div>
       </div>
     </div>
   );

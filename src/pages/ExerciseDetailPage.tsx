@@ -46,7 +46,7 @@ const ExerciseDetailPage: React.FC<ExerciseDetailPageProps> = ({ exerciseId, onC
             exerciseId: data.exercise_id, // Pass the exerciseId
             id: data.exercise_id,
             name: data.name,
-            gifUrl: data.gifurl,
+
             bodypart: data.bodypart || data.muscle_group,
             equipment: data.equipment,
             tier: data.tier,
@@ -93,11 +93,11 @@ const ExerciseDetailPage: React.FC<ExerciseDetailPageProps> = ({ exerciseId, onC
   }
 
   if (error) {
-    return <div className="flex justify-center items-center h-screen bg-neutral-900 text-red-500 p-8">Error: {error}</div>;
+    return <div className="flex justify-center items-center h-screen text-red-500 p-8">Error: {error}</div>;
   }
 
   if (!exercise) {
-    return <div className="flex justify-center items-center h-screen bg-neutral-900 text-white p-8">Exercise not found.</div>;
+    return <div className="flex justify-center items-center h-screen text-white p-8">Exercise not found.</div>;
   }
 
   return <ExerciseDetailView {...exercise} onClose={onClose} />; // Pass onClose to ExerciseDetailView

@@ -60,7 +60,7 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
   return (
     <div
       ref={ref}
-      className="group relative bg-neutral-950/70 backdrop-blur-lg border border-lime-400/20 rounded-2xl overflow-hidden flex flex-col text-white transition-all duration-300 hover:border-lime-400/60 hover:shadow-xl hover:shadow-lime-500/10 cursor-pointer"
+      className="group relative bg-black/20 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden flex flex-col text-white transition-all duration-300 hover:bg-white/10 cursor-pointer"
       style={{ height: `${CARD_HEIGHT_PX}px`, width: '100%' }}
       onClick={handleSelect}
     >

@@ -10,10 +10,10 @@ const MuscleGroupCard: React.FC<MuscleGroupCardProps> = ({ groupName, iconSrc, o
   return (
     <button
       onClick={() => onSelectGroup(groupName)}
-      className="flex flex-col items-center justify-center p-6 bg-neutral-800/60 backdrop-blur-lg border border-neutral-700/80 rounded-2xl text-white font-semibold capitalize text-center transition-all duration-300 ease-in-out hover:bg-lime-500/10 hover:border-lime-400/70 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-opacity-70 shadow-lg hover:shadow-lime-500/20 aspect-square"
+      className="group flex flex-col items-center justify-center p-4 bg-black/20 backdrop-blur-xl border border-white/10 rounded-2xl text-text-secondary capitalize text-center aspect-square transition-colors duration-300 hover:text-white hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50"
     >
-      <img src={iconSrc} alt={`${groupName} icon`} className="mb-3 h-12 w-12 object-contain group-hover:opacity-80 transition-opacity" />
-      <span className="text-sm sm:text-base group-hover:text-white transition-colors">{groupName}</span>
+      <img src={iconSrc} alt={`${groupName} icon`} className="mb-2 h-12 w-12 object-contain" />
+      <span className="text-xs mt-1 group-hover:text-white">{groupName}</span>
     </button>
   );
 };
