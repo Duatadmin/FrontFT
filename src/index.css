@@ -142,4 +142,8 @@
   .sticky-safe-right {
     padding-right: var(--safe-area-inset-right);
   }
+
+  .bottom-safe-4 {
+    bottom: calc(1rem + var(--safe-area-inset-bottom));
+  }
 }
