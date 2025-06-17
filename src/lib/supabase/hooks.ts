@@ -127,10 +127,10 @@ export const useCurrentTrainingPlan = (): SupabaseResponse<TrainingPlan> => {
       if (!userId) return null;
       
       const { data, error } = await supabase
-        .from('training_plans')
+        .from('modular_training_plan')
         .select('*')
         .eq('user_id', userId)
-        .eq('active', true)
+        .eq('status', 'active')
         .single();
       
       if (error && error.code !== 'PGRST116') throw error;
@@ -150,112 +150,95 @@ export const useCurrentTrainingPlan = (): SupabaseResponse<TrainingPlan> => {
   };
 };
 
-/**
- * Hook to fetch user goals
- */
-export const useGoals = (): SupabaseResponse<Goal[]> => {
-  const fetcher = useCallback(async () => {
-    try {
-      const userId = await getCurrentUserId();
-      if (!userId) return [];
-      
-      const { data, error } = await supabase
-        .from('goals')
-        .select('*')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      throw new Error(handleSupabaseError(error));
-    }
-  }, []);
-  
-  const { data, error, isLoading, mutate } = useSWR('user-goals', fetcher);
-  
-  return {
-    data: data || null,
-    error: error ? (error as Error).message : null,
-    isLoading,
-    mutate
-  };
-};
+// TODO: This hook is deprecated and needs to be refactored for the new modular schema.
+// The 'goals' table no longer exists.
+// export const useGoals = (): SupabaseResponse<Goal[]> => {
+//   const fetcher = useCallback(async () => {
+//     try {
+//       const userId = await getCurrentUserId();
+//       if (!userId) return null;
+//
+//       const { data, error } = await supabase
+//         .from('goals')
+//         .select('*')
+//         .eq('user_id', userId);
+//
+//       if (error) throw error;
+//       return data;
+//     } catch (error) {
+//       throw new Error(handleSupabaseError(error));
+//     }
+//   }, []);
+//
+//   const { data, error, isLoading, mutate } = useSWR('goals', fetcher);
+//
+//   return { data, error: error?.message || null, isLoading, mutate };
+// };
 
-/**
- * Hook to fetch the current week's reflection
- */
-export const useCurrentWeekReflection = (): SupabaseResponse<WeeklyReflection> => {
-  const fetcher = useCallback(async () => {
-    try {
-      const userId = await getCurrentUserId();
-      if (!userId) return null;
-      
-      // Calculate current week's start and end dates
-      const now = new Date();
-      const startOfWeek = new Date(now);
-      startOfWeek.setDate(now.getDate() - now.getDay());
-      startOfWeek.setHours(0, 0, 0, 0);
-      
-      const endOfWeek = new Date(startOfWeek);
-      endOfWeek.setDate(startOfWeek.getDate() + 6);
-      endOfWeek.setHours(23, 59, 59, 999);
-      
-      const { data, error } = await supabase
-        .from('weekly_reflections')
-        .select('*')
-        .eq('user_id', userId)
-        .eq('week_start_date', startOfWeek.toISOString().split('T')[0])
-        .single();
-      
-      if (error && error.code !== 'PGRST116') throw error;
-      return data;
-    } catch (error) {
-      throw new Error(handleSupabaseError(error));
-    }
-  }, []);
-  
-  const { data, error, isLoading, mutate } = useSWR('current-week-reflection', fetcher);
-  
-  return {
-    data,
-    error: error ? (error as Error).message : null,
-    isLoading,
-    mutate
-  };
-};
+// TODO: This hook is deprecated and needs to be refactored for the new modular schema.
+// The 'weekly_reflections' table no longer exists.
+// export const useCurrentWeekReflection = (): SupabaseResponse<WeeklyReflection> => {
+//   const fetcher = useCallback(async () => {
+//     try {
+//       const userId = await getCurrentUserId();
+//       if (!userId) return null;
+//
+//       const today = new Date();
+//       const startOfWeek = new Date(
+//         today.setDate(today.getDate() - today.getDay())
+//       );
+//       const endOfWeek = new Date(
+//         today.setDate(today.getDate() - today.getDay() + 6)
+//       );
+//
+//       const { data, error } = await supabase
+//         .from('weekly_reflections')
+//         .select('*')
+//         .eq('user_id', userId)
+//         .gte('week_start_date', startOfWeek.toISOString())
+//         .lte('week_start_date', endOfWeek.toISOString())
+//         .single();
+//
+//       if (error && error.code !== 'PGRST116') throw error;
+//       return data;
+//     } catch (error) {
+//       throw new Error(handleSupabaseError(error));
+//     }
+//   }, []);
+//
+//   const { data, error, isLoading, mutate } = useSWR(
+//     'currentWeekReflection',
+//     fetcher
+//   );
+//
+//   return { data, error: error?.message || null, isLoading, mutate };
+// };
 
-/**
- * Hook to fetch user progress photos
- */
-export const useProgressPhotos = (): SupabaseResponse<ProgressPhoto[]> => {
-  const fetcher = useCallback(async () => {
-    try {
-      const userId = await getCurrentUserId();
-      if (!userId) return [];
-      
-      const { data, error } = await supabase
-        .from('progress_photos')
-        .select('*')
-        .eq('user_id', userId)
-        .order('date', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    } catch (error) {
-      throw new Error(handleSupabaseError(error));
-    }
-  }, []);
-  
-  const { data, error, isLoading, mutate } = useSWR('progress-photos', fetcher);
-  
-  return {
-    data: data || null,
-    error: error ? (error as Error).message : null,
-    isLoading,
-    mutate
-  };
-};
+// TODO: This hook is deprecated and needs to be refactored for the new modular schema.
+// The 'progress_photos' table no longer exists.
+// export const useProgressPhotos = (): SupabaseResponse<ProgressPhoto[]> => {
+//   const fetcher = useCallback(async () => {
+//     try {
+//       const userId = await getCurrentUserId();
+//       if (!userId) return null;
+//
+//       const { data, error } = await supabase
+//         .from('progress_photos')
+//         .select('*')
+//         .eq('user_id', userId)
+//         .order('created_at', { ascending: false });
+//
+//       if (error) throw error;
+//       return data;
+//     } catch (error) {
+//       throw new Error(handleSupabaseError(error));
+//     }
+//   }, []);
+//
+//   const { data, error, isLoading, mutate } = useSWR('progressPhotos', fetcher);
+//
+//   return { data, error: error?.message || null, isLoading, mutate };
+// };
 
 /**
  * Hook to calculate user's workout streak

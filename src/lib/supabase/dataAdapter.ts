@@ -7,10 +7,11 @@
  */
 import { supabase } from '../supabase';
 // Import types but don't use mock data generator directly
-import type { 
-  WorkoutSession, 
-  TrainingPlan
-} from './schema.types';
+import type { Tables, WorkoutSession } from "./schema.types";
+
+// Manually define the TrainingPlan type based on the modular_training_plan table.
+// This is a workaround because the alias is missing from the generated schema.types.ts file.
+export type TrainingPlan = Tables<"modular_training_plan">;
 
 /**
  * Error type for workout data operations
