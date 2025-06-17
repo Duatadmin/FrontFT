@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/browser';
-import { TrendingUp, Trophy, Loader, AlertTriangle } from 'lucide-react';
+import { TrendingUp, Trophy, Loader, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -63,12 +63,74 @@ const getMostFrequentExercise = (exerciseNames: (string | null)[]): string => {
 };
 
 const ProgressiveProgressCard: React.FC = () => {
+  const [allCleanedData, setAllCleanedData] = useState<SetData[]>([]); // Stores all fetched and cleaned data
   const [progressData, setProgressData] = useState<ProgressData[]>([]);
   const [personalRecord, setPersonalRecord] = useState<PersonalRecord | null>(null);
-  const [exerciseName, setExerciseName] = useState<string>('');
+  const [uniqueExercises, setUniqueExercises] = useState<string[]>([]);
+  const [selectedExercise, setSelectedExercise] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Function to process data for a given exercise
+  const processDataForExercise = (exerciseToProcess: string, dataToProcess: SetData[]) => {
+    if (!exerciseToProcess || dataToProcess.length === 0) {
+      setProgressData([]);
+      setPersonalRecord(null);
+      return;
+    }
+
+    const filteredData = dataToProcess.filter(item => item.exercise_name === exerciseToProcess);
+
+    if (filteredData.length === 0) {
+      setProgressData([]);
+      setPersonalRecord(null);
+      return;
+    }
+
+    const dailyMaxE1RM = filteredData.reduce<Record<string, SetData>>((acc, item) => {
+      const date = item.session_date.split('T')[0];
+      const e1RM = calculateE1RM(item.weight_kg, item.reps_done);
+      if (!acc[date] || e1RM > (acc[date].e1RM ?? 0)) {
+        acc[date] = {
+          session_date: item.session_date,
+          exercise_name: item.exercise_name,
+          reps_done: item.reps_done,
+          weight_kg: item.weight_kg,
+          e1RM
+        };
+      }
+      return acc;
+    }, {});
+
+    let currentPR = 0;
+    const prData = Object.values(dailyMaxE1RM)
+      .sort((a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime())
+      .map(item => {
+        const itemE1RM = item.e1RM ?? 0;
+        if (itemE1RM > currentPR) {
+          currentPR = itemE1RM;
+          return { ...item, isPR: true };
+        }
+        return { ...item, isPR: false };
+      });
+
+    const fullProgressData: ProgressData[] = prData.map(item => ({
+      date: new Date(item.session_date).toLocaleDateString('default', { month: 'short', day: 'numeric' }),
+      e1RM: Math.round(item.e1RM ?? 0),
+      isPR: item.isPR ?? false,
+    }));
+
+    const lastPR = prData.filter(item => item.isPR).pop();
+
+    setPersonalRecord({
+      value: Math.round(currentPR),
+      unit: 'kg',
+      date: lastPR ? new Date(lastPR.session_date).toLocaleDateString() : 'N/A',
+    });
+    setProgressData(fullProgressData);
+  };
+
+  // Effect for fetching initial data
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -103,54 +165,21 @@ const ProgressiveProgressCard: React.FC = () => {
           return;
         }
 
-        const mostFrequentExercise = getMostFrequentExercise(cleanData.map(item => item.exercise_name));
+        const allExerciseNames = cleanData.map(item => item.exercise_name);
+        const uniqueExerciseNames = Array.from(new Set(allExerciseNames.filter(name => name !== null))) as string[];
+        setUniqueExercises(uniqueExerciseNames);
+        setAllCleanedData(cleanData); // Store all cleaned data
 
-        const filteredData = cleanData.filter(item => item.exercise_name === mostFrequentExercise);
+        if (uniqueExerciseNames.length > 0) {
+          const mostFrequent = getMostFrequentExercise(allExerciseNames);
+          setSelectedExercise(mostFrequent);
+          // Initial processing will be handled by the next useEffect
+        } else {
+          setLoading(false); // No exercises to process
+        }
 
-        const dailyMaxE1RM = filteredData.reduce<Record<string, SetData>>((acc, item) => {
-          // item.session_date, item.weight_kg, item.reps_done are guaranteed non-null here due to prior filtering
-          const date = item.session_date.split('T')[0];
-          const e1RM = calculateE1RM(item.weight_kg, item.reps_done);
-
-          if (!acc[date] || e1RM > (acc[date].e1RM ?? 0)) {
-            acc[date] = {
-              session_date: item.session_date,
-              exercise_name: item.exercise_name, // also guaranteed non-null
-              reps_done: item.reps_done,
-              weight_kg: item.weight_kg,
-              e1RM
-            };
-          }
-          return acc;
-        }, {});
-
-        let currentPR = 0;
-        const prData = Object.values(dailyMaxE1RM)
-          .sort((a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime())
-          .map(item => {
-            const itemE1RM = item.e1RM ?? 0;
-            if (itemE1RM > currentPR) {
-              currentPR = itemE1RM;
-              return { ...item, isPR: true };
-            }
-            return { ...item, isPR: false };
-          });
-
-        // const sortedDays = Object.keys(dailyMaxE1RM).sort(); // This variable is not used in the current logic
-
-        const fullProgressData: ProgressData[] = prData.map(item => ({
-          date: new Date(item.session_date).toLocaleDateString('default', { month: 'short', day: 'numeric' }),
-          e1RM: Math.round(item.e1RM ?? 0),
-          isPR: item.isPR ?? false,
-        }));
-
-        setPersonalRecord({
-          value: Math.round(currentPR),
-          unit: 'kg',
-          date: new Date(prData.find(item => item.isPR)?.session_date ?? '').toLocaleDateString(),
-        });
-        setProgressData(fullProgressData);
-        setExerciseName(mostFrequentExercise);
+        // Data processing is now handled by the useEffect watching selectedExercise and allCleanedData
+        // setLoading(false) will be called in that effect or if no data
 
       } catch (e: any) {
         setError(e.message);
@@ -161,6 +190,29 @@ const ProgressiveProgressCard: React.FC = () => {
 
     fetchData();
   }, []);
+
+  // Effect for processing data when selectedExercise or allCleanedData changes
+  useEffect(() => {
+    if (selectedExercise && allCleanedData.length > 0) {
+      setLoading(true);
+      processDataForExercise(selectedExercise, allCleanedData);
+      setLoading(false);
+    }
+  }, [selectedExercise, allCleanedData]);
+
+  const handleNextExercise = () => {
+    if (uniqueExercises.length <= 1) return;
+    const currentIndex = uniqueExercises.indexOf(selectedExercise);
+    const nextIndex = (currentIndex + 1) % uniqueExercises.length;
+    setSelectedExercise(uniqueExercises[nextIndex]);
+  };
+
+  const handlePreviousExercise = () => {
+    if (uniqueExercises.length <= 1) return;
+    const currentIndex = uniqueExercises.indexOf(selectedExercise);
+    const prevIndex = (currentIndex - 1 + uniqueExercises.length) % uniqueExercises.length;
+    setSelectedExercise(uniqueExercises[prevIndex]);
+  };
 
   if (loading) {
     return (
@@ -192,15 +244,40 @@ const ProgressiveProgressCard: React.FC = () => {
 
   return (
     <div className="bg-neutral-800/50 p-4 md:p-6 rounded-2xl shadow-lg flex flex-col h-full">
-      <div className="flex justify-between items-start mb-4">
-        <h2 className="text-lg font-semibold text-white flex items-center">
+      <div className="mb-4">
+        {/* Main Card Title */}
+        <h2 className="text-lg font-semibold text-white flex items-center mb-2">
           <TrendingUp size={20} className="mr-2 text-accent-lime" />
           Progressive Progress
         </h2>
+        {/* Exercise Navigation - on a new line */}
+        {uniqueExercises.length > 0 && (
+          <div className="flex items-center justify-between w-full">
+            <button 
+              onClick={handlePreviousExercise}
+              disabled={uniqueExercises.length <= 1}
+              className="p-1 rounded-md hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            >
+              <ChevronLeft size={24} className="text-white" />
+            </button>
+            <h3 
+              className="text-md font-semibold text-white text-center flex-grow mx-2 truncate"
+              title={selectedExercise || 'Select Exercise'}
+            >
+              {(selectedExercise || 'Select Exercise') + ' e1RM'}
+            </h3>
+            <button 
+              onClick={handleNextExercise}
+              disabled={uniqueExercises.length <= 1}
+              className="p-1 rounded-md hover:bg-neutral-700 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            >
+              <ChevronRight size={24} className="text-white" />
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="flex-grow">
-        <h3 className="text-md font-semibold text-white mb-2">{exerciseName} e1RM</h3>
         
         <div className="flex items-baseline space-x-2 mb-4">
           <p className="text-3xl font-bold text-white">{Math.round(personalRecord.value)}<span className="text-lg font-normal text-text-secondary ml-1">{personalRecord.unit}</span></p>
