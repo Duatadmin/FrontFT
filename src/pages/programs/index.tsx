@@ -15,7 +15,7 @@ import CurrentProgramTab from '../../components/programs/CurrentProgramTab';
 const ProgramsPage: React.FC = () => {
   useAuthGuard();
   return (
-    <>
+    <div className="px-4 py-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-xl font-bold text-text-primary" data-testid="programs-page-title">
           Training Programs & Goals
@@ -84,7 +84,7 @@ const ProgramsPage: React.FC = () => {
           </Card>
         </TabsContent>
       </Tabs>
-    </>
+    </div>
   );
 };
 
