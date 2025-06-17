@@ -26,8 +26,28 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle
   const exerciseMuscleGroups = (session.exercises || [])
     .map(ex => ex.muscleGroup)
     .filter(mg => mg && validMuscleGroups.includes(mg as MuscleGroup)) as MuscleGroup[];
+
+  // Logic for limiting and prioritizing muscle groups
+  const preferredOrder: MuscleGroup[] = ['chest', 'back', 'shoulders', 'glutes', 'quads'];
+  let displayableMuscleGroups: MuscleGroup[] = [];
+
+  // Add preferred muscle groups first
+  for (const preferred of preferredOrder) {
+    if (exerciseMuscleGroups.includes(preferred) && !displayableMuscleGroups.includes(preferred)) {
+      displayableMuscleGroups.push(preferred);
+    }
+  }
+
+  // Add other muscle groups if space allows (up to 5 total)
+  for (const group of exerciseMuscleGroups) {
+    if (displayableMuscleGroups.length >= 5) break;
+    if (!displayableMuscleGroups.includes(group)) {
+      displayableMuscleGroups.push(group);
+    }
+  }
   
-  const uniqueMuscleGroups = Array.from(new Set(exerciseMuscleGroups));
+  // Ensure we don't exceed 5
+  const finalDisplayGroups = displayableMuscleGroups.slice(0, 5);
 
   return (
     <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-lg mb-3 transition-all duration-300 ease-in-out">
@@ -62,8 +82,8 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle
 
         {/* Right side: Muscle Icons and Chevron */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-2">
-          {uniqueMuscleGroups.length > 0 && (
-            <MuscleGroupDisplay muscleGroups={uniqueMuscleGroups} iconSize={24} />
+          {finalDisplayGroups.length > 0 && (
+            <MuscleGroupDisplay muscleGroups={finalDisplayGroups} iconSize={24} />
           )}
           <svg
             className={`w-5 h-5 transform transition-transform duration-200 text-neutral-400 ${isOpen ? 'rotate-180' : ''}`}
