@@ -247,8 +247,12 @@ const ProgressiveProgressCard: React.FC = () => {
       <div className="mb-4">
         {/* Main Card Title */}
         <h2 className="text-lg font-semibold text-white flex items-center mb-2">
-          <TrendingUp size={20} className="mr-2 text-accent-lime" />
-          Progressive Progress
+          <TrendingUp size={36} className="mr-3 text-accent-lime flex-shrink-0" />
+          <span>
+            Progressive
+            <br />
+            Progress
+          </span>
         </h2>
         {/* Exercise Navigation - on a new line */}
         {uniqueExercises.length > 0 && (
