@@ -55,16 +55,30 @@ export async function fetchWorkoutSessions(
       };
     }
 
-    // Start building the query
+    // Start building the query against workout_full_view
     let query = supabase
-      .from('workout_sessions')
-      .select('*')
+      .from('workout_full_view') // Target the correct view
+      .select(`
+        session_id, 
+        user_id, 
+        session_date, 
+        day_label,
+        day_of_week,
+        focus_area,
+        session_number,
+        overall_difficulty,
+        duration_minutes,
+        session_completed,
+        session_state,
+        plan_id,
+        week_id
+      `)
       .eq('user_id', userId);
       
-    // Filter for completed sessions
+    // Filter for completed sessions using the boolean field
     query = query.eq('session_completed', true);
     
-    // Add date range filters if provided
+    // Add date range filters if provided, using session_date
     if (startDate) {
       query = query.gte('session_date', startDate);
     }
@@ -78,17 +92,17 @@ export async function fetchWorkoutSessions(
       query = query.eq('focus_area', focusArea);
     }
     
-    // Execute the query
+    // Execute the query, order by session_date
     const { data, error } = await query.order('session_date', { ascending: false });
     
     if (error) {
-      console.error('Error fetching workout sessions:', error);
+      console.error('Error fetching workout sessions from workout_full_view:', error);
       return {
         data: null,
         error: {
           code: 'FETCH_ERROR',
           message: `Failed to fetch workout sessions: ${error.message}`,
-          missingData: 'workout_sessions',
+          missingData: 'workout_full_view_data',
           affectedModule: 'workout history',
           originalError: error
         },
@@ -104,72 +118,65 @@ export async function fetchWorkoutSessions(
       };
     }
     
-    // Process the data (parse JSON fields if needed)
+    // Process the data (map to WorkoutSession type, handle session_state)
     try {
-      const processedData = data.map(session => {
-        // Validate required fields
-        if (!session.id) {
-          console.warn('Session missing ID:', session);
-        }
-        
-        if (!session.session_date && !session.created_at) {
-          console.warn('Session missing timestamp:', session);
-        }
-        
-        // Process JSON fields
-        let completed_exercises = session.completed_exercises;
-        let metrics = session.metrics;
-        let metadata = session.metadata;
-        
-        try {
-          if (typeof completed_exercises === 'string') {
-            completed_exercises = JSON.parse(completed_exercises);
-          }
-        } catch (e) {
-          console.warn(`Invalid completed_exercises JSON for session ${session.id}:`, e);
-          completed_exercises = {};
-        }
-        
-        try {
-          if (typeof metrics === 'string') {
-            metrics = JSON.parse(metrics);
-          }
-        } catch (e) {
-          console.warn(`Invalid metrics JSON for session ${session.id}:`, e);
-          metrics = {};
-        }
-        
-        try {
-          if (typeof metadata === 'string') {
-            metadata = JSON.parse(metadata);
-          }
-        } catch (e) {
-          console.warn(`Invalid metadata JSON for session ${session.id}:`, e);
-          metadata = {};
-        }
-        
-        return {
-          ...session,
-          completed_exercises,
-          metrics,
-          metadata
+      const processedData = data.map(row => {
+        const session: Partial<WorkoutSession> = {
+            id: row.session_id,
+            user_id: row.user_id,
+            session_date: row.session_date,
+            created_at: row.session_date, // Use session_date as created_at for now
+            // updated_at: undefined, // workout_full_view doesn't have a clear session updated_at; recorded_at is for sets
+            focus_area: row.focus_area,
+            session_completed: row.session_completed, // Correctly maps to the expected property
+
+            // day_label: row.day_label, // Not in WorkoutSession type
+            // day_of_week: row.day_of_week, // Not in WorkoutSession type, needs mapping if type is number
+            // session_number: row.session_number, // Not in WorkoutSession type
+            // overall_difficulty: row.overall_difficulty, // Not in WorkoutSession type
+            // duration_minutes: row.duration_minutes, // Not in WorkoutSession type
+            // plan_id: row.plan_id, // Not in WorkoutSession type
+            // week_id: row.week_id, // Not in WorkoutSession type
+
+            completed_exercises: {},
+            metrics: {},
+            metadata: {}
         };
+
+        if (row.session_state) {
+            try {
+                const state = typeof row.session_state === 'string' 
+                    ? JSON.parse(row.session_state) 
+                    : row.session_state;
+                
+                session.completed_exercises = state.completed_exercises || {};
+                session.metrics = state.metrics || {};
+                session.metadata = state.metadata || {};
+            } catch (e) {
+                console.warn(`Invalid session_state JSON for session ${row.session_id}:`, e);
+            }
+        }
+        
+        return session as WorkoutSession;
       });
+
+      // Deduplicate sessions based on session_id, as workout_full_view might return multiple rows per session
+      const uniqueSessions = Array.from(new Map(processedData.map(s => [s.id, s])).values());
       
-      console.log(`Successfully fetched ${processedData.length} workout sessions`);
+      console.log(`Successfully fetched ${uniqueSessions.length} unique workout sessions from workout_full_view`);
       return {
-        data: processedData,
+        data: uniqueSessions,
         error: null,
         success: true
       };
     } catch (parseErr) {
-      console.error('Error processing workout sessions data:', parseErr);
+      console.error('Error processing workout sessions data from workout_full_view:', parseErr);
       return {
         data: null,
         error: {
           code: 'DATA_PROCESSING_ERROR',
           message: 'Failed to process workout sessions data',
-          missingData: 'valid JSON structure',
+          missingData: 'valid JSON structure in session_state',
           affectedModule: 'workout history',
           originalError: parseErr
         },
@@ -177,13 +184,13 @@ export async function fetchWorkoutSessions(
       };
     }
   } catch (err) {
-    console.error('Error in fetchWorkoutSessions:', err);
+    console.error('Error in fetchWorkoutSessions (workout_full_view):', err);
     return {
       data: null,
       error: {
         code: 'UNEXPECTED_ERROR',
         message: `Unexpected error fetching workout sessions: ${err instanceof Error ? err.message : String(err)}`,
-        missingData: 'workout_sessions',
+        missingData: 'workout_full_view_data',
         affectedModule: 'workout history',
         originalError: err
       },
@@ -201,30 +208,58 @@ export async function fetchWorkoutSessionById(
 ): Promise<WorkoutSession | null> {
   try {
     const { data, error } = await supabase
-      .from('workout_sessions')
-      .select('*')
-      .eq('id', sessionId)
+      .from('workout_full_view')
+      .select(`
+        session_id, 
+        user_id, 
+        session_date, 
+        focus_area,
+        session_completed,
+        session_state
+      `)
       .eq('user_id', userId)
-      .single();
+      .eq('session_id', sessionId);
     
     if (error) {
-      console.error('Error fetching workout session:', error);
+      console.error('Error fetching workout session by ID:', error);
+      return null;
+    }
+
+    if (!data || data.length === 0) {
+      console.log(`No data found for session ID: ${sessionId}`);
       return null;
     }
     
-    // Process the data (parse JSON fields if needed)
-    return {
-      ...data,
-      completed_exercises: typeof data.completed_exercises === 'string' 
-        ? JSON.parse(data.completed_exercises) 
-        : data.completed_exercises,
-      metrics: typeof data.metrics === 'string'
-        ? JSON.parse(data.metrics)
-        : data.metrics,
-      metadata: typeof data.metadata === 'string'
-        ? JSON.parse(data.metadata)
-        : data.metadata
+    // All rows belong to the same session, so we can take session details from the first row
+    const firstRow = data[0];
+    const session: Partial<WorkoutSession> = {
+        id: firstRow.session_id,
+        user_id: firstRow.user_id,
+        session_date: firstRow.session_date,
+        created_at: firstRow.session_date,
+        focus_area: firstRow.focus_area,
+        session_completed: firstRow.session_completed,
+        completed_exercises: {},
+        metrics: {},
+        metadata: {}
     };
+
+    if (firstRow.session_state) {
+        try {
+            const state = typeof firstRow.session_state === 'string' 
+                ? JSON.parse(firstRow.session_state) 
+                : firstRow.session_state;
+            
+            session.completed_exercises = state.completed_exercises || {};
+            session.metrics = state.metrics || {};
+            session.metadata = state.metadata || {};
+        } catch (e) {
+            console.warn(`Invalid session_state JSON for session ${firstRow.session_id}:`, e);
+        }
+    }
+    
+    return session as WorkoutSession;
+
   } catch (err) {
     console.error('Error in fetchWorkoutSessionById:', err);
     return null;
@@ -357,7 +392,7 @@ export async function fetchActiveTrainingPlan(userId: string): Promise<TrainingP
     // Try to fetch from training_plans table if it exists
     try {
       const { data, error } = await supabase
-        .from('training_plans')
+        .from('modular_training_plan')
         .select('*')
         .eq('user_id', userId)
         .eq('active', true)
@@ -370,10 +405,10 @@ export async function fetchActiveTrainingPlan(userId: string): Promise<TrainingP
       console.warn('Training plans table may not exist:', err);
     }
     
-    // Fallback: Check if there are any workout_sessions with plan metadata
+    // Fallback: Check if there are any sessions with plan metadata in the new view
     const { data: workouts, error: workoutsError } = await supabase
-      .from('workout_sessions')
-      .select('metadata,session_date')
+      .from('workout_full_view')
+      .select('session_state, session_date')
       .eq('user_id', userId)
       .eq('session_completed', true)
       .order('session_date', { ascending: false })
@@ -383,29 +418,24 @@ export async function fetchActiveTrainingPlan(userId: string): Promise<TrainingP
       return null;
     }
     
-    // Look for workouts with plan metadata
+    // Look for workouts with plan metadata inside session_state
     for (const workout of workouts) {
-      const metadata = typeof workout.metadata === 'string'
-        ? JSON.parse(workout.metadata)
-        : workout.metadata;
+      if (!workout.session_state) continue;
+
+      const session_state = typeof workout.session_state === 'string'
+        ? JSON.parse(workout.session_state)
+        : workout.session_state;
       
+      const metadata = session_state?.metadata;
+
       if (metadata?.source === 'plan' && metadata?.plan_id) {
         // Found a workout from a plan, use this as a pseudo training plan
-        // Create a training plan object from the workout metadata
-        const trainingPlan: TrainingPlan = {
-          id: metadata.plan_id as string,
+        return {
+          id: metadata.plan_id,
           user_id: userId,
-          name: (metadata.plan_name as string) || 'Current Plan',
-          description: (metadata.plan_description as string) || '',
-          active: true,
-          days: metadata.days || {},
-          start_date: metadata.start_date || new Date().toISOString(),
-          end_date: metadata.end_date,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        
-        return trainingPlan;
+          created_at: workout.session_date, // Use the session date as a proxy
+          // ... other fields are unknown from this context
+        } as TrainingPlan;
       }
     }
     

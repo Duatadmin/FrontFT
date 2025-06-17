@@ -239,7 +239,7 @@ Note: status removed from session insert; completed defaults to FALSE.
 
 ```sql
 -- Table definition
-CREATE TABLE IF NOT EXISTS training_set (
+CREATE TABLE IF NOT EXISTS modular_training_set (
   id              UUID         PRIMARY KEY DEFAULT uuid_generate_v4(),
   exercise_row_id UUID         NOT NULL REFERENCES modular_training_exercise(id) ON DELETE CASCADE,
   set_no          SMALLINT     NOT NULL,
@@ -250,14 +250,14 @@ CREATE TABLE IF NOT EXISTS training_set (
 );
 
 -- Indexes for analytical queries
-CREATE INDEX IF NOT EXISTS idx_set_exercise   ON training_set(exercise_row_id);
-CREATE INDEX IF NOT EXISTS idx_set_recorded   ON training_set(recorded_at DESC);
-CREATE INDEX IF NOT EXISTS idx_set_weight     ON training_set(weight_kg);
+CREATE INDEX IF NOT EXISTS idx_set_exercise   ON modular_training_set(exercise_row_id);
+CREATE INDEX IF NOT EXISTS idx_set_recorded   ON modular_training_set(recorded_at DESC);
+CREATE INDEX IF NOT EXISTS idx_set_weight     ON modular_training_set(weight_kg);
 
 -- Row-Level Security (Owner Read/Write)
-ALTER TABLE training_set ENABLE ROW LEVEL SECURITY;
+ALTER TABLE modular_training_set ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Owner-Read" ON training_set
+CREATE POLICY "Owner-Read" ON modular_training_set
   FOR SELECT USING (
     EXISTS (
       SELECT 1
@@ -270,7 +270,7 @@ CREATE POLICY "Owner-Read" ON training_set
     )
   );
 
-CREATE POLICY "Owner-Write" ON training_set
+CREATE POLICY "Owner-Write" ON modular_training_set
   FOR INSERT, UPDATE, DELETE USING (
     EXISTS (
       SELECT 1
@@ -308,3 +308,45 @@ Update any triggers that referenced status in sessions.
 Regenerate Supabase client types (if using code‑gen TS/Python).
 
 Refactor session_repository.py → use modular tables, then drop the VIEW.
+
+We have a workout_full_view table. Wich is view table for all our workouts.
+Please find attached the columns of the table.
+
+| column_name        | data_type                | is_nullable | column_default |
+| ------------------ | ------------------------ | ----------- | -------------- |
+| plan_id            | uuid                     | YES         | null           |
+| user_id            | uuid                     | YES         | null           |
+| split_type         | text                     | YES         | null           |
+| goal               | text                     | YES         | null           |
+| level              | text                     | YES         | null           |
+| plan_status        | text                     | YES         | null           |
+| week_start         | date                     | YES         | null           |
+| week_id            | uuid                     | YES         | null           |
+| week_number        | integer                  | YES         | null           |
+| week_start_date    | date                     | YES         | null           |
+| session_id         | uuid                     | YES         | null           |
+| day_label          | text                     | YES         | null           |
+| session_date       | date                     | YES         | null           |
+| day_of_week        | text                     | YES         | null           |
+| focus_area         | text                     | YES         | null           |
+| session_number     | integer                  | YES         | null           |
+| overall_difficulty | integer                  | YES         | null           |
+| duration_minutes   | integer                  | YES         | null           |
+| session_completed  | boolean                  | YES         | null           |
+| session_state      | jsonb                    | YES         | null           |
+| exercise_row_id    | uuid                     | YES         | null           |
+| exercise_id        | text                     | YES         | null           |
+| exercise_name      | text                     | YES         | null           |
+| muscle_group       | text                     | YES         | null           |
+| sets_planned       | integer                  | YES         | null           |
+| rep_scheme         | text                     | YES         | null           |
+| rir                | integer                  | YES         | null           |
+| equipment          | text                     | YES         | null           |
+| tier               | text                     | YES         | null           |
+| order_in_session   | integer                  | YES         | null           |
+| set_id             | uuid                     | YES         | null           |
+| set_no             | smallint                 | YES         | null           |
+| reps_done          | smallint                 | YES         | null           |
+| weight_kg          | real                     | YES         | null           |
+| rpe                | smallint                 | YES         | null           |
+| recorded_at        | timestamp with time zone | YES         | null           |

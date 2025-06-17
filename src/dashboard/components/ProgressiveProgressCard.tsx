@@ -13,7 +13,7 @@ import {
 } from 'recharts';
 
 // Type Definitions
-type TrainingSet = Database['public']['Tables']['training_set']['Row'];
+
 interface ProgressData {
   date: string;
   e1RM: number;
@@ -23,6 +23,11 @@ interface PersonalRecord {
   unit: string;
   date: string;
 }
+
+// Explicitly define the type for our query result to guide the compiler
+type SetWithExercise = Database['public']['Tables']['modular_training_set']['Row'] & {
+  modular_training_exercise: Pick<Database['public']['Tables']['modular_training_exercise']['Row'], 'exercise_name'> | null;
+};
 
 // Epley formula for e1RM
 const calculateE1RM = (weight: number, reps: number): number => {
@@ -44,14 +49,13 @@ const ProgressiveProgressCard: React.FC = () => {
         if (!session) throw new Error('User not authenticated.');
 
         const { data, error: queryError } = await supabase
-          .from('training_set')
+          .from('modular_training_set')
           .select(`
-            weight_kg, 
-            reps_done, 
-            recorded_at,
-            modular_training_exercise ( exrc_id, exrcwiki ( name ) )
-          `)
-          .not('modular_training_exercise', 'is', null);
+            *,
+            modular_training_exercise!modular_training_set_exercise_row_id_fkey (
+              exercise_name
+            )
+          `);
 
         if (queryError) throw queryError;
         if (!data || data.length === 0) {
@@ -59,7 +63,8 @@ const ProgressiveProgressCard: React.FC = () => {
           return;
         }
 
-        const setsWithNames = data.map(s => ({ ...s, exerciseName: s.modular_training_exercise?.exrcwiki?.name || 'Unknown' }));
+        const typedData = data as SetWithExercise[];
+        const setsWithNames = typedData.map(s => ({ ...s, exerciseName: s.modular_training_exercise?.exercise_name || 'Unknown' }));
 
         const exerciseCounts = setsWithNames.reduce((acc, set) => {
           acc[set.exerciseName] = (acc[set.exerciseName] || 0) + 1;
