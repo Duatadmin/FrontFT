@@ -1,5 +1,5 @@
 import React from 'react';
-import { FixedSizeList, type ListChildComponentProps } from 'react-window';
+import { VariableSizeList, type ListChildComponentProps } from 'react-window';
 import type { WorkoutExercise } from '@/utils/rowsToPlanTree';
 import { SetTable } from './SetTable'; // Assuming SetTable will be created next
 
@@ -10,7 +10,7 @@ interface ExerciseListProps {
   // planId: string; // Removed
 }
 
-const ITEM_HEIGHT = 200; // Approximate height for each exercise item, adjust as needed
+// ITEM_HEIGHT is no longer a fixed const, it will be calculated per item.
 
 interface ExerciseRowData {
   exercises: WorkoutExercise[];
@@ -28,12 +28,12 @@ const ExerciseRow: React.FC<ListChildComponentProps<ExerciseRowData>> = ({ index
   }
 
   return (
-    <div style={style} className="py-3 pr-2"> {/* Added pr-2 for scrollbar spacing if needed */}
-      <div className="p-4 bg-neutral-700/40 rounded-lg shadow border border-neutral-600">
+    <div style={style} className="pr-2"> {/* py-3 removed, spacing handled by card's margin */}
+      <div className="p-4 bg-neutral-700/40 rounded-lg shadow border border-neutral-600 mb-2"> {/* mb-2 added for spacing */}
         <h4 className="text-xl font-semibold text-green-300 mb-2 capitalize">
           {exercise.name || 'Unnamed Exercise'}
         </h4>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-sm mb-3 text-neutral-300">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs sm:text-sm mb-3 text-neutral-300">
           <p><strong>Muscle:</strong> {exercise.muscleGroup || 'N/A'}</p>
           <p><strong>Tier:</strong> {exercise.tier || 'N/A'}</p>
           <p><strong>Equip:</strong> {exercise.equipment || 'N/A'}</p>
@@ -66,19 +66,56 @@ export const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, sessionId
   // react-window needs a fixed height for the list container.
   // This can be a challenge in responsive designs. For simplicity, using a fixed height here.
   // Consider using react-virtualized-auto-sizer for more dynamic height handling.
-  const listHeight = Math.min(exercises.length * ITEM_HEIGHT, 600); // Max height 600px, or total items height
+  // Height calculation for VariableSizeList needs a different approach.
+  // For now, let's use a fixed height for the list viewport or make it more dynamic later.
+  const listHeight = 600; // Default list viewport height, can be adjusted
+
+  const getItemHeight = (index: number): number => {
+    const exercise = exercises[index];
+    if (!exercise) return 80; // Fallback small height
+
+    let height = 0;
+    // Card structure: p-4 (16px*2=32) + border (1px*2=2) + mb-2 (8px)
+    height += 32 + 2 + 8; // 42px
+
+    // Exercise Name (text-xl, mb-2)
+    height += 28; // Approx height for text-xl (e.g., 1.25rem * 1.5 line height)
+    height += 8;  // mb-2 (0.5rem)
+
+    // Metadata (6 items, text-xs, grid, mb-3)
+    // On mobile (single column), each item text-xs (0.75rem * 1.5 line height = ~18px)
+    // Assuming up to 6 lines if all wrap, or fewer if grid applies effectively.
+    // Let's estimate based on 3 rows of 2 items on sm, or 6 rows on xs.
+    // Max 6 lines * ~18px/line = 108px. Plus mb-3 (12px)
+    height += (6 * 18); // Max height for metadata text
+    height += 12; // mb-3 (0.75rem)
+
+    // SetTable (mt-2)
+    height += 8; // mt-2 (0.5rem)
+    if (exercise.sets && exercise.sets.length > 0) {
+      height += 24; // Table header (approx text-xs + padding)
+      height += exercise.sets.length * 30; // Each set row (approx text-xs + padding)
+    } else {
+      height += 20; // "No sets" message (text-sm)
+    }
+    
+    // Add a small general buffer for any unaccounted spacing/rounding
+    height += 16;
+
+    return Math.max(height, 150); // Ensure a minimum height
+  };
 
   return (
-    <FixedSizeList
+    <VariableSizeList
       height={listHeight} 
       itemCount={exercises.length}
-      itemSize={ITEM_HEIGHT}
+      itemSize={getItemHeight}
       width="100%" // Takes full width of its parent
       itemData={{ exercises, weekId, sessionId }} // planId removed
       className="scrollbar-thin scrollbar-thumb-neutral-600 scrollbar-track-neutral-800"
     >
       {ExerciseRow}
-    </FixedSizeList>
+    </VariableSizeList>
   );
 };
 

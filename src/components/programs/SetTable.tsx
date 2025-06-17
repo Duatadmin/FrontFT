@@ -140,46 +140,46 @@ export const SetTable: React.FC<SetTableProps> = ({ sets: initialSets, weekId, s
 
   return (
     <div className="overflow-x-auto mt-2">
-      <table className="min-w-full text-sm text-left text-neutral-300 bg-neutral-700/30 rounded">
-        <thead className="text-xs text-neutral-400 uppercase bg-neutral-700/50">
+      <table className="min-w-full text-xs sm:text-sm text-left text-neutral-300 bg-neutral-700/30 rounded">
+        <thead className="text-[0.65rem] sm:text-xs text-neutral-400 uppercase bg-neutral-700/50">
           <tr>
-            <th scope="col" className="px-4 py-2">Set</th>
-            <th scope="col" className="px-4 py-2">Reps</th>
-            <th scope="col" className="px-4 py-2">Weight (kg)</th>
-            <th scope="col" className="px-4 py-2">RPE</th>
-            <th scope="col" className="px-4 py-2">Actions</th>
+            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5">Set</th>
+            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5">Reps</th>
+            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5 whitespace-nowrap">Wt (kg)</th>
+            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5">RPE</th>
+            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5">Actions</th>
           </tr>
         </thead>
         <tbody>
           {editableSets.map((set, index) => (
-            <tr key={set.id || `set-${index}`} className="border-b border-neutral-600 hover:bg-neutral-700/40">
-              <td className="px-4 py-2 font-medium">{set.setNo ?? index + 1}</td>
-              <td className="px-4 py-2">
+            <tr key={set.id || `set-${index}`} className="border-b border-neutral-600 hover:bg-neutral-700/40 align-middle">
+              <td className="px-2 py-1 sm:px-3 sm:py-1.5 font-medium">{set.setNo ?? index + 1}</td>
+              <td className="px-2 py-1 sm:px-3 sm:py-1.5">
                 {set.isEditing ? (
                   <input 
                     type="number" 
                     value={set.pendingRepsDone ?? ''} 
                     onChange={(e) => handleInputChange(set.id, 'repsDone', e.target.value)} 
-                    className="bg-neutral-600 text-neutral-100 p-1 rounded w-16 text-center"
+                    className="bg-neutral-600 text-neutral-100 p-0.5 sm:p-1 rounded w-14 sm:w-16 text-center text-xs sm:text-sm"
                   />
                 ) : (
                   set.repsDone ?? '–'
                 )}
               </td>
-              <td className="px-4 py-2">
+              <td className="px-2 py-1 sm:px-3 sm:py-1.5">
                 {set.isEditing ? (
                   <input 
                     type="number" 
                     step="0.25" 
                     value={set.pendingWeightKg ?? ''} 
                     onChange={(e) => handleInputChange(set.id, 'weightKg', e.target.value)} 
-                    className="bg-neutral-600 text-neutral-100 p-1 rounded w-20 text-center"
+                    className="bg-neutral-600 text-neutral-100 p-0.5 sm:p-1 rounded w-14 sm:w-16 text-center text-xs sm:text-sm"
                   />
                 ) : (
                   set.weightKg ?? '–'
                 )}
               </td>
-              <td className="px-4 py-2">
+              <td className="px-2 py-1 sm:px-3 sm:py-1.5">
                 {set.isEditing ? (
                   <input 
                     type="number" 
@@ -187,19 +187,19 @@ export const SetTable: React.FC<SetTableProps> = ({ sets: initialSets, weekId, s
                     min="1" max="10" 
                     value={set.pendingRpe ?? ''} 
                     onChange={(e) => handleInputChange(set.id, 'rpe', e.target.value)} 
-                    className="bg-neutral-600 text-neutral-100 p-1 rounded w-16 text-center"
+                    className="bg-neutral-600 text-neutral-100 p-0.5 sm:p-1 rounded w-14 sm:w-16 text-center text-xs sm:text-sm"
                   />
                 ) : (
                   set.rpe ?? '–'
                 )}
               </td>
-              <td className="px-4 py-2">
+              <td className="px-2 py-1 sm:px-3 sm:py-1.5 whitespace-nowrap">
                 {set.isEditing ? (
-                  <button onClick={() => handleSave(set)} className="font-medium text-green-400 hover:text-green-300 mr-2 text-xs p-1 bg-green-700/50 hover:bg-green-600/50 rounded">
+                  <button onClick={() => handleSave(set)} className="font-medium text-green-400 hover:text-green-300 mr-1 sm:mr-2 text-xs p-0.5 sm:p-1 bg-green-700/50 hover:bg-green-600/50 rounded">
                     Save
                   </button>
                 ) : null}
-                <button onClick={() => toggleEdit(set.id)} className={`font-medium text-xs p-1 rounded ${set.isEditing ? 'text-yellow-400 hover:text-yellow-300 bg-yellow-700/50 hover:bg-yellow-600/50' : 'text-blue-400 hover:text-blue-300 bg-blue-700/50 hover:bg-blue-600/50'}`}>
+                <button onClick={() => toggleEdit(set.id)} className={`font-medium text-xs p-0.5 sm:p-1 rounded ${set.isEditing ? 'text-yellow-400 hover:text-yellow-300 bg-yellow-700/50 hover:bg-yellow-600/50' : 'text-blue-400 hover:text-blue-300 bg-blue-700/50 hover:bg-blue-600/50'}`}>
                   {set.isEditing ? 'Cancel' : 'Edit'}
                 </button>
               </td>
