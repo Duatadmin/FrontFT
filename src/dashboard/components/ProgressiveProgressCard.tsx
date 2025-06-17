@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/browser';
-import { Database } from '@/lib/supabase/schema.types';
 import { TrendingUp, Trophy, Loader, AlertTriangle } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -17,22 +16,50 @@ import {
 interface ProgressData {
   date: string;
   e1RM: number;
+  isPR: boolean;
 }
+
+interface SetData {
+  session_date: string;
+  exercise_name: string;
+  reps_done: number;
+  weight_kg: number;
+  e1RM?: number;
+  isPR?: boolean;
+}
+
 interface PersonalRecord {
   value: number;
   unit: string;
   date: string;
 }
 
-// Explicitly define the type for our query result to guide the compiler
-type SetWithExercise = Database['public']['Tables']['modular_training_set']['Row'] & {
-  modular_training_exercise: Pick<Database['public']['Tables']['modular_training_exercise']['Row'], 'exercise_name'> | null;
+const CustomDot: React.FC<any> = ({ cx, cy, payload }) => {
+  if (payload.isPR) {
+    // A bigger, highlighted dot for PRs
+    return <circle cx={cx} cy={cy} r={5} fill="#facc15" stroke="#fff" strokeWidth={1} />;
+  }
+  // A standard dot for other points
+  return <circle cx={cx} cy={cy} r={3} fill="#84cc16" />;
 };
 
 // Epley formula for e1RM
 const calculateE1RM = (weight: number, reps: number): number => {
   if (reps === 1) return weight;
   return weight * (1 + reps / 30);
+};
+
+// Helper function to find the most frequent exercise
+const getMostFrequentExercise = (exerciseNames: (string | null)[]): string => {
+  const validNames = exerciseNames.filter(name => name !== null) as string[];
+  if (validNames.length === 0) return 'N/A';
+
+  const counts = validNames.reduce<Record<string, number>>((acc, name) => {
+    acc[name] = (acc[name] || 0) + 1;
+    return acc;
+  }, {});
+
+  return Object.keys(counts).reduce((a, b) => (counts[a] > counts[b] ? a : b), validNames[0]);
 };
 
 const ProgressiveProgressCard: React.FC = () => {
@@ -49,57 +76,81 @@ const ProgressiveProgressCard: React.FC = () => {
         if (!session) throw new Error('User not authenticated.');
 
         const { data, error: queryError } = await supabase
-          .from('modular_training_set')
-          .select(`
-            *,
-            modular_training_exercise!modular_training_set_exercise_row_id_fkey (
-              exercise_name
-            )
-          `);
+          .from('workout_full_view')
+          .select('session_date, exercise_name, reps_done, weight_kg, user_id')
+          .order('session_date', { ascending: true });
 
         if (queryError) throw queryError;
+
+        console.log('--- RAW DATA FROM SUPABASE ---', data);
+
         if (!data || data.length === 0) {
           setLoading(false);
           return;
         }
 
-        const typedData = data as SetWithExercise[];
-        const setsWithNames = typedData.map(s => ({ ...s, exerciseName: s.modular_training_exercise?.exercise_name || 'Unknown' }));
+        // Filter out rows with null essential data BEFORE any processing
+        const cleanData = data.filter(
+          item =>
+            item.session_date !== null &&
+            item.exercise_name !== null &&
+            item.reps_done !== null &&
+            item.weight_kg !== null
+        ) as { session_date: string; exercise_name: string; reps_done: number; weight_kg: number; user_id: string | null }[];
 
-        const exerciseCounts = setsWithNames.reduce((acc, set) => {
-          acc[set.exerciseName] = (acc[set.exerciseName] || 0) + 1;
-          return acc;
-        }, {} as Record<string, number>);
-
-        const mostFrequentExercise = Object.keys(exerciseCounts).reduce((a, b) => exerciseCounts[a] > exerciseCounts[b] ? a : b);
-        setExerciseName(mostFrequentExercise);
-
-        const exerciseSets = setsWithNames.filter(s => s.exerciseName === mostFrequentExercise);
-
-        let overallPR: PersonalRecord = { value: 0, unit: 'kg', date: '' };
-        const monthlyMaxE1RM: Record<string, number> = {};
-
-        for (const set of exerciseSets) {
-          if (set.weight_kg && set.reps_done) {
-            const e1RM = calculateE1RM(set.weight_kg, set.reps_done);
-            if (e1RM > overallPR.value) {
-              overallPR = { value: e1RM, unit: 'kg', date: new Date(set.recorded_at).toLocaleDateString() };
-            }
-            
-            const month = new Date(set.recorded_at).toISOString().slice(0, 7); // YYYY-MM
-            if (!monthlyMaxE1RM[month] || e1RM > monthlyMaxE1RM[month]) {
-                monthlyMaxE1RM[month] = e1RM;
-            }
-          }
+        if (cleanData.length === 0) {
+          setLoading(false);
+          return;
         }
 
-        const chartData = Object.keys(monthlyMaxE1RM).sort().map(month => ({
-          date: new Date(month + '-02').toLocaleString('default', { month: 'short' }), // Use day 2 to avoid timezone issues
-          e1RM: Math.round(monthlyMaxE1RM[month]),
+        const mostFrequentExercise = getMostFrequentExercise(cleanData.map(item => item.exercise_name));
+
+        const filteredData = cleanData.filter(item => item.exercise_name === mostFrequentExercise);
+
+        const dailyMaxE1RM = filteredData.reduce<Record<string, SetData>>((acc, item) => {
+          // item.session_date, item.weight_kg, item.reps_done are guaranteed non-null here due to prior filtering
+          const date = item.session_date.split('T')[0];
+          const e1RM = calculateE1RM(item.weight_kg, item.reps_done);
+
+          if (!acc[date] || e1RM > (acc[date].e1RM ?? 0)) {
+            acc[date] = {
+              session_date: item.session_date,
+              exercise_name: item.exercise_name, // also guaranteed non-null
+              reps_done: item.reps_done,
+              weight_kg: item.weight_kg,
+              e1RM
+            };
+          }
+          return acc;
+        }, {});
+
+        let currentPR = 0;
+        const prData = Object.values(dailyMaxE1RM)
+          .sort((a, b) => new Date(a.session_date).getTime() - new Date(b.session_date).getTime())
+          .map(item => {
+            const itemE1RM = item.e1RM ?? 0;
+            if (itemE1RM > currentPR) {
+              currentPR = itemE1RM;
+              return { ...item, isPR: true };
+            }
+            return { ...item, isPR: false };
+          });
+
+        // const sortedDays = Object.keys(dailyMaxE1RM).sort(); // This variable is not used in the current logic
+
+        const fullProgressData: ProgressData[] = prData.map(item => ({
+          date: new Date(item.session_date).toLocaleDateString('default', { month: 'short', day: 'numeric' }),
+          e1RM: Math.round(item.e1RM ?? 0),
+          isPR: item.isPR ?? false,
         }));
 
-        setPersonalRecord(overallPR);
-        setProgressData(chartData);
+        setPersonalRecord({
+          value: Math.round(currentPR),
+          unit: 'kg',
+          date: new Date(prData.find(item => item.isPR)?.session_date ?? '').toLocaleDateString(),
+        });
+        setProgressData(fullProgressData);
+        setExerciseName(mostFrequentExercise);
 
       } catch (e: any) {
         setError(e.message);
@@ -180,7 +231,7 @@ const ProgressiveProgressCard: React.FC = () => {
                 name="e1RM"
                 stroke="#84cc16"
                 strokeWidth={2}
-                dot={{ r: 4, fill: '#84cc16' }}
+                dot={<CustomDot />}
                 activeDot={{ r: 6, stroke: '#fff' }}
               />
             </RechartsLineChart>

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase/browser';
-import { Database } from '@/lib/supabase/schema.types';
 import { BarChart as BarChartIcon, AlertTriangle, Loader } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -15,8 +14,6 @@ import {
 } from 'recharts';
 
 // Type Definitions
-type TrainingSet = Database['public']['Tables']['training_set']['Row'];
-
 interface ChartData {
   week: string;
   weeklyLoad: number;
@@ -51,32 +48,53 @@ const TrainingLoadCard: React.FC = () => {
         }
 
         const { data, error: queryError } = await supabase
-          .from('training_set')
-          .select('weight_kg, reps_done, recorded_at')
-          .order('recorded_at', { ascending: true });
+          .from('workout_full_view') // Changed from modular_training_set
+          // Assuming workout_full_view provides these fields directly or they can be derived.
+          // If workout_full_view is session-level, this select might need to access a JSONB field (e.g., session_state.sets)
+          // For now, proceeding with the assumption that these fields are available per 'row' that contributes to load.
+          .select('session_date, weight_kg, reps_done') // Changed recorded_at to session_date
+          .order('session_date', { ascending: true });
 
         if (queryError) throw queryError;
 
-        const sets: TrainingSet[] = data || [];
-        if (sets.length === 0) {
+        const rawData = data || [];
+        if (rawData.length === 0) {
           setChartData([]);
           setLoading(false);
           return;
         }
 
         // --- Client-side data transformation ---
-        const weeklyLoads = sets.reduce((acc: Record<string, number>, set: TrainingSet) => {
-            const date = new Date(set.recorded_at);
-            // Calculate week start date (Monday)
-            const dayOfWeek = date.getUTCDay(); // Sunday = 0, Monday = 1, ...
-            const dateOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-            const weekStartDate = new Date(date.setUTCDate(date.getUTCDate() + dateOffset));
+        // Filter out rows with null essential data BEFORE any processing
+        const cleanData = rawData.filter(
+          item =>
+            item.session_date !== null &&
+            item.weight_kg !== null &&
+            item.reps_done !== null
+        ) as { session_date: string; weight_kg: number; reps_done: number }[];
+
+        if (cleanData.length === 0) {
+          setChartData([]);
+          setLoading(false);
+          return;
+        }
+
+        const weeklyLoads = cleanData.reduce((acc: Record<string, number>, item) => {
+            const itemDate = new Date(item.session_date); // Changed from set.recorded_at
+            const dayOfWeek = itemDate.getUTCDay(); // Sunday=0, Monday=1, etc.
+            const offsetToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calculate offset to get to Monday
+            
+            const weekStartDate = new Date(itemDate);
+            weekStartDate.setUTCDate(itemDate.getUTCDate() - offsetToMonday);
+            weekStartDate.setUTCHours(0, 0, 0, 0); // Normalize to the start of the day
+
             const weekStartString = weekStartDate.toISOString().split('T')[0];
 
             if (!acc[weekStartString]) {
                 acc[weekStartString] = 0;
             }
-            acc[weekStartString] += (set.weight_kg || 0) * (set.reps_done || 0);
+            // item.weight_kg and item.reps_done are guaranteed non-null here due to prior filtering
+            acc[weekStartString] += item.weight_kg * item.reps_done;
             return acc;
         }, {});
 
