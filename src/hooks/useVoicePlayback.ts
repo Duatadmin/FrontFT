@@ -65,7 +65,14 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           'Content-Type': 'application/json',
           'X-Request-ID': newRequestId,
         },
-        body: JSON.stringify({ text: textToPlay }),
+        body: JSON.stringify({
+          text: textToPlay,
+          model: 'gpt-4o-mini-tts',
+          voice: 'shimmer',
+          speed: 1.0,
+          response_format: 'opus',
+          instructions: 'You are a personal trainer. Speak motivating and respectfull and calm.'
+        }),
         signal,
       });
 
