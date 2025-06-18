@@ -45,7 +45,7 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
       {/* Centering container with max-width and responsive padding */}
       <div className="w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
         {/* Spacing between messages */}
-        <div className="space-y-4">
+        <div className="flex flex-col space-y-4">
           {messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
           ))}

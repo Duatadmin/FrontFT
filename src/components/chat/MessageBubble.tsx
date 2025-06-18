@@ -20,31 +20,28 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLoading = fals
   const isUser = message.role === 'user';
 
   // Common styles inspired by ChatInput
-  const bubbleBaseStyle = 'px-4 py-2.5 rounded-3xl text-base font-normal leading-relaxed backdrop-blur-md border border-white/10 transition-all duration-150';
+  const bubbleBaseStyle = 'px-4 py-2.5 rounded-3xl text-base font-normal leading-relaxed backdrop-blur-md border border-white/10 transition-all duration-150 max-w-[75%] min-w-[12.5%]';
   
   // Specific styles
   const userBubbleStyle = `bg-[#DFF250]/30 text-white ${bubbleBaseStyle}`; // Olive tint for user messages
   const assistantBubbleStyle = `bg-white/5 text-text ${bubbleBaseStyle}`; // Matches ChatInput bg
 
-  const bubbleClasses = isUser ? userBubbleStyle : assistantBubbleStyle;
+  const bubbleKindStyle = isUser ? userBubbleStyle : assistantBubbleStyle;
   const alignmentClass = isUser ? 'self-end' : 'self-start';
 
   return (
-    // Container applies alignment and animation
-    <div className={`${alignmentClass} motion-safe:animate-slide-in-up`}>
-      {/* Message Content */}
-      <div className={bubbleClasses}>
-        {isLoading ? (
-          <TypingIndicator />
-        ) : (
-          // Apply whitespace-pre-wrap to render newlines
-          <div className="font-sans text-sm leading-relaxed text-inherit whitespace-pre-wrap">
-            {message.role === 'assistant' && message.content.includes("I'm Isinka") 
-              ? message.content.replace("I'm Isinka", "I'm Jarvis")
-              : message.content}
-          </div>
-        )}
-      </div>
+    <div
+      className={`${bubbleKindStyle} ${alignmentClass} motion-safe:animate-slide-in-up`}
+    >
+      {isLoading ? (
+        <TypingIndicator />
+      ) : (
+        <div className="font-sans text-sm leading-relaxed text-inherit whitespace-pre-wrap break-words">
+          {message.role === 'assistant' && message.content.includes("I'm Isinka")
+            ? message.content.replace("I'm Isinka", "I'm Jarvis")
+            : message.content}
+        </div>
+      )}
     </div>
   );
 };
