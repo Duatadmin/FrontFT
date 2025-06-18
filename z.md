@@ -11,4 +11,11 @@ await supabase.auth.signInWithPassword({
   password:'Maxim!1990'
 });
 
-git reset --hard a121598
+git reset --hard 8a1ca48
+
+
+run the project in windsurf preview browser
+
+usmbvieiwmnzbqbhhbob
+
+npx supabase gen types typescript --project-id usmbvieiwmnzbqbhhbob > src\lib\supabase\schema.types.ts

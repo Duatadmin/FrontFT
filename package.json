@@ -8,7 +8,10 @@
     "preview": "vite preview",
     "start": "npx serve -s dist -l $PORT",
     "build:legacy-voice": "cd legacy/voice-module && yarn build",
-    "test": "vitest run"
+    "test": "vitest run",
+    "serve:api": "ts-node --compiler-options \"{\\\"module\\\":\\\"commonjs\\\", \\\"moduleResolution\\\":\\\"node\\\"}\" server.ts",
+    "build:api": "tsc -p tsconfig.server.json",
+    "start:api:prod": "node dist_server/server.js"
   },
   "engines": {
     "node": ">=18"
@@ -33,6 +36,7 @@
     "sharp": "^0.34.2",
     "supabase": "^2.24.3",
     "tailwindcss": "^3.4.17",
+    "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "vite": "^6.3.1",
     "vite-plugin-pwa": "^1.0.0",
@@ -58,6 +62,7 @@
     "clsx": "^2.1.1",
     "cypress": "^14.4.1",
     "date-fns": "^4.1.0",
+    "dotenv": "^16.5.0",
     "framer-motion": "^11.18.2",
     "hls.js": "^1.6.5",
     "js-cookie": "^3.0.5",

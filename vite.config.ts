@@ -47,6 +47,15 @@ export default defineConfig({
       }
     })
   ],
+  server: {
+    proxy: {
+      // Proxy /api/tts requests to your Node.js server
+      '/api/tts': {
+        target: 'http://localhost:3001', // Assuming your Node.js server runs on 3001
+        changeOrigin: true,
+      },
+    },
+  },
   test: {
     globals: true,
     environment: 'jsdom', // Use jsdom for DOM-related testing

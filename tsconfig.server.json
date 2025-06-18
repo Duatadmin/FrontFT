@@ -1,0 +1,23 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "outDir": "./dist_server",
+    "rootDir": ".",
+    "noEmit": false,
+    "declaration": false,
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": false
+  },
+  "include": [
+    "server.ts",
+    "src/api/tts-handler.ts",
+    "env.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*.test.ts"
+  ]
+}
