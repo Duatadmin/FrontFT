@@ -221,9 +221,9 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
               console.log(`[VoiceWidget] InactiveButton onMouseDown: handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
             }
           }}
-          onTouchStart={(e) => {
+          onTouchStart={(_e) => {
             if (!effectiveIsDisabled && (status === 'idle' || status === 'active')) {
-              e.preventDefault();
+              // e.preventDefault(); // Removed to address passive event listener warning
               handleStart();
             } else {
               console.log(`[VoiceWidget] InactiveButton onTouchStart (bubbling): handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
