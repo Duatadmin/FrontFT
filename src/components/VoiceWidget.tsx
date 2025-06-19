@@ -221,12 +221,12 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
               console.log(`[VoiceWidget] InactiveButton onMouseDown: handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
             }
           }}
-          onTouchStartCapture={(e) => {
+          onTouchStart={(e) => {
             if (!effectiveIsDisabled && (status === 'idle' || status === 'active')) {
               e.preventDefault();
               handleStart();
             } else {
-              console.log(`[VoiceWidget] InactiveButton onTouchStart: handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
+              console.log(`[VoiceWidget] InactiveButton onTouchStart (bubbling): handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
             }
           }}
           onKeyDown={handleKeyPress} // handleKeyPress has its own disabled check

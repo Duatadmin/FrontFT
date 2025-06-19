@@ -278,31 +278,39 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       if (audioPlayerRef.current) {
         const playPromise = audioPlayerRef.current.play();
         if (playPromise !== undefined) {
-          playPromise.then(() => {
-            audioPlayerRef.current?.pause(); // Pause immediately after unlocking
-            console.log('[TTS] Audio context likely unlocked by toggle.');
-            // If queue has items and not already playing, start
-            if (queue.length > 0 && !isPlaying) {
-              console.log('[TTS] Voice toggled on, queue has items, starting playNext after unlock attempt.');
-              playNext();
-            }
-          }).catch(err => {
-            console.warn('[TTS] Failed to unlock audio via toggle, play will be attempted by playNext:', err);
-            // Proceed, playNext will attempt to play anyway
-            if (queue.length > 0 && !isPlaying) {
-              playNext();
-            }
-          });
+          playPromise
+            .then(() => {
+              audioPlayerRef.current?.pause(); // Pause immediately after unlocking
+              console.log('[TTS] Audio context likely unlocked by toggle.');
+              // If queue has items and not already playing, start
+              if (queue.length > 0 && !isPlaying) {
+                console.log('[TTS] Voice toggled on, queue has items, starting playNext after unlock attempt.');
+                playNext();
+              }
+            })
+            .catch(err => {
+              if (err.name === 'AbortError') {
+                console.info('[TTS] Audio unlock attempt (play then pause) resulted in an expected AbortError. Playback will proceed via playNext if items are in queue.');
+              } else {
+                console.warn('[TTS] Failed to unlock audio via toggle (unexpected error), play will be attempted by playNext:', err);
+              }
+              // If unlock attempt fails (for any reason), and conditions are still met, try to playNext.
+              // This ensures that even if the explicit unlock logs an error, the queue processing continues.
+              if (queue.length > 0 && !isPlaying) {
+                playNext();
+              }
+            });
         } else {
-          // Fallback if play() doesn't return a promise (older browsers)
-           if (queue.length > 0 && !isPlaying) {
-             playNext();
-           }
+          // Fallback if play() doesn't return a promise (older browsers) or if audioPlayerRef.current.play() is not available
+          // Still try to playNext if conditions are met, as the audio might be unlocked by other means or not need unlocking.
+          if (queue.length > 0 && !isPlaying) {
+            console.log('[TTS] Voice toggled on (playPromise undefined), queue has items, attempting playNext.');
+            playNext();
+          }
         }
       } else if (queue.length > 0 && !isPlaying) {
         // Audio player not yet available, but queue has items. playNext will be called by useEffect.
-        console.log('[TTS] Voice toggled on, audio player not ready yet, but queue has items. Effect will call playNext.');
-        // playNext(); // Or let the useEffect for queue changes handle it
+        console.log('[TTS] Voice toggled on (audio player not ready), queue has items. Effect will call playNext.');
       }
     } else { // Voice is being disabled
       stopCurrentPlayback(true); // Pass true to indicate it's due to toggle off
