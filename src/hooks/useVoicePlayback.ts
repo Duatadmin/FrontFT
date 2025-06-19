@@ -44,6 +44,10 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       setIsPlaying(false);
       setCurrentRequestId(null);
       if (audioPlayerRef.current) {
+        // Clear handlers before changing src to prevent old errors firing
+        audioPlayerRef.current.onerror = null;
+        audioPlayerRef.current.onended = null;
+        audioPlayerRef.current.onloadeddata = null;
         audioPlayerRef.current.src = ''; // Clear src to ensure it stops
       }
       return;
@@ -93,6 +97,10 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       const audio = audioPlayerRef.current;
       audio.pause();
       audio.currentTime = 0;
+      // Clear previous event handlers to prevent stale events from firing
+      audio.onerror = null;
+      audio.onended = null;
+      audio.onloadeddata = null;
 
       if (!supportsMediaSource()) {
         console.warn('[TTS] MediaSource API not supported. Streaming audio will be disabled. Falling back to alternative playback.');
@@ -219,6 +227,10 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     }
     if (audioPlayerRef.current) {
       audioPlayerRef.current.pause();
+      // Always clear handlers before changing src to prevent stale events
+      audioPlayerRef.current.onerror = null;
+      audioPlayerRef.current.onended = null;
+      audioPlayerRef.current.onloadeddata = null;
       audioPlayerRef.current.src = ''; // Detach MediaSource or Blob URL
     }
     if (mediaSourceRef.current && mediaSourceRef.current.readyState === 'open') {
