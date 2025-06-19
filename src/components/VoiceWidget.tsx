@@ -85,7 +85,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       setShowErrorToast(false);
       setToastMessage('');
       if (!voiceEnabled) {
-        console.log('[VoiceWidget] Toggling voiceEnabled on for TTS.');
+        console.log('[VoiceWidget] voiceEnabled is false, calling toggleVoice() to enable TTS.');
         toggleVoice();
       }
       await walkie.start(newSid);
@@ -102,6 +102,10 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     try {
       await walkie.stop();
       console.log('[VoiceWidget] walkie.stop() called successfully.');
+      if (voiceEnabled) {
+        console.log('[VoiceWidget] voiceEnabled is true, calling toggleVoice() to disable TTS.');
+        toggleVoice();
+      }
     } catch (e: any) {
       console.error('Failed to stop walkie:', e);
       setToastMessage(e.message || 'Failed to stop recording.');
