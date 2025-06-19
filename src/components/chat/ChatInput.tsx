@@ -146,14 +146,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
       {/* Further reduced height container */}
       <div className="w-[95%] max-w-md bg-black/20 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg px-4 py-1.5 mx-auto flex flex-col gap-1.5 transition-all duration-150">
         {/* Input area with SendButton - Corrected Alignment */}
-        <div className="relative flex items-center w-full">
+        <div className="relative flex items-center w-full py-1.5">
           <textarea
             ref={textareaRef}
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isTickerActive ? '' : 'Ask anything...'}
-            className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-4 py-1.5 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
+            className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-4 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
             rows={1}
             disabled={isTextInputDisabled}
             autoComplete="off"

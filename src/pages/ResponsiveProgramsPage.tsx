@@ -2,11 +2,9 @@
 import React from 'react';
 import useMediaQuery from '../hooks/useMediaQuery';
 import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
-import ProgramsPageSkeleton from '../components/skeletons/ProgramsPageSkeleton';
 import AnalyticsDashboardLayout from '../components/layout/AnalyticsDashboardLayout';
+import ProgramsPage from './programs'; // Direct import
 
-// Lazy load ProgramsPage
-const ProgramsPage = React.lazy(() => import('./programs'));
 
 const ResponsiveProgramsPage: React.FC = () => {
   const isMobile = useMediaQuery('(max-width: 768px)');
@@ -14,9 +12,7 @@ const ResponsiveProgramsPage: React.FC = () => {
   if (isMobile) {
     return (
       <MobileDashboardLayout>
-        <React.Suspense fallback={<ProgramsPageSkeleton />}>
-          <ProgramsPage />
-        </React.Suspense>
+        <ProgramsPage />
       </MobileDashboardLayout>
     );
   }
@@ -24,9 +20,7 @@ const ResponsiveProgramsPage: React.FC = () => {
   // For larger screens, render ProgramsPage within AnalyticsDashboardLayout
   return (
     <AnalyticsDashboardLayout title="Training Programs & Goals">
-      <React.Suspense fallback={<ProgramsPageSkeleton />}>
-        <ProgramsPage />
-      </React.Suspense>
+      <ProgramsPage />
     </AnalyticsDashboardLayout>
   );
 };
