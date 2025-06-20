@@ -51,7 +51,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
   return (
     <div 
-      className="relative text-white w-full bg-transparent flex flex-col h-dvh md:h-auto md:max-w-4xl md:mx-auto md:my-8"
+      className="relative text-white w-full bg-transparent flex flex-col h-dvh md:h-auto md:max-w-4xl md:mx-auto md:my-8 overflow-hidden"
     >
       {/* Close Button */} 
 
@@ -147,7 +147,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
       {/* Scrollable Content Wrapper */}
       <div className="flex-1 overflow-y-auto pb-28 min-h-0">
         {/* Content Body */}
-        <div className="w-full p-4 sm:p-6 md:p-8 bg-black/20 backdrop-blur-xl md:border-t md:border-white/10 md:rounded-b-2xl">
+        <div className="w-full p-4 sm:p-6 md:p-8 bg-transparent md:bg-black/20 md:backdrop-blur-xl md:border-t md:border-white/10 md:rounded-b-2xl">
         {/* New Exercise Title Location */}
         <h2 className="text-3xl md:text-4xl font-bold text-lime-300 mb-6 tracking-tight drop-shadow-md">
           {name}
