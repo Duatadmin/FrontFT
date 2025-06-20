@@ -15,6 +15,22 @@ export const validMuscleGroups: MuscleGroup[] = [
   'shoulders', 'traps', 'triceps'
 ];
 
+const MUSCLE_GROUP_PRIORITY_ORDER: MuscleGroup[] = [
+  'back',
+  'chest',
+  'quads',
+  'shoulders',
+  'biceps',
+  'triceps',
+  'abs',
+  'traps',
+  'calves',
+  'forearms',
+  'hamstrings',
+  'glutes', // Added glutes as it was in the user's list but missing from the original validMuscleGroups
+  'cardio' // Added cardio as it's a valid group
+];
+
 interface MuscleIconProps {
   muscleGroup: MuscleGroup;
   size?: number;
@@ -23,19 +39,26 @@ interface MuscleIconProps {
 
 const MuscleIcon: React.FC<MuscleIconProps> = ({ muscleGroup, size = 30, className = '' }) => {
   const iconPath = `/muscle_group_icons/${muscleGroup}.svg`;
+  const wrapperClasses = "rounded-full p-2 bg-white/5 backdrop-blur-md flex items-center justify-center";
 
   if (muscleGroup === 'cardio') {
-    return <Target size={size} className={`text-emerald-400 ${className}`} />;
+    return (
+      <div className={wrapperClasses}>
+        <Target size={size} className={`text-emerald-400 ${className}`} />
+      </div>
+    );
   }
 
   return (
-    <img 
-      src={iconPath} 
-      alt={`${muscleGroup} icon`} 
-      width={size} 
-      height={size} 
-      className={`icon-muscle-group ${className}`} // Added a generic class for potential global styling
-    />
+    <div className={wrapperClasses}>
+      <img 
+        src={iconPath} 
+        alt={`${muscleGroup} icon`} 
+        width={size} 
+        height={size} 
+        className={`icon-muscle-group ${className}`} // Added a generic class for potential global styling
+      />
+    </div>
   );
 };
 
@@ -112,15 +135,36 @@ export const MuscleGroupDisplay: React.FC<MuscleGroupDisplayProps> = ({ muscleGr
   }
 
   // Ensure we only render valid muscle groups, though the input should ideally be pre-validated
-  const validDisplayGroups = muscleGroups.filter(group => validMuscleGroups.includes(group));
+  let filteredGroups = muscleGroups.filter(group => validMuscleGroups.includes(group));
 
-  if (validDisplayGroups.length === 0) {
+  if (filteredGroups.length === 0) {
+    return null;
+  }
+
+  // Sort based on priority order
+  filteredGroups.sort((a, b) => {
+    const indexA = MUSCLE_GROUP_PRIORITY_ORDER.indexOf(a);
+    const indexB = MUSCLE_GROUP_PRIORITY_ORDER.indexOf(b);
+    
+    // If both are in priority list, sort by their order
+    if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+    // If only A is in priority list, A comes first
+    if (indexA !== -1) return -1;
+    // If only B is in priority list, B comes first
+    if (indexB !== -1) return 1;
+    // If neither are in priority list, maintain original relative order (or sort alphabetically)
+    return 0; // Or a.localeCompare(b) for alphabetical as fallback
+  });
+
+  const prioritizedDisplayGroups = filteredGroups.slice(0, 3);
+
+  if (prioritizedDisplayGroups.length === 0) {
     return null;
   }
 
   return (
-    <div className={`flex items-center gap-2 p-3 bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl shadow-md ${containerClassName}`}>
-      {validDisplayGroups.map(group => (
+    <div className={`flex items-center gap-2 ${containerClassName}`}>
+      {prioritizedDisplayGroups.map(group => (
         <MuscleIcon key={group} muscleGroup={group} size={iconSize} />
       ))}
     </div>

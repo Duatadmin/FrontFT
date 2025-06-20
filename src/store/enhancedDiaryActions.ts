@@ -1,5 +1,5 @@
 import { StateCreator } from 'zustand';
-import type { Goal, WeeklyReflection, ProgressPhoto } from './diaryTypes';
+import type { Goal, WeeklyReflection, ProgressPhoto, Challenge } from './diaryTypes';
 import { DiaryState } from './useDiaryStore'; // Import the main state type
 import {
   generateMockGoals,
@@ -23,6 +23,12 @@ export type EnhancedDiaryActions = {
 
   fetchProgressPhotos: (userId: string) => Promise<void>;
   addProgressPhoto: (photo: Omit<ProgressPhoto, 'id' | 'user_id'>, userId: string) => Promise<void>;
+  removeProgressPhoto: (photoId: string, userId: string) => Promise<void>; // Added
+
+  // Challenges
+  addChallenge: (challenge: Omit<Challenge, 'id' | 'user_id' | 'week_id'>, userId: string, weekId: string) => Promise<void>; // Added
+  removeChallenge: (challengeId: string, userId: string) => Promise<void>; // Added
+  updateChallenge: (challengeId: string, updates: Partial<Omit<Challenge, 'id' | 'user_id' | 'week_id'>>, userId: string) => Promise<void>; // Added
 
   calculateStreak: () => Promise<void>;
   markSessionCompleted: (sessionId: string) => Promise<void>;
@@ -117,6 +123,83 @@ export const createEnhancedDiaryActions: StateCreator<
       user_id: userId,
     };
     set(state => ({ ...state, progressPhotos: [...state.progressPhotos, newPhoto] }));
+  },
+  // #endregion
+
+  removeProgressPhoto: async (photoId, userId) => {
+    console.log(`Mock removeProgressPhoto for photoId: ${photoId}, userId: ${userId}`);
+    set(state => ({
+      ...state,
+      progressPhotos: state.progressPhotos.filter(p => p.id !== photoId),
+    }));
+  },
+  // #endregion
+
+  // #region Challenges
+  addChallenge: async (challenge, userId, weekId) => {
+    const newChallenge: Challenge = {
+      ...challenge,
+      id: `challenge-${Date.now()}`,
+      user_id: userId,
+      week_id: weekId,
+    };
+    console.log('Mock addChallenge:', newChallenge);
+    // Assuming weeklyReflections[0] is the target for now, or currentWeekReflection
+    set(state => {
+      const reflectionToUpdate = state.currentWeekReflection || (state.weeklyReflections.length > 0 ? state.weeklyReflections[0] : null);
+      if (reflectionToUpdate) {
+        const updatedReflection = {
+          ...reflectionToUpdate,
+          challenges: [...(reflectionToUpdate.challenges || []), newChallenge],
+        };
+        return {
+          ...state,
+          currentWeekReflection: state.currentWeekReflection ? updatedReflection : state.currentWeekReflection,
+          weeklyReflections: state.weeklyReflections.map(r => r.id === updatedReflection.id ? updatedReflection : r),
+        };
+      }
+      return state; // Or handle error: no reflection to add challenge to
+    });
+  },
+
+  removeChallenge: async (challengeId, userId) => {
+    console.log(`Mock removeChallenge for challengeId: ${challengeId}, userId: ${userId}`);
+    set(state => {
+      const reflectionToUpdate = state.currentWeekReflection || (state.weeklyReflections.length > 0 ? state.weeklyReflections[0] : null);
+      if (reflectionToUpdate) {
+        const updatedReflection = {
+          ...reflectionToUpdate,
+          challenges: (reflectionToUpdate.challenges || []).filter(c => c.id !== challengeId),
+        };
+        return {
+          ...state,
+          currentWeekReflection: state.currentWeekReflection ? updatedReflection : state.currentWeekReflection,
+          weeklyReflections: state.weeklyReflections.map(r => r.id === updatedReflection.id ? updatedReflection : r),
+        };
+      }
+      return state;
+    });
+  },
+
+  updateChallenge: async (challengeId, updates, userId) => {
+    console.log(`Mock updateChallenge for challengeId: ${challengeId}, userId: ${userId}`, updates);
+    set(state => {
+      const reflectionToUpdate = state.currentWeekReflection || (state.weeklyReflections.length > 0 ? state.weeklyReflections[0] : null);
+      if (reflectionToUpdate) {
+        const updatedReflection = {
+          ...reflectionToUpdate,
+          challenges: (reflectionToUpdate.challenges || []).map(c => 
+            c.id === challengeId ? { ...c, ...updates } : c
+          ),
+        };
+        return {
+          ...state,
+          currentWeekReflection: state.currentWeekReflection ? updatedReflection : state.currentWeekReflection,
+          weeklyReflections: state.weeklyReflections.map(r => r.id === updatedReflection.id ? updatedReflection : r),
+        };
+      }
+      return state;
+    });
   },
   // #endregion
 

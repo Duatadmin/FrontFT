@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Plus, X, Check, Edit2, AlertTriangle } from 'lucide-react';
 import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
+import type { Challenge } from '../../../store/diaryTypes';
 
 /**
  * ChallengesAndFixes Component
@@ -19,17 +20,14 @@ const ChallengesAndFixes: React.FC = () => {
   
   // Handle adding a new challenge
   const handleAddChallenge = () => {
-    if (!newChallenge.trim() || !user?.id) return;
+    if (!newChallenge.trim() || !user?.id || !currentWeekReflection?.id) return;
     
-    const challenge = {
-      id: `challenge-${Date.now()}`,
+    const challengeData: Omit<Challenge, 'id' | 'user_id' | 'week_id'> = {
       text: newChallenge.trim(),
-      solution: newSolution.trim(),
-      week_id: currentWeekReflection?.id || '',
-      user_id: user.id,
+      solution: newSolution.trim() || null, // Ensure solution can be null if empty
     };
     
-    addChallenge(challenge);
+    addChallenge(challengeData, user.id, currentWeekReflection.id);
     setNewChallenge('');
     setNewSolution('');
   };
@@ -58,13 +56,12 @@ const ChallengesAndFixes: React.FC = () => {
   const saveEdits = (id: string) => {
     if (!editText.trim() || !user?.id) return;
     
-    updateChallenge({
-      id,
+    const updateData: Partial<Omit<Challenge, 'id' | 'user_id' | 'week_id'>> = {
       text: editText.trim(),
-      solution: editSolution.trim(),
-      week_id: currentWeekReflection?.id || '',
-      user_id: user.id,
-    });
+      solution: editSolution.trim() || null, // Ensure solution can be null if empty
+    };
+    
+    updateChallenge(id, updateData, user.id);
     
     setEditingId(null);
   };
@@ -72,7 +69,7 @@ const ChallengesAndFixes: React.FC = () => {
   // If no reflection exists yet, show a placeholder
   if (!currentWeekReflection) {
     return (
-      <div className="bg-background-card rounded-2xl shadow-card p-5">
+      <div className="bg-neutral-800/50 rounded-2xl shadow-card p-5">
         <h3 className="text-base font-semibold mb-4 flex items-center">
           <AlertTriangle className="text-accent-violet mr-2" size={18} />
           Challenges & Solutions
@@ -88,7 +85,7 @@ const ChallengesAndFixes: React.FC = () => {
   }
   
   return (
-    <div className="bg-background-card rounded-2xl shadow-card p-5" data-testid="challenges-fixes">
+    <div className="bg-neutral-800/50 rounded-2xl shadow-card p-5" data-testid="challenges-fixes">
       <h3 className="text-base font-semibold mb-4 flex items-center">
         <AlertTriangle className="text-accent-violet mr-2" size={18} />
         Challenges & Solutions
@@ -104,7 +101,7 @@ const ChallengesAndFixes: React.FC = () => {
           currentWeekReflection.challenges.map((challenge) => (
             <div 
               key={challenge.id} 
-              className="border border-border-light rounded-lg p-3 bg-background-surface"
+              className="border border-border-light rounded-lg p-3 bg-neutral-900/70"
               data-testid={`challenge-${challenge.id}`}
             >
               {editingId === challenge.id ? (
@@ -114,14 +111,14 @@ const ChallengesAndFixes: React.FC = () => {
                     type="text"
                     value={editText}
                     onChange={(e) => setEditText(e.target.value)}
-                    className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                    className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                     placeholder="Challenge"
                     aria-label="Edit challenge"
                   />
                   <textarea
                     value={editSolution}
                     onChange={(e) => setEditSolution(e.target.value)}
-                    className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                    className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                     placeholder="Solution (optional)"
                     rows={2}
                     aria-label="Edit solution"
@@ -168,7 +165,7 @@ const ChallengesAndFixes: React.FC = () => {
                     </div>
                   </div>
                   {challenge.solution && (
-                    <div className="mt-2 bg-background-card rounded-md p-2 text-xs text-text-secondary">
+                    <div className="mt-2 bg-neutral-900/70 rounded-md p-2 text-xs text-text-secondary">
                       <span className="font-medium">Solution:</span> {challenge.solution}
                     </div>
                   )}
@@ -186,7 +183,7 @@ const ChallengesAndFixes: React.FC = () => {
           type="text"
           value={newChallenge}
           onChange={(e) => setNewChallenge(e.target.value)}
-          className="w-full p-2 text-sm bg-background-surface border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+          className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
           placeholder="What challenge did you face?"
           aria-label="New challenge"
           data-testid="new-challenge-input"
@@ -194,7 +191,7 @@ const ChallengesAndFixes: React.FC = () => {
         <textarea
           value={newSolution}
           onChange={(e) => setNewSolution(e.target.value)}
-          className="w-full p-2 text-sm bg-background-surface border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+          className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
           placeholder="How did you overcome it? (optional)"
           rows={2}
           aria-label="Solution for new challenge"
@@ -205,9 +202,9 @@ const ChallengesAndFixes: React.FC = () => {
             onClick={handleAddChallenge}
             disabled={!newChallenge.trim()}
             className={`flex items-center text-sm px-3 py-1.5 rounded-lg ${
-              newChallenge.trim() 
-                ? 'bg-accent-violet text-white hover:bg-accent-violet/90' 
-                : 'bg-background-surface text-text-tertiary cursor-not-allowed'
+              !newChallenge.trim()
+                ? 'bg-background-surface text-text-tertiary cursor-not-allowed'
+                : 'bg-neutral-900/70 text-accent-violet border border-border-light hover:bg-neutral-800/70'
             }`}
             data-testid="add-challenge-button"
           >

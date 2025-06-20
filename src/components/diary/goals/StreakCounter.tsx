@@ -57,7 +57,7 @@ const StreakCounter: React.FC = () => {
   // Loading state
   if (loading.streak) {
     return (
-      <div className="bg-background-card rounded-2xl shadow-card p-4 h-[80px] animate-pulse" data-testid="streak-counter-loading">
+      <div className="bg-neutral-800/50 rounded-2xl shadow-card p-4 h-[80px] animate-pulse" data-testid="streak-counter-loading">
         <div className="flex items-center gap-2 mb-2">
           <div className="w-6 h-6 bg-background-surface rounded-full"></div>
           <div className="h-5 w-32 bg-background-surface rounded-md"></div>
@@ -79,7 +79,7 @@ const StreakCounter: React.FC = () => {
   // Empty state - no streak yet
   if (streakData.currentStreak === 0) {
     return (
-      <div className="bg-background-card rounded-2xl shadow-card p-4" data-testid="streak-counter-empty">
+      <div className="bg-neutral-800/50 rounded-2xl shadow-card p-4" data-testid="streak-counter-empty">
         <div className="flex justify-between items-center">
           <h3 className="text-base font-semibold flex items-center">
             <Flame className="text-accent-violet mr-2" size={18} />
@@ -96,7 +96,7 @@ const StreakCounter: React.FC = () => {
   
   // Normal state with streak data
   return (
-    <div className="bg-background-card rounded-2xl shadow-card p-4" data-testid="streak-counter-active">
+    <div className="bg-neutral-800/50 rounded-2xl shadow-card p-4" data-testid="streak-counter-active">
       <div className="flex justify-between items-center mb-2">
         <h3 className="text-base font-semibold flex items-center">
           <Flame className={cn(

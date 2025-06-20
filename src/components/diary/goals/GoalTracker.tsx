@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ListTodo, Plus, Edit2, Check, X, MoreHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
-import useDiaryStore, { Goal } from '../../../store/useDiaryStore';
+import { ListTodo, Plus, Edit2, Check, X, ChevronDown, ChevronUp } from 'lucide-react';
+import useDiaryStore from '../../../store/useDiaryStore';
+import type { Goal } from '../../../store/diaryTypes';
 import useUserStore from '../../../store/useUserStore';
 import createLogger from '../../../utils/logger';
 
@@ -13,7 +14,7 @@ const GoalTracker: React.FC = () => {
   const logger = createLogger('GoalTracker');
   
   // Access store directly - ErrorBoundary will catch any issues
-  const { goals, loading, error, fetchGoals, addGoal, updateGoal, removeGoal } = useDiaryStore();
+  const { goals, loading, error, fetchGoals, addGoal, updateGoal, deleteGoal } = useDiaryStore();
   const { user } = useUserStore();
   
   // Log store state for debugging
@@ -74,17 +75,14 @@ const GoalTracker: React.FC = () => {
       return;
     }
     
-    addGoal({
+    const goalData: Omit<Goal, 'id' | 'user_id' | 'created_at' | 'completed'> = {
       title: newGoal.title.trim(),
-      description: newGoal.description.trim(),
+      description: newGoal.description.trim() || null, // Ensure description can be null if empty
       target_date: newGoal.target_date,
       type: newGoal.type as 'short_term' | 'long_term',
-      progress: 0,
-      user_id: user.id,
-      id: `goal-${Date.now()}`,
-      created_at: new Date().toISOString(),
-      completed: false,
-    });
+      progress: 0, // New goals start with 0 progress
+    };
+    addGoal(goalData, user.id);
     
     // Reset form
     setNewGoal({
@@ -107,13 +105,12 @@ const GoalTracker: React.FC = () => {
   const handleSaveEdit = () => {
     if (!editGoal.title?.trim() || !user?.id || !editingGoalId) return;
     
-    updateGoal({
-      ...editGoal,
-      title: editGoal.title.trim(),
-      description: editGoal.description?.trim() || '',
-      id: editingGoalId,
-      user_id: user.id,
-    } as Goal);
+    const { id, user_id, created_at, ...updateData } = editGoal;
+    updateGoal(editingGoalId, {
+      ...updateData,
+      title: editGoal.title?.trim(), // Ensure title is trimmed
+      description: editGoal.description?.trim() || null, // Ensure description is trimmed or null
+    });
     
     setEditingGoalId(null);
     setEditGoal({});
@@ -129,18 +126,13 @@ const GoalTracker: React.FC = () => {
     // If progress is 100, mark as completed
     const completed = progress === 100;
     
-    updateGoal({
-      ...goal,
-      progress,
-      completed,
-      user_id: user.id,
-    });
+    updateGoal(id, { progress, completed });
   };
   
   // Delete a goal
   const handleDeleteGoal = (id: string) => {
     if (!user?.id) return;
-    removeGoal(id, user.id);
+    deleteGoal(id);
   };
   
   // Toggle expanded state for a goal
@@ -199,7 +191,7 @@ const GoalTracker: React.FC = () => {
   const longTermGoals = goals.filter(goal => goal.type === 'long_term');
   
   return (
-    <div className="bg-background-card rounded-2xl shadow-card p-5" data-testid="goal-tracker">
+    <div className="bg-neutral-800/50 rounded-2xl shadow-card p-5" data-testid="goal-tracker">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-semibold flex items-center">
           <ListTodo className="text-accent-violet mr-2" size={18} />
@@ -220,7 +212,7 @@ const GoalTracker: React.FC = () => {
       
       {/* Add goal form */}
       {isAddingGoal && (
-        <div className="bg-background-surface rounded-lg p-4 mb-4 border border-border-light" data-testid="add-goal-form">
+        <div className="bg-neutral-900/70 rounded-lg p-4 mb-4 border border-border-light" data-testid="add-goal-form">
           <h4 className="text-sm font-medium mb-3">Add New Goal</h4>
           
           <div className="space-y-3 mb-4">
@@ -233,7 +225,7 @@ const GoalTracker: React.FC = () => {
                 type="text"
                 value={newGoal.title}
                 onChange={(e) => setNewGoal({ ...newGoal, title: e.target.value })}
-                className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                 placeholder="E.g., Squat 200 lbs, Run 5K, etc."
                 data-testid="new-goal-title"
               />
@@ -247,7 +239,7 @@ const GoalTracker: React.FC = () => {
                 id="goal-description"
                 value={newGoal.description}
                 onChange={(e) => setNewGoal({ ...newGoal, description: e.target.value })}
-                className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                 placeholder="Add more details about your goal..."
                 rows={2}
                 data-testid="new-goal-description"
@@ -264,7 +256,7 @@ const GoalTracker: React.FC = () => {
                   type="date"
                   value={newGoal.target_date}
                   onChange={(e) => setNewGoal({ ...newGoal, target_date: e.target.value })}
-                  className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                  className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                   data-testid="new-goal-date"
                 />
               </div>
@@ -277,7 +269,7 @@ const GoalTracker: React.FC = () => {
                   id="goal-type"
                   value={newGoal.type}
                   onChange={(e) => setNewGoal({ ...newGoal, type: e.target.value })}
-                  className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                  className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                   data-testid="new-goal-type"
                 >
                   <option value="short_term">Short Term</option>
@@ -325,7 +317,7 @@ const GoalTracker: React.FC = () => {
             {shortTermGoals.map((goal) => (
               <div 
                 key={goal.id} 
-                className={`bg-background-surface border border-border-light rounded-lg overflow-hidden ${
+                className={`bg-neutral-900/70 border border-border-light rounded-lg overflow-hidden ${
                   goal.completed ? 'border-accent-mint/30 bg-accent-mint/5' : ''
                 }`}
                 data-testid={`goal-${goal.id}`}
@@ -337,14 +329,14 @@ const GoalTracker: React.FC = () => {
                       type="text"
                       value={editGoal.title || ''}
                       onChange={(e) => setEditGoal({ ...editGoal, title: e.target.value })}
-                      className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                      className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                       placeholder="Goal title"
                     />
                     
                     <textarea
                       value={editGoal.description || ''}
                       onChange={(e) => setEditGoal({ ...editGoal, description: e.target.value })}
-                      className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                      className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                       placeholder="Description (optional)"
                       rows={2}
                     />
@@ -354,13 +346,13 @@ const GoalTracker: React.FC = () => {
                         type="date"
                         value={editGoal.target_date || ''}
                         onChange={(e) => setEditGoal({ ...editGoal, target_date: e.target.value })}
-                        className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                        className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                       />
                       
                       <select
                         value={editGoal.type || 'short_term'}
                         onChange={(e) => setEditGoal({ ...editGoal, type: e.target.value as 'short_term' | 'long_term' })}
-                        className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                        className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                       >
                         <option value="short_term">Short Term</option>
                         <option value="long_term">Long Term</option>
@@ -430,7 +422,7 @@ const GoalTracker: React.FC = () => {
                         </div>
                       </div>
                       <div className="mt-2 mb-1">
-                        <div className="w-full bg-background-neutral h-1.5 rounded-full overflow-hidden">
+                        <div className="w-full bg-neutral-900/70 h-1.5 rounded-full overflow-hidden">
                           <div
                             className="bg-accent-violet h-1.5 rounded-full transition-all duration-300"
                             style={{ width: `${goal.progress}%` }}
@@ -470,7 +462,7 @@ const GoalTracker: React.FC = () => {
             {longTermGoals.map((goal) => (
               <div 
                 key={goal.id} 
-                className={`bg-background-surface border border-border-light rounded-lg overflow-hidden ${
+                className={`bg-neutral-900/70 border border-border-light rounded-lg overflow-hidden ${
                   goal.completed ? 'border-accent-mint/30 bg-accent-mint/5' : ''
                 }`}
                 data-testid={`goal-${goal.id}`}
@@ -482,14 +474,14 @@ const GoalTracker: React.FC = () => {
                       type="text"
                       value={editGoal.title || ''}
                       onChange={(e) => setEditGoal({ ...editGoal, title: e.target.value })}
-                      className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                      className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                       placeholder="Goal title"
                     />
                     
                     <textarea
                       value={editGoal.description || ''}
                       onChange={(e) => setEditGoal({ ...editGoal, description: e.target.value })}
-                      className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                      className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                       placeholder="Description (optional)"
                       rows={2}
                     />
@@ -499,13 +491,13 @@ const GoalTracker: React.FC = () => {
                         type="date"
                         value={editGoal.target_date || ''}
                         onChange={(e) => setEditGoal({ ...editGoal, target_date: e.target.value })}
-                        className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                        className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                       />
                       
                       <select
                         value={editGoal.type || 'long_term'}
                         onChange={(e) => setEditGoal({ ...editGoal, type: e.target.value as 'short_term' | 'long_term' })}
-                        className="w-full p-2 text-sm bg-background-card border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
+                        className="w-full p-2 text-sm bg-neutral-900/70 border border-border-light rounded-md focus:ring-1 focus:ring-accent-violet"
                       >
                         <option value="short_term">Short Term</option>
                         <option value="long_term">Long Term</option>
@@ -577,12 +569,11 @@ const GoalTracker: React.FC = () => {
                       </div>
                       
                       <div className="mb-1">
-                        <div className="w-full bg-background-card rounded-full h-1.5">
-                          <div 
-                            className={`h-1.5 rounded-full ${
-                              goal.completed ? 'bg-accent-mint' : 'bg-accent-mint'
-                            }`}
+                        <div className="w-full bg-neutral-900/70 h-1.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-accent-violet h-1.5 rounded-full transition-all duration-300"
                             style={{ width: `${goal.progress}%` }}
+                            data-testid={`goal-progress-${goal.id}`}
                           ></div>
                         </div>
                         <div className="flex justify-between mt-1">

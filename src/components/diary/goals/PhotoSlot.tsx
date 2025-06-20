@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Camera, X, ArrowLeft, ArrowRight, Image, Plus, Calendar, Trash } from 'lucide-react';
 import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
-import { ProgressPhoto } from '../../../store/useDiaryStore';
+import type { ProgressPhoto } from '../../../store/diaryTypes';
 
 /**
  * PhotoSlot Component
@@ -38,15 +38,14 @@ const PhotoSlot: React.FC = () => {
   const handleUploadPhoto = () => {
     if (!uploadPreview || !user?.id) return;
     
-    const newPhoto: ProgressPhoto = {
-      id: `photo-${Date.now()}`,
+    const photoPayload: Omit<ProgressPhoto, 'id' | 'user_id'> = {
       url: uploadPreview,
       description: description.trim(),
+      caption: description.trim(),
       date: new Date().toISOString(),
-      user_id: user.id,
     };
     
-    addProgressPhoto(newPhoto);
+    addProgressPhoto(photoPayload, user.id);
     setIsUploading(false);
     setUploadPreview(null);
     setDescription('');
@@ -88,7 +87,7 @@ const PhotoSlot: React.FC = () => {
   
   if (isUploading) {
     return (
-      <div className="bg-background-card rounded-2xl shadow-card p-5" data-testid="photo-slot-upload">
+      <div className="bg-neutral-800/50 rounded-2xl shadow-card p-5" data-testid="photo-slot-upload">
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-base font-semibold flex items-center">
             <Camera className="text-accent-violet mr-2" size={18} />
@@ -159,7 +158,7 @@ const PhotoSlot: React.FC = () => {
   }
   
   return (
-    <div className="bg-background-card rounded-2xl shadow-card p-5" data-testid="photo-slot">
+    <div className="bg-neutral-800/50 rounded-2xl shadow-card p-5" data-testid="photo-slot">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-base font-semibold flex items-center">
           <Camera className="text-accent-violet mr-2" size={18} />
@@ -184,8 +183,8 @@ const PhotoSlot: React.FC = () => {
       
       {progressPhotos.length === 0 ? (
         // Empty state
-        <div className="flex flex-col items-center justify-center py-8 bg-background-surface rounded-lg">
-          <div className="rounded-full bg-background-card p-3 mb-3">
+        <div className="flex flex-col items-center justify-center py-8 bg-neutral-900/70 border border-border-light rounded-lg overflow-hidden">
+          <div className="rounded-full bg-neutral-800/50 p-3 mb-3">
             <Image className="text-text-tertiary" size={24} />
           </div>
           <p className="text-sm text-text-secondary mb-3 text-center">
@@ -193,11 +192,13 @@ const PhotoSlot: React.FC = () => {
           </p>
           <label 
             htmlFor="photo-upload-empty"
-            className="bg-accent-violet text-white text-sm px-3 py-1.5 rounded-lg flex items-center cursor-pointer hover:bg-accent-violet/90"
+            className="bg-accent-violet text-neutral-900 text-sm font-medium px-4 py-2 rounded-lg flex items-center cursor-pointer hover:bg-accent-violet/90"
             data-testid="upload-first-photo"
           >
-            <Plus size={14} className="mr-1" />
             Add First Photo
+            <span className="ml-2 bg-black/10 rounded-full p-1 flex items-center justify-center">
+              <Camera size={16} />
+            </span>
             <input 
               id="photo-upload-empty"
               type="file"
@@ -226,8 +227,8 @@ const PhotoSlot: React.FC = () => {
                 <button
                   onClick={goToPrevious}
                   disabled={activeIndex === 0}
-                  className={`absolute left-2 top-1/2 transform -translate-y-1/2 bg-background-card/80 rounded-full p-1 ${
-                    activeIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-background-card'
+                  className={`absolute left-2 top-1/2 transform -translate-y-1/2 bg-white/10 rounded-full p-1 ${
+                    activeIndex === 0 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'
                   }`}
                   aria-label="Previous photo"
                   data-testid="prev-photo"
@@ -237,8 +238,8 @@ const PhotoSlot: React.FC = () => {
                 <button
                   onClick={goToNext}
                   disabled={activeIndex === progressPhotos.length - 1}
-                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 bg-background-card/80 rounded-full p-1 ${
-                    activeIndex === progressPhotos.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-background-card'
+                  className={`absolute right-2 top-1/2 transform -translate-y-1/2 bg-white/10 rounded-full p-1 ${
+                    activeIndex === progressPhotos.length - 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-white/20'
                   }`}
                   aria-label="Next photo"
                   data-testid="next-photo"

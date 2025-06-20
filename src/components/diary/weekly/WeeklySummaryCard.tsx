@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { CalendarClock, BarChart2, Award, Clock, Dumbbell, Heart } from 'lucide-react';
 import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
-import { WeeklyReflection } from '../../../store/useDiaryStore';
+import type { WeeklyReflection } from '../../../store/diaryTypes';
 
 /**
  * WeeklySummaryCard Component
@@ -29,7 +29,7 @@ const WeeklySummaryCard: React.FC = () => {
   // Loading state
   if (loading.weeklyReflection) {
     return (
-      <div className="bg-background-card rounded-2xl shadow-card p-6 h-[200px] animate-pulse" data-testid="weekly-summary-loading">
+      <div className="bg-neutral-800/50 rounded-2xl shadow-card p-6 h-[200px] animate-pulse" data-testid="weekly-summary-loading">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-8 h-8 bg-background-surface rounded-full"></div>
           <div className="h-6 w-48 bg-background-surface rounded-md"></div>
@@ -62,7 +62,7 @@ const WeeklySummaryCard: React.FC = () => {
   // Empty state or first visit - needs to be created
   if (!currentWeekReflection) {
     return (
-      <div className="bg-background-card rounded-2xl shadow-card p-6" data-testid="weekly-summary-empty">
+      <div className="bg-neutral-800/50 rounded-2xl shadow-card p-6" data-testid="weekly-summary-empty">
         <div className="flex items-center gap-2 mb-4">
           <CalendarClock className="text-accent-violet" size={24} />
           <h2 className="text-lg font-semibold">Weekly Summary</h2>
@@ -88,7 +88,7 @@ const WeeklySummaryCard: React.FC = () => {
   const completionPercentage = calculateCompletionPercentage(currentWeekReflection);
   
   return (
-    <div className="bg-background-card rounded-2xl shadow-card p-6" data-testid="weekly-summary-card">
+    <div className="bg-neutral-800/50 rounded-2xl shadow-card p-6" data-testid="weekly-summary-card">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
         <div className="flex items-center gap-2">
           <CalendarClock className="text-accent-violet" size={24} />
@@ -121,35 +121,35 @@ const WeeklySummaryCard: React.FC = () => {
       {/* Metrics Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {/* Sessions Completed */}
-        <div className="bg-background-surface rounded-lg p-3 flex flex-col items-center" data-testid="metric-sessions">
+        <div className="bg-neutral-900/70 rounded-lg p-3 flex flex-col items-center" data-testid="metric-sessions">
           <BarChart2 className="text-accent-violet mb-1" size={20} />
           <span className="text-sm text-text-secondary">Sessions</span>
           <div className="font-bold text-lg">{currentWeekReflection.completed_sessions}/{currentWeekReflection.planned_sessions}</div>
         </div>
         
         {/* Total Volume */}
-        <div className="bg-background-surface rounded-lg p-3 flex flex-col items-center" data-testid="metric-volume">
+        <div className="bg-neutral-900/70 rounded-lg p-3 flex flex-col items-center" data-testid="metric-volume">
           <Dumbbell className="text-accent-violet mb-1" size={20} />
           <span className="text-sm text-text-secondary">Volume</span>
           <div className="font-bold text-lg">{(currentWeekReflection.total_volume / 1000).toFixed(1)}k</div>
         </div>
         
         {/* New PRs */}
-        <div className="bg-background-surface rounded-lg p-3 flex flex-col items-center" data-testid="metric-prs">
+        <div className="bg-neutral-900/70 rounded-lg p-3 flex flex-col items-center" data-testid="metric-prs">
           <Award className="text-accent-mint mb-1" size={20} />
           <span className="text-sm text-text-secondary">PRs</span>
           <div className="font-bold text-lg">{currentWeekReflection.new_prs}</div>
         </div>
         
         {/* Cardio Minutes */}
-        <div className="bg-background-surface rounded-lg p-3 flex flex-col items-center" data-testid="metric-cardio">
+        <div className="bg-neutral-900/70 rounded-lg p-3 flex flex-col items-center" data-testid="metric-cardio">
           <Clock className="text-accent-violet mb-1" size={20} />
           <span className="text-sm text-text-secondary">Cardio</span>
           <div className="font-bold text-lg">{currentWeekReflection.cardio_minutes} min</div>
         </div>
         
         {/* Mood */}
-        <div className="bg-background-surface rounded-lg p-3 flex flex-col items-center" data-testid="metric-mood">
+        <div className="bg-neutral-900/70 rounded-lg p-3 flex flex-col items-center" data-testid="metric-mood">
           <Heart className="text-accent-red mb-1" size={20} />
           <span className="text-sm text-text-secondary">Mood</span>
           <div className="font-bold text-lg">
@@ -158,7 +158,7 @@ const WeeklySummaryCard: React.FC = () => {
         </div>
         
         {/* Sleep Quality */}
-        <div className="bg-background-surface rounded-lg p-3 flex flex-col items-center" data-testid="metric-sleep">
+        <div className="bg-neutral-900/70 rounded-lg p-3 flex flex-col items-center" data-testid="metric-sleep">
           <span className="text-lg mb-1">💤</span>
           <span className="text-sm text-text-secondary">Sleep</span>
           <div className="font-bold text-lg">
