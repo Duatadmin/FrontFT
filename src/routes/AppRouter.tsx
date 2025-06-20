@@ -46,11 +46,8 @@ const ExerciseDetailWrapper = () => {
   }
 
   // Desktop layout
-  return (
-    <AnalyticsDashboardLayout title="Exercise Details">
-      <ExerciseDetailPage exerciseId={id} onClose={handleClose} />
-    </AnalyticsDashboardLayout>
-  );
+  // The parent route <ProtectedRoute><AnalyticsDashboardLayout> already provides the layout.
+  return <ExerciseDetailPage exerciseId={id} onClose={handleClose} />;
 };
 
 export default function AppRouter() {

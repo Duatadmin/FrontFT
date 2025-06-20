@@ -57,7 +57,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
       {onClose && (
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 z-30 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white font-semibold py-2 px-5 rounded-lg transition-colors text-sm"
+          className="fixed top-4 right-4 z-30 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white font-semibold py-2 px-5 rounded-lg transition-colors text-sm"
           aria-label="Go back to exercise list"
         >
           Back
@@ -143,11 +143,11 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
       </div>
 
       {/* Scrollable Content Wrapper */}
-      <div className="flex-1 overflow-y-auto pb-28">
+      <div className="flex-1 overflow-y-auto pb-28 overscroll-behavior-y-contain">
         {/* Content Body */}
         <div className="w-full p-4 sm:p-6 md:p-8 bg-black/20 backdrop-blur-xl md:border-t md:border-white/10 md:rounded-b-2xl">
         {/* New Exercise Title Location */}
-        <h2 className="text-3xl md:text-4xl font-bold text-lime-300 text-center mb-6 tracking-tight drop-shadow-md">
+        <h2 className="text-3xl md:text-4xl font-bold text-lime-300 mb-6 tracking-tight drop-shadow-md">
           {name}
         </h2>
         <div className="flex flex-wrap gap-3 text-sm mb-6">
