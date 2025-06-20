@@ -51,21 +51,13 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
   return (
     <div 
-      className="relative text-white w-full bg-transparent flex flex-col h-dvh md:h-auto md:max-w-4xl md:mx-auto md:my-8 md:rounded-2xl md:shadow-2xl md:shadow-black/30 md:border md:border-white/10"
+      className="relative text-white w-full bg-transparent flex flex-col h-dvh md:h-auto md:max-w-4xl md:mx-auto md:my-8"
     >
       {/* Close Button */} 
-      {onClose && (
-        <button 
-          onClick={onClose}
-          className="fixed top-4 right-4 z-30 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white font-semibold py-2 px-5 rounded-lg transition-colors text-sm"
-          aria-label="Go back to exercise list"
-        >
-          Back
-        </button>
-      )}
+
 
       {/* Gradient Video Container */}
-      <div className="gv-wrapper relative w-full aspect-video md:rounded-t-2xl overflow-hidden sticky top-0 z-20 md:sticky-none"> {/* Applied w-full and rounded-t-2xl as requested */}
+      <div className="gv-wrapper relative w-full aspect-video md:rounded-t-2xl overflow-hidden z-20 md:sticky-none"> {/* Applied w-full and rounded-t-2xl as requested */}
         {/* gradient below the video */}
         <div className="gv-gradient base" />
 
@@ -140,10 +132,20 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
           style={{ opacity: 0.9 }} // Fallback inline style
         />
 
+        {/* Close Button */}
+        {onClose && (
+          <button 
+            onClick={onClose}
+            className="absolute bottom-4 right-4 z-30 bg-black/40 hover:bg-black/60 text-white/80 hover:text-white font-semibold py-2 px-5 rounded-lg transition-colors text-sm"
+            aria-label="Go back to exercise list"
+          >
+            Back
+          </button>
+        )}
       </div>
 
       {/* Scrollable Content Wrapper */}
-      <div className="flex-1 overflow-y-auto pb-28 overscroll-behavior-y-contain">
+      <div className="flex-1 overflow-y-auto pb-28 min-h-0">
         {/* Content Body */}
         <div className="w-full p-4 sm:p-6 md:p-8 bg-black/20 backdrop-blur-xl md:border-t md:border-white/10 md:rounded-b-2xl">
         {/* New Exercise Title Location */}
