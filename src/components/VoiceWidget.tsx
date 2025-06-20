@@ -120,7 +120,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   let currentIcon;
   let currentLabel;
   let currentTitle;
-  const baseButtonClasses = "relative flex items-center justify-center bg-white/5 text-white px-4 py-2 rounded-full backdrop-blur-md border border-white/10 transition-all duration-300 hover:scale-105 overflow-hidden";
+  const baseButtonClasses = "relative flex items-center justify-center text-white rounded-full transition-all duration-300 hover:scale-105 overflow-hidden";
   let cursorClass = "cursor-pointer";
   let stateSpecificClasses = "";
 

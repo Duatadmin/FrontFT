@@ -171,7 +171,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
         {/* Lower row for other action buttons */}
         <div className="flex items-center justify-between pt-2">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
             
             <VoiceWidget 
