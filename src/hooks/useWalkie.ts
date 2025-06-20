@@ -128,7 +128,27 @@ export function useWalkie(options: UseWalkieOptions): {
     currentSessionIdRef.current = null;
   }, [handleInternalError]);
 
-  const start = useCallback(async (sessionId: string) => {
+  // Utility to ensure microphone permission has been granted before initializing SEPIA.
+// On some browsers (notably mobile Chrome) the first getUserMedia call inside
+// SepiaVoiceRecorder can time-out if permission has not yet been requested.
+async function ensureMicrophonePermission(): Promise<void> {
+  // Permissions API is optional – fallback to direct getUserMedia if unavailable.
+  try {
+    // Cast to any to avoid TS lib DOM versions that might not yet include 'microphone'
+    const status = await (navigator.permissions as any).query({ name: 'microphone' });
+    if (status.state === 'granted') {
+      return; // All good – already granted.
+    }
+  } catch {
+    // Ignore – will fall back to actual getUserMedia request below.
+  }
+  // This call will trigger the native permission prompt (must happen in a user-gesture).
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // We only wanted the permission, stop tracks immediately.
+  stream.getTracks().forEach(track => track.stop());
+}
+
+const start = useCallback(async (sessionId: string) => {
     if (state.status === 'connecting' || state.status === 'active') {
       console.warn('Streaming already in progress or connecting. Call stop() first.');
       return;
@@ -149,7 +169,10 @@ export function useWalkie(options: UseWalkieOptions): {
           // Keep effectiveHost as wsUrl if parsing fails unexpectedly (e.g. malformed scheme part)
         }
       } 
-      // At this point, effectiveHost should be 'hostname' or 'hostname:port'
+      // Request microphone permission as early as possible while we still have the user gesture (touch).
+await ensureMicrophonePermission();
+
+// At this point, effectiveHost should be 'hostname' or 'hostname:port'
       // WalkieWS will prepend 'wss://'
 
       const wsOptions: WalkieWSOptions = {
