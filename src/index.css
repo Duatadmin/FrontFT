@@ -29,8 +29,8 @@
     /* Prevent text selection */
     @apply select-none; 
     /* Ensure body takes full viewport height, accounting for virtual keyboard */
-    min-height: 100vh;
-    min-height: -webkit-fill-available; /* For mobile Safari */
+    
+    
   }
 
   /* Updated scrollbar */
@@ -55,8 +55,8 @@
   }
   #root {
     /* Ensure root also respects viewport height changes */
-    min-height: 100vh;
-    min-height: -webkit-fill-available; 
+    
+    
     @apply flex flex-col;
   }
 }
