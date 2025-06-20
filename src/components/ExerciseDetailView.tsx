@@ -51,7 +51,7 @@ const ExerciseDetailView: React.FC<ExerciseDetailViewProps> = ({
 
   return (
     <div 
-      className="relative text-white w-full bg-transparent flex flex-col h-dvh md:h-auto md:max-w-4xl md:mx-auto md:my-8 overflow-hidden"
+      className="relative text-white w-full bg-transparent flex flex-col h-full md:h-auto md:max-w-4xl md:mx-auto md:my-8 overflow-hidden"
     >
       {/* Close Button */} 
 
