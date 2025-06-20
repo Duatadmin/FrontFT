@@ -46,7 +46,7 @@ export const PlanCard: React.FC = () => {
   }
 
   return (
-    <div className="p-6 bg-neutral-900/70 backdrop-blur-md border border-neutral-700 rounded-2xl shadow-xl text-neutral-100">
+    <div className="p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg text-neutral-100">
       <header className="mb-6 pb-4 border-b border-neutral-700">
         <h2 className="text-3xl font-rubik font-bold text-primary mb-2">
           {formatText(plan.goal) || 'Workout Plan'}
@@ -59,7 +59,7 @@ export const PlanCard: React.FC = () => {
             <strong>Level:</strong> {formatText(plan.level) || 'N/A'}
           </span>
           <span>
-            <strong>Status:</strong> <span className={`font-semibold ${plan.planStatus === 'active' ? 'text-green-500' : 'text-yellow-500'}`}>{plan.planStatus || 'N/A'}</span>
+            <strong>Status:</strong> <span className={`${plan.planStatus === 'active' ? 'bg-green-600/20 border-green-500/40 text-green-300' : 'bg-yellow-600/20 border-yellow-500/40 text-yellow-300'} border backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-medium`}>{plan.planStatus || 'N/A'}</span>
           </span>
         </div>
       </header>

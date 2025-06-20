@@ -17,17 +17,17 @@ export const WeekTabs: React.FC<WeekTabsProps> = ({ weeks }) => {
   const selectedWeek = weeks[selectedWeekIndex];
 
   return (
-    <div>
-      <nav className="mb-6 border-b border-neutral-700 flex space-x-1 overflow-x-auto" aria-label="Weeks">
+    <div className="pt-1">
+      <nav className="mb-6 border-b border-white/10 flex space-x-1 overflow-x-auto" aria-label="Weeks">
         {weeks.map((week, index) => (
           <button
             key={week.weekId}
             onClick={() => setSelectedWeekIndex(index)}
-            className={`whitespace-nowrap px-4 py-3 font-medium text-sm rounded-t-lg focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors duration-150
+            className={`whitespace-nowrap px-4 py-3 font-medium text-sm rounded-t-lg focus:outline-none focus:ring-2 focus:ring-primary transition-colors duration-150
               ${
                 selectedWeekIndex === index
-                  ? 'border-b-2 border-green-500 text-green-400 bg-neutral-800/50'
-                  : 'text-neutral-400 hover:text-green-300 hover:bg-neutral-800/30 border-b-2 border-transparent'
+                  ? 'bg-primary/10 font-semibold border-b-2 border-primary text-primary'
+                  : 'text-neutral-400 hover:text-neutral-100 border-b-2 border-transparent'
               }`}
             aria-current={selectedWeekIndex === index ? 'page' : undefined}
           >

@@ -106,17 +106,17 @@ const ExerciseCard: React.FC<ExerciseCardProps> = ({
           </h3>
           {/* Tags for bodypart, equipment, isCompound */}
           <div className="flex flex-wrap gap-2 mb-2">
-            {bodypart && <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded-md">{bodypart}</span>}
-            {equipment && <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-md">{equipment}</span>}
+            {bodypart && <span className="text-xs bg-green-500/20 text-green-300 px-2 py-1 rounded-md border border-green-500/40 backdrop-blur-sm">{bodypart}</span>}
+            {equipment && <span className="text-xs bg-blue-500/20 text-blue-300 px-2 py-1 rounded-md border border-blue-500/40 backdrop-blur-sm">{equipment}</span>}
             {typeof isCompound === 'boolean' && (
-              <span className={`text-xs px-2 py-1 rounded-md ${isCompound ? 'bg-purple-500/20 text-purple-300' : 'bg-sky-500/20 text-sky-300'}`}>
+              <span className={`text-xs px-2 py-1 rounded-md ${isCompound ? 'bg-purple-500/20 text-purple-300 border-purple-500/40' : 'bg-sky-500/20 text-sky-300 border-sky-500/40'} border backdrop-blur-sm`}>
                 {isCompound ? 'Compound' : 'Isolation'}
               </span>
             )}
           </div>
         </div>
         <div className="flex justify-end items-center"> {/* Bottom part of content area, for Tier */}
-          {tier && <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2.5 py-1 rounded-md font-medium">{`Tier ${tier}`}</span>}
+          {tier && <span className="text-xs bg-yellow-500/20 text-yellow-300 px-2.5 py-1 rounded-md font-medium border border-yellow-500/40 backdrop-blur-sm">{`Tier ${tier}`}</span>}
         </div>
       </div>
     </div>
