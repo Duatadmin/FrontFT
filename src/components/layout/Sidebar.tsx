@@ -2,7 +2,6 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
-  BarChart2,
   // FileText, // Unused
   ShoppingCart,
   // Star, // Unused
@@ -12,7 +11,6 @@ import {
   MessageCircle,
   HelpCircle,
   ChevronRight,
-  Bell,
   BookOpen,
   Dumbbell,
   LogOut,
@@ -147,7 +145,7 @@ const Sidebar: React.FC = () => {
   return (
     <aside className="w-[250px] h-full bg-white/5 backdrop-blur-md border-r border-white/10 flex flex-col overflow-hidden md:mt-0 md:pt-0">
       {/* Logo Header */}
-      <div className="px-6 pb-4 md:pt-0 flex items-center">
+      <div className="px-6 pt-5 pb-4 flex items-center">
         <div className="h-14">
           <img src="/logo.svg" alt="Jarvis Fitness" className="h-full invert" />
         </div>
@@ -184,12 +182,12 @@ const Sidebar: React.FC = () => {
           isActive={location.pathname === '/library'}
         />
         
-        <SidebarLink 
+        {/* <SidebarLink 
           icon={<BarChart2 size={18} />} 
           label="Progress" 
           to="/progress"
           isActive={location.pathname === '/progress'}
-        />
+        /> */}
         
         <SidebarLink 
           icon={<MessageCircle size={18} />} 
@@ -198,12 +196,12 @@ const Sidebar: React.FC = () => {
           isActive={location.pathname === '/'}
         />
         
-        <SidebarLink 
+        {/* <SidebarLink 
           icon={<Bell size={18} />} 
           label="Supabase Test" 
           to="/supabase-test"
           isActive={location.pathname === '/supabase-test'}
-        />
+        /> */}
 
         {/* ADDED: SidebarLink for Analytics Dashboard */}
         <SidebarLink 

@@ -16,11 +16,14 @@ const ProgramsPage: React.FC = () => {
   useAuthGuard();
   return (
     <div className="px-4 py-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-xl font-bold text-text-primary" data-testid="programs-page-title">
-          Training Programs & Goals
-        </h1>
-      </div>
+      <header className="mb-6">
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-bold text-white mb-6" data-testid="programs-page-title">
+            Training Programs & Goals
+          </h1>
+        </div>
+        <p className="text-text-secondary">Design your training routines and track your fitness objectives.</p>
+      </header>
       
       <Tabs 
         defaultValue="current" 

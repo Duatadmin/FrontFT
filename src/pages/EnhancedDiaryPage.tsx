@@ -8,7 +8,6 @@ import { CalendarDays, BarChart2, Target } from 'lucide-react';
 import DailyLogTab from '../components/diary/tabs/DailyLogTab';
 import WeeklyReviewTab from '../components/diary/tabs/WeeklyReviewTab';
 import GoalsReflectionsTab from '../components/diary/tabs/GoalsReflectionsTab';
-import FiltersBar from '../components/diary/daily/FiltersBar';
 
 /**
  * Enhanced Training Journal Page
@@ -34,7 +33,7 @@ const EnhancedDiaryPage: React.FC = () => {
       <div className="flex-1 overflow-auto">
         <main className="container mx-auto px-4 py-6">
           <header className="mb-6">
-            <h1 className="text-2xl font-bold">Training Journal</h1>
+            <h1 className="font-display text-3xl font-bold text-white mb-6">Training Journal</h1>
             <p className="text-text-secondary">Track your fitness journey and reflect on your progress</p>
           </header>
           
@@ -79,7 +78,7 @@ const EnhancedDiaryPage: React.FC = () => {
             </TabsList>
 
             {/* Conditionally render FiltersBar for the daily log tab */}
-            {activeTab === 'daily' && <FiltersBar />}
+            {/* {activeTab === 'daily' && <FiltersBar />} */}
             
             {/* Tab content */}
             <TabsContent value="daily" className="mt-2">

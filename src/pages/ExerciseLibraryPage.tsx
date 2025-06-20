@@ -15,8 +15,6 @@ const ExerciseLibraryPage: React.FC = () => {
   );
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null); // State for selected exercise ID
   const { exercises, loading, error } = useExerciseLibrary(selectedMuscleGroup, selectedEquipmentCategory);
-  const [pageTitle, setPageTitle] = useState('Exercise Library');
-
   useEffect(() => {
     const newSearchParams = new URLSearchParams(searchParams);
     if (selectedEquipmentCategory) {
@@ -45,33 +43,12 @@ const ExerciseLibraryPage: React.FC = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams]); // Rerun when searchParams change (e.g. browser back/forward)
 
-  useEffect(() => {
-    let title = 'Exercise Library';
-    if (selectedMuscleGroup) {
-      title = `${selectedMuscleGroup.charAt(0).toUpperCase() + selectedMuscleGroup.slice(1)} Exercises`;
-      if (selectedEquipmentCategory) {
-        title += ` – ${selectedEquipmentCategory}`;
-      }
-    } else {
-      title = 'Select Muscle Group';
-    }
-    setPageTitle(title);
-  }, [selectedMuscleGroup, selectedEquipmentCategory, selectedExerciseId]); // Add selectedExerciseId to dependencies
-
   const handleSelectExercise = (id: string) => {
     setSelectedExerciseId(id);
   };
 
   const handleCloseExerciseDetail = () => {
     setSelectedExerciseId(null);
-    // Potentially update pageTitle here if needed when closing detail view
-    if (selectedMuscleGroup) {
-      let title = `${selectedMuscleGroup.charAt(0).toUpperCase() + selectedMuscleGroup.slice(1)} Exercises`;
-      if (selectedEquipmentCategory) {
-        title += ` – ${selectedEquipmentCategory}`;
-      }
-      setPageTitle(title);
-    }
   };
 
   // Helper to import equipmentCategories for the effect above
@@ -115,7 +92,10 @@ const ExerciseLibraryPage: React.FC = () => {
         </div>
       ) : (
         <>
-          <h1 className="text-3xl font-bold mb-6 text-lime-400">{pageTitle}</h1>
+          <header className="mb-6">
+          <h1 className="font-display text-3xl font-bold text-white mb-6">Exercise Library</h1>
+          <p className="text-text-secondary">Browse exercises by muscle group and equipment.</p>
+        </header>
           {!selectedMuscleGroup ? (
         <MuscleGroupSelector onSelectGroup={handleSelectGroup} />
       ) : (

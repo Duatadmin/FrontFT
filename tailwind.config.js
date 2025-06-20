@@ -49,7 +49,8 @@ module.exports = {
       spacing: defaultTheme.spacing,
       fontFamily: {
         sans: ['Rubik', 'Inter', ...defaultTheme.fontFamily.sans],
-        display: ['"Funnel Display"', ...defaultTheme.fontFamily.sans],
+        display: ['Rubik', ...defaultTheme.fontFamily.sans],
+        rubik: ['Rubik', ...defaultTheme.fontFamily.sans],
       },
       letterSpacing: {
         tight: '-0.02em', // Adjusted tracking
