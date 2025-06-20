@@ -65,12 +65,18 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     }
   }
 
-  const supportsOpus = (() => {
-    if (typeof window === 'undefined') return false;
-    const MS = (window as any).MediaSource;
-    return !!MS && typeof MS.isTypeSupported === 'function'
-      ? MS.isTypeSupported('audio/ogg; codecs="opus"') // Corrected MIME with space and quotes
-      : false;
+  const OGG_OPUS_MIME = 'audio/ogg; codecs="opus"';
+  const oggMseSupported = (() => {
+    if (typeof window === 'undefined' || !('MediaSource' in window)) return false;
+    try {
+      const isMediaSourceSupported = MediaSource.isTypeSupported?.(OGG_OPUS_MIME);
+      // For MediaSource streaming, MediaSource.isTypeSupported is the definitive check.
+      // The canPlayType check is more for direct <audio src> playback and can be unreliable for MSE.
+      return !!isMediaSourceSupported;
+    } catch (e) {
+      console.error('Error checking Ogg/Opus MSE support:', e);
+      return false;
+    }
   })();
 
   useEffect(() => {
@@ -155,142 +161,129 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         return;
       }
 
-      // START: Added diagnostic logging
-      if (typeof window.MediaSource !== 'undefined') {
-        console.log('[TTS] MediaSource API found. Checking Opus support variations...');
-        const mimeTypesToTest = [
-          'audio/ogg; codecs="opus"', // The one we need
-          'audio/ogg; codecs=opus',   // Without quotes
-          'audio/webm; codecs="opus"',
-          'audio/webm; codecs=opus',
-          'audio/opus', 
-          'video/ogg; codecs="opus"',
-          'video/webm; codecs="opus"'
-        ];
+      if (oggMseSupported) {
+        // Branch 1: Real-time streaming for compatible browsers (e.g., modern Safari)
+        console.log('[TTS] Ogg/Opus with MediaSource is supported. Using low-latency streaming path.');
+        mediaSourceRef.current = new MediaSource();
+        audio.src = URL.createObjectURL(mediaSourceRef.current);
+        oggPageBufferRef.current = new Uint8Array(0); // Initialize Ogg page buffer
 
-        mimeTypesToTest.forEach(mimeType => {
+        mediaSourceRef.current.addEventListener('sourceopen', async () => {
+          if (!mediaSourceRef.current || mediaSourceRef.current.readyState !== 'open') return;
+
           try {
-            const supported = MediaSource.isTypeSupported(mimeType);
-            console.log(`[TTS] MediaSource.isTypeSupported('${mimeType}'): ${supported}`);
-          } catch (e) {
-            console.error(`[TTS] Error checking MediaSource.isTypeSupported('${mimeType}'):`, e);
-          }
-        });
-      }
-      // END: Added diagnostic logging
+            sourceBufferRef.current = mediaSourceRef.current.addSourceBuffer(OGG_OPUS_MIME);
+            const reader = response.body!.getReader();
+            let streamEndedByReader = false;
 
-      if (!supportsOpus) {
-        console.warn('[TTS] MediaSource is supported, but Opus (audio/ogg; codecs="opus") is not. Skipping playback for this item.');
-        setIsPlaying(false);
-        setCurrentRequestId(null);
-        setQueue(prev => prev.slice(1));
-        if (audioPlayerRef.current) {
-          audioPlayerRef.current.onerror = null;
-          audioPlayerRef.current.onended = null;
-          audioPlayerRef.current.src = '';
-        }
-        return; // Exit playNext for this item
-      }
-
-      mediaSourceRef.current = new MediaSource();
-      audio.src = URL.createObjectURL(mediaSourceRef.current);
-      oggPageBufferRef.current = new Uint8Array(0); // Initialize Ogg page buffer
-
-      mediaSourceRef.current.addEventListener('sourceopen', async () => {
-        if (!mediaSourceRef.current || mediaSourceRef.current.readyState !== 'open') return;
-
-        try {
-          sourceBufferRef.current = mediaSourceRef.current.addSourceBuffer('audio/ogg; codecs="opus"');
-          const reader = response.body!.getReader();
-          let streamEndedByReader = false;
-
-          const processData = async (isFinalAttempt: boolean) => {
-            if (!sourceBufferRef.current || sourceBufferRef.current.updating || !oggPageBufferRef.current) {
-              return;
-            }
-            const { page, remainingBuffer } = extractOggPage(oggPageBufferRef.current, isFinalAttempt);
-            if (page && page.length > 0) {
-              try {
-                sourceBufferRef.current.appendBuffer(page);
-                oggPageBufferRef.current = remainingBuffer;
-              } catch (appendError) {
-                console.error('[TTS] Error appending Ogg page:', appendError);
-                if (mediaSourceRef.current && mediaSourceRef.current.readyState === 'open') {
-                  try { mediaSourceRef.current.endOfStream(); } catch (eosErr) { console.warn('[TTS] Error ending stream after append error:', eosErr); }
+            const processData = async (isFinalAttempt: boolean) => {
+              if (!sourceBufferRef.current || sourceBufferRef.current.updating || !oggPageBufferRef.current) {
+                return;
+              }
+              const { page, remainingBuffer } = extractOggPage(oggPageBufferRef.current, isFinalAttempt);
+              if (page && page.length > 0) {
+                try {
+                  sourceBufferRef.current.appendBuffer(page);
+                  oggPageBufferRef.current = remainingBuffer;
+                } catch (appendError) {
+                  console.error('[TTS] Error appending Ogg page:', appendError);
+                  if (mediaSourceRef.current && mediaSourceRef.current.readyState === 'open') {
+                    try { mediaSourceRef.current.endOfStream(); } catch (eosErr) { console.warn('[TTS] Error ending stream after append error:', eosErr); }
+                  }
+                  throw appendError;
                 }
-                throw appendError; // Propagate to be caught by outer try-catch
               }
-            }
-          };
+            };
 
-          sourceBufferRef.current.addEventListener('updateend', async () => {
-            // After an append, try to process more from buffer.
-            // If stream has ended and buffer is now empty, finalize MediaSource.
-            if (abortControllerRef.current?.signal.aborted) return;
-            await processData(streamEndedByReader); // Process with current knowledge of stream end
-            if (streamEndedByReader && mediaSourceRef.current?.readyState === 'open' &&
-                (!oggPageBufferRef.current || oggPageBufferRef.current.length === 0) &&
-                sourceBufferRef.current && !sourceBufferRef.current.updating) {
-              console.log('[TTS] updateend: Stream ended, buffer empty, finalizing MediaSource.');
-              mediaSourceRef.current.endOfStream();
-            }
-          });
-
-          // eslint-disable-next-line no-constant-condition
-          while (true) {
-            if (abortControllerRef.current?.signal.aborted || mediaSourceRef.current?.readyState !== 'open') {
-              console.log('[TTS] Streaming aborted or MediaSource closed, exiting read loop.');
-              if (mediaSourceRef.current?.readyState === 'open' && sourceBufferRef.current && !sourceBufferRef.current.updating) {
-                try { mediaSourceRef.current.endOfStream(); } catch (e) { console.warn('[TTS] Error ending stream during abort in read loop:', e); }
-              }
-              break;
-            }
-
-            const { done, value } = await reader.read();
-            streamEndedByReader = done;
-
-            if (value) {
-              const newCombinedBuffer = new Uint8Array((oggPageBufferRef.current?.length || 0) + value.length);
-              if (oggPageBufferRef.current) newCombinedBuffer.set(oggPageBufferRef.current, 0);
-              newCombinedBuffer.set(value, oggPageBufferRef.current?.length || 0);
-              oggPageBufferRef.current = newCombinedBuffer;
-            }
-
-            await processData(done); // Process accumulated data
-
-            if (done) {
-              console.log('[TTS] Stream finished (reader.read() done).');
-              // Ensure any final data is processed and MediaSource is ended if buffer becomes empty.
-              // The 'updateend' listener will handle ending the stream if an append occurs here.
-              // If no append occurs (buffer was already empty or no full page), and not updating, end here.
-              if (mediaSourceRef.current?.readyState === 'open' &&
+            sourceBufferRef.current.addEventListener('updateend', async () => {
+              if (abortControllerRef.current?.signal.aborted) return;
+              await processData(streamEndedByReader);
+              if (streamEndedByReader && mediaSourceRef.current?.readyState === 'open' &&
                   (!oggPageBufferRef.current || oggPageBufferRef.current.length === 0) &&
                   sourceBufferRef.current && !sourceBufferRef.current.updating) {
-                console.log('[TTS] Stream done, buffer empty post-process, finalizing MediaSource.');
+                console.log('[TTS] updateend: Stream ended, buffer empty, finalizing MediaSource.');
                 mediaSourceRef.current.endOfStream();
               }
-              break; // Exit while loop
-            }
-          }
-        } catch (err) {
-          console.error('[TTS] Error during MediaSource stream processing:', err);
-          if (mediaSourceRef.current?.readyState === 'open') {
-            try { mediaSourceRef.current.endOfStream(); } catch (e) { console.warn('[TTS] Error ending MediaSource stream in catch:', e); }
-          }
-          throw err; // Let outer catch handle state updates
-        }
-      }, { once: true });
+            });
 
-      audio.onended = () => {
-        console.log('[TTS] Audio playback ended successfully (MediaSource path)');
-        setIsPlaying(false); setCurrentRequestId(null);
-        setQueue(prev => prev.slice(1));
-      };
-      audio.onerror = (e) => {
-        console.error('[TTS] Audio playback error (MediaSource path):', e);
-        setIsPlaying(false); setCurrentRequestId(null);
-        setQueue(prev => prev.slice(1));
-      };
+            // eslint-disable-next-line no-constant-condition
+            while (true) {
+              if (abortControllerRef.current?.signal.aborted || mediaSourceRef.current?.readyState !== 'open') {
+                console.log('[TTS] Streaming aborted or MediaSource closed, exiting read loop.');
+                if (mediaSourceRef.current?.readyState === 'open' && sourceBufferRef.current && !sourceBufferRef.current.updating) {
+                  try { mediaSourceRef.current.endOfStream(); } catch (e) { console.warn('[TTS] Error ending stream during abort in read loop:', e); }
+                }
+                break;
+              }
+
+              const { done, value } = await reader.read();
+              streamEndedByReader = done;
+
+              if (value) {
+                const newCombinedBuffer = new Uint8Array((oggPageBufferRef.current?.length || 0) + value.length);
+                if (oggPageBufferRef.current) newCombinedBuffer.set(oggPageBufferRef.current, 0);
+                newCombinedBuffer.set(value, oggPageBufferRef.current?.length || 0);
+                oggPageBufferRef.current = newCombinedBuffer;
+              }
+
+              await processData(done);
+
+              if (done) {
+                console.log('[TTS] Stream finished (reader.read() done).');
+                if (mediaSourceRef.current?.readyState === 'open' &&
+                    (!oggPageBufferRef.current || oggPageBufferRef.current.length === 0) &&
+                    sourceBufferRef.current && !sourceBufferRef.current.updating) {
+                  console.log('[TTS] Stream done, buffer empty post-process, finalizing MediaSource.');
+                  mediaSourceRef.current.endOfStream();
+                }
+                break;
+              }
+            }
+          } catch (err) {
+            console.error('[TTS] Error during MediaSource stream processing:', err);
+            if (mediaSourceRef.current?.readyState === 'open') {
+              try { mediaSourceRef.current.endOfStream(); } catch (e) { console.warn('[TTS] Error ending MediaSource stream in catch:', e); }
+            }
+            throw err;
+          }
+        }, { once: true });
+
+        audio.onended = () => {
+          console.log('[TTS] Audio playback ended successfully (MediaSource path)');
+          setIsPlaying(false); setCurrentRequestId(null);
+          setQueue(prev => prev.slice(1));
+        };
+        audio.onerror = (e) => {
+          console.error('[TTS] Audio playback error (MediaSource path):', e);
+          setIsPlaying(false); setCurrentRequestId(null);
+          setQueue(prev => prev.slice(1));
+        };
+      } else {
+        // Branch 2: Progressive download for incompatible browsers (e.g., Chrome)
+        console.log('[TTS] Ogg/Opus with MediaSource not supported. Falling back to progressive download.');
+        const blob = await response.blob();
+        const blobUrl = URL.createObjectURL(blob);
+        audio.src = blobUrl;
+
+        const cleanup = () => {
+          URL.revokeObjectURL(blobUrl);
+          audio.onerror = null;
+          audio.onended = null;
+        };
+
+        audio.onended = () => {
+          console.log('[TTS] Audio playback ended successfully (Fallback path)');
+          cleanup();
+          setIsPlaying(false); setCurrentRequestId(null);
+          setQueue(prev => prev.slice(1));
+        };
+        audio.onerror = (e) => {
+          console.error('[TTS] Audio playback error (Fallback path):', e);
+          cleanup();
+          setIsPlaying(false); setCurrentRequestId(null);
+          setQueue(prev => prev.slice(1));
+        };
+      }
 
       try {
         await audio.play();
@@ -324,7 +317,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         setQueue(prev => prev.slice(1));
       }
     }
-  }, [queue, voiceEnabled, supportsOpus]);
+  }, [queue, voiceEnabled, oggMseSupported]);
 
   const stopCurrentPlayback = useCallback(async (calledByToggleOff = false) => {
     if (abortControllerRef.current) {
