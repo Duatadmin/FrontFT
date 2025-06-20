@@ -140,7 +140,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   return (
     <div 
-      className="sticky bottom-0 z-10 pt-2"
+      className="fixed bottom-0 left-0 right-0 z-10 pt-2"
       style={{ paddingBottom: `calc(1rem + var(--safe-area-inset-bottom))` }}
     >
       {/* Further reduced height container */}

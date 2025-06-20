@@ -12,9 +12,9 @@ interface ChatLayoutProps {
 
 const ChatLayout: React.FC<ChatLayoutProps> = ({ messages, isLoading, onSendMessage }) => {
   return (
-    <div className="flex flex-col h-dvh">
+    <div className="flex flex-col h-screen">
       <ChatHeader />
-      <main className="flex-1 overflow-hidden flex flex-col pt-[calc(64px+env(safe-area-inset-top))]">
+      <main className="flex-1 overflow-hidden flex flex-col pt-[calc(64px+env(safe-area-inset-top))] pb-32">
         <ChatMessages messages={messages} isLoading={isLoading} />
       </main>
       <ChatInput 
