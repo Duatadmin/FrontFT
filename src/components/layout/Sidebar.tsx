@@ -145,9 +145,9 @@ const Sidebar: React.FC = () => {
   };
   
   return (
-    <aside className="w-[250px] h-full bg-white/5 backdrop-blur-md border-r border-white/10 flex flex-col overflow-hidden">
+    <aside className="w-[250px] h-full bg-white/5 backdrop-blur-md border-r border-white/10 flex flex-col overflow-hidden md:mt-0 md:pt-0">
       {/* Logo Header */}
-      <div className="px-6 py-4 flex items-center">
+      <div className="px-6 pb-4 md:pt-0 flex items-center">
         <div className="h-14">
           <img src="/logo.svg" alt="Jarvis Fitness" className="h-full invert" />
         </div>
