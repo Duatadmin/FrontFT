@@ -155,6 +155,30 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         return;
       }
 
+      // START: Added diagnostic logging
+      if (typeof window.MediaSource !== 'undefined') {
+        console.log('[TTS] MediaSource API found. Checking Opus support variations...');
+        const mimeTypesToTest = [
+          'audio/ogg; codecs="opus"', // The one we need
+          'audio/ogg; codecs=opus',   // Without quotes
+          'audio/webm; codecs="opus"',
+          'audio/webm; codecs=opus',
+          'audio/opus', 
+          'video/ogg; codecs="opus"',
+          'video/webm; codecs="opus"'
+        ];
+
+        mimeTypesToTest.forEach(mimeType => {
+          try {
+            const supported = MediaSource.isTypeSupported(mimeType);
+            console.log(`[TTS] MediaSource.isTypeSupported('${mimeType}'): ${supported}`);
+          } catch (e) {
+            console.error(`[TTS] Error checking MediaSource.isTypeSupported('${mimeType}'):`, e);
+          }
+        });
+      }
+      // END: Added diagnostic logging
+
       if (!supportsOpus) {
         console.warn('[TTS] MediaSource is supported, but Opus (audio/ogg; codecs="opus") is not. Skipping playback for this item.');
         setIsPlaying(false);
