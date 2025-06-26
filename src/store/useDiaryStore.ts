@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ViewMode } from '@/components/diary/ViewModeSwitch';
 import { devtools, persist } from 'zustand/middleware';
 import { createEnhancedDiaryActions, EnhancedDiaryActions } from './enhancedDiaryActions';
 import type {
@@ -24,6 +25,7 @@ type DiaryDataState = {
   streak: Streak;
   selectedSession: WorkoutSession | null;
   activeTab: DiaryTab;
+  dailyViewMode: ViewMode;
   filters: DiaryFilters;
   loading: Record<string, boolean>;
   error: Record<string, string | null>;
@@ -33,6 +35,7 @@ type DiaryDataState = {
 type DiaryActions = {
   setFilters: (filters: Partial<DiaryFilters>) => void;
   setActiveTab: (tab: DiaryTab) => void;
+  setDailyViewMode: (mode: ViewMode) => void;
   selectSession: (session: WorkoutSession | null) => void;
   clearErrors: () => void;
 };
@@ -58,6 +61,7 @@ const initialState: DiaryDataState = {
   streak: { currentStreak: 0, longestStreak: 0, lastSevenDays: Array(7).fill(false), streakChange: 0 },
   selectedSession: null,
   activeTab: 'daily',
+  dailyViewMode: 'list',
   filters: { dateRange: getDefaultDateRange(), focusArea: null, prAchieved: null },
   loading: { goals: false, weeklyReflection: false, progressPhotos: false, streak: false },
   error: { goals: null, weeklyReflection: null, progressPhotos: null, streak: null },
@@ -71,6 +75,7 @@ const useDiaryStore = create<DiaryState>()(
 
         setFilters: (filters: Partial<DiaryFilters>) => set(state => ({ ...state, filters: { ...state.filters, ...filters } })),
         setActiveTab: (tab: DiaryTab) => set(state => ({ ...state, activeTab: tab })),
+        setDailyViewMode: (mode: ViewMode) => set(state => ({ ...state, dailyViewMode: mode })),
         selectSession: (session: WorkoutSession | null) => set(state => ({ ...state, selectedSession: session })),
         clearErrors: () => set(state => ({ ...state, error: initialState.error })),
 
@@ -89,6 +94,7 @@ const useDiaryStore = create<DiaryState>()(
             selectedSession,
             setFilters,
             setActiveTab,
+            setDailyViewMode,
             selectSession,
             clearErrors,
             fetchGoals,

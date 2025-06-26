@@ -62,3 +62,38 @@ export const fetchCompletedSessions = async (userId: string): Promise<WorkoutFul
   return data || [];
 };
 
+/**
+ * Fetches completed workout sessions for a given user within a specific month.
+ * @param userId The ID of the user.
+ * @param year The full year (e.g., 2024).
+ * @param month The month (0-11, where 0 is January).
+ * @returns A promise that resolves to an array of completed session rows for that month.
+ * @throws Will throw an error if the Supabase query fails.
+ */
+export const fetchMonthlySessions = async (userId: string, year: number, month: number): Promise<WorkoutFullViewRow[]> => {
+  if (!userId) {
+    console.error('fetchMonthlySessions: userId is required');
+    return [];
+  }
+
+  // Calculate the start and end dates for the given month
+  const startDate = new Date(year, month, 1).toISOString();
+  const endDate = new Date(year, month + 1, 0).toISOString();
+
+  const { data, error } = await supabase
+    .from('workout_full_view')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('session_completed', true)
+    .gte('session_date', startDate)
+    .lte('session_date', endDate)
+    .order('session_date', { ascending: true });
+
+  if (error) {
+    console.error(`Error fetching sessions for ${year}-${month + 1} for userId:`, userId, error);
+    throw error;
+  }
+
+  return data || [];
+};
+
