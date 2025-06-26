@@ -5,7 +5,7 @@ import VoiceWidget from '../VoiceWidget'; // Added import for VoiceWidget
 import VoiceTicker, { ISepiaVoiceRecorder } from './VoiceTicker'; // Import VoiceTicker and its recorder interface
 // import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
 // import { WalkieTalkieButton } from '../chat/WalkieTalkieButton';// Adjusted path
-import { SendButton } from '../chat/SendButton';         // Adjusted path
+import { LottieSendButton } from './LottieSendButton';
 
 import { useVoicePlayback } from '../../hooks/useVoicePlayback';
 
@@ -21,7 +21,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
   isLoading,
 }) => {
   const [voiceWidgetStatus, setVoiceWidgetStatus] = useState<string>('idle'); // To track VoiceWidget state
-  const [isDemoActive, setIsDemoActive] = useState(false); // For testing the ticker animation
+    const [isDemoActive, /* setIsDemoActive */] = useState(false); // For testing the ticker animation
   const voiceTickerRecorderRef = useRef<ISepiaVoiceRecorder>({ onResamplerData: undefined });
   const [isSending, setIsSending] = useState(false); // Local state to prevent race conditions
   console.log('[ChatInput] Initializing: isSending = false, isLoading =', isLoading); // Initial state log
@@ -111,8 +111,15 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
 
   const handleSend = () => {
+    if (isSendingRef.current) {
+      console.log('[ChatInput] Text send blocked because a message is already in flight.');
+      return;
+    }
     const trimmedInput = inputValue.trim();
     if (trimmedInput && !isTextInputDisabled) {
+      console.log('[ChatInput] Setting lock for text send.');
+      isSendingRef.current = true;
+      setIsSending(true);
       onSendMessage(trimmedInput);
       setInputValue('');
       if (textareaRef.current) {
@@ -187,9 +194,10 @@ const ChatInput: React.FC<ChatInputProps> = ({
               }}
             />
           </div>
-          <SendButton 
-            onClick={handleSend} 
-            disabled={!inputValue.trim() || isTextInputDisabled} 
+          <LottieSendButton
+            onClick={handleSend}
+            disabled={!inputValue.trim() || isTextInputDisabled}
+            isSending={isSending}
             className="shadow-none"
           />
           {/* <VoiceModeToggle 

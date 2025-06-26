@@ -1,11 +1,37 @@
 // src/components/VoiceWidget.tsx
 import React, { useRef, useState, Fragment, useEffect } from 'react';
 import { useVoice } from '../hooks/VoiceContext';
-import { useWalkie } from '../hooks/useWalkie'; 
+import { useWalkie } from '../hooks/useWalkie';
 import { v4 as uuid } from 'uuid';
+import { Player } from '@lottiefiles/react-lottie-player';
 import { Mic } from 'lucide-react';
 import { Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
+
+const EarbudIcon = () => {
+  const playerRef = useRef<any>(null);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (playerRef.current) {
+        playerRef.current.play();
+      }
+    }, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
+  return (
+    <Player
+      ref={playerRef}
+      src={'/icons/wired-gradient-1055-earbud-wireless-earphones-in-reveal.json'}
+      speed={1}
+      keepLastFrame
+      style={{ width: '24px', height: '24px' }}
+      className="flex-shrink-0"
+    />
+  );
+};
 
 // Props for VoiceWidget
 interface VoiceWidgetProps {
@@ -129,7 +155,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
 
   switch (status) {
     case 'error':
-      currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-yellow-300 mr-2 flex-shrink-0" />;
+      currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-yellow-300 flex-shrink-0" />;
       currentLabel = "Error";
       currentTitle = errorMessage || 'Microphone error';
       cursorClass = "cursor-not-allowed";
@@ -137,7 +163,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       break;
     case 'connecting':
       currentIcon = (
-        <svg className="animate-spin h-5 w-5 text-white/50 mr-2 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <svg className="animate-spin h-5 w-5 text-white/50 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
@@ -148,12 +174,12 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       stateSpecificClasses = "opacity-90";
       break;
     case 'active':
-      currentIcon = <Mic size={18} className="mr-2 text-white/50 scale-110 transition-transform duration-150 flex-shrink-0" />;
+      currentIcon = <Mic size={18} className="text-white/50 scale-110 transition-transform duration-150 flex-shrink-0" />;
       currentLabel = "Listening...";
       currentTitle = "Streaming... Release to stop";
       break;
     default: // idle or other unhandled states
-      currentIcon = <Mic size={18} className="mr-2 text-white/50 flex-shrink-0" />;
+      currentIcon = <EarbudIcon />;
       currentLabel = "Voice Mode";
       currentTitle = "Press and hold to talk";
       if (effectiveIsDisabled && status === 'idle') { // Specifically for idle but otherwise disabled (e.g. chat processing)
@@ -205,7 +231,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
           title={currentTitle}
           aria-label={currentTitle}
         >
-          <span className="relative flex items-center z-10">
+          <span className="relative flex items-center gap-2 z-10">
             {currentIcon}
             <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
           </span>
@@ -236,7 +262,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
           title={currentTitle}
           aria-label={currentTitle}
         >
-          <span className="relative flex items-center z-10">
+          <span className="relative flex items-center gap-2 z-10">
             {currentIcon}
             <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
           </span>

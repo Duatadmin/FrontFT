@@ -43,7 +43,7 @@ export default function AppRouter() {
         path="/*" 
         element={
           <ProtectedRoute>
-            {ProtectedRoutes ? <ProtectedRoutes /> : <div>Loading application...</div>}
+            {ProtectedRoutes ? <ProtectedRoutes /> : <div></div>}
           </ProtectedRoute>
         }
       />
