@@ -1,27 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useDashboardData } from '../dashboard/useDashboardData'; // Added
-import type { MetricData } from '../dashboard/types'; // Added
-import { Loader2 } from 'lucide-react'; // Added
+import React from 'react';
+import { useDashboardData } from '../dashboard/useDashboardData';
+import type { MetricData } from '../dashboard/types';
+import { Loader2 } from 'lucide-react';
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import AnalyticsDashboardLayout from '../components/layout/AnalyticsDashboardLayout';
+import MobileDashboardLayout from '@/components/layout/MobileDashboardLayout';
 import KpiCard from '../components/ui/KpiCard';
 import DonutActivity from '../components/charts/DonutActivity';
-import BarRevenue from '../components/charts/BarRevenue';
-import { LineChart, BarChart2 } from 'lucide-react';
+import { BarChart2 } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-// Mock data for the charts
-const generateMockRevenueData = () => {
-  return Array.from({ length: 12 }, (_, i) => {
-    const month = new Date(0, i).toLocaleString('default', { month: 'short' });
-    return {
-      name: month,
-      current: 10 + Math.random() * 40,
-      subscribers: 5 + Math.random() * 30,
-      new: 2 + Math.random() * 20
-    };
-  });
-};
 
 const donutActivityData = [
   { name: 'Organic', value: 30, color: '#8B5CF6' },
@@ -37,58 +23,46 @@ const topProductsData = [
 
 const EnhancedDashboard: React.FC = () => {
   useAuthGuard();
-  const { data, loading, error } = useDashboardData(); // Added
-  const [revenueData, setRevenueData] = useState(generateMockRevenueData()); // Keep for now for BarRevenue chart
-
-  // Simulate loading data for BarRevenue (can be removed if BarRevenue uses real data)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setRevenueData(generateMockRevenueData());
-    }, 60000);
-    return () => clearInterval(interval);
-  }, []);
+  const { data, loading, error } = useDashboardData();
 
   if (loading) {
     return (
-      <AnalyticsDashboardLayout>
+      <MobileDashboardLayout>
         <div className="flex items-center justify-center h-[calc(100vh-100px)]">
           <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
         </div>
-      </AnalyticsDashboardLayout>
+      </MobileDashboardLayout>
     );
   }
 
-  if (error && !data) { // Changed from || to && to allow mock data display on error
+  if (error && !data) {
     return (
-      <AnalyticsDashboardLayout>
+      <MobileDashboardLayout>
         <div className="flex items-center justify-center h-[calc(100vh-100px)]">
           <div className="text-center p-8 bg-white/5 backdrop-blur-md rounded-lg shadow-xl">
             <h3 className="text-2xl font-semibold text-white mb-3">Failed to load dashboard data</h3>
             <p className="text-gray-300">{error?.message || 'An unknown error occurred.'}</p>
             {error?.affectedModule && <p className="text-xs text-gray-400 mt-2">Affected: {error.affectedModule}</p>}
             {error?.missingData && <p className="text-xs text-gray-400">Missing: {error.missingData}</p>}
-            {/* You could add a retry button here */}
           </div>
         </div>
-      </AnalyticsDashboardLayout>
+      </MobileDashboardLayout>
     );
   }
 
-  // NEW: Explicitly handle if data is still null after loading and error checks
   if (!data) {
     return (
-      <AnalyticsDashboardLayout>
+      <MobileDashboardLayout>
         <div className="flex items-center justify-center h-[calc(100vh-100px)]">
           <div className="text-center p-8 bg-white/5 backdrop-blur-md rounded-lg shadow-xl">
             <h3 className="text-2xl font-semibold text-white mb-3">No data available</h3>
             <p className="text-gray-300">Dashboard data could not be loaded, and no mock data is available.</p>
           </div>
         </div>
-      </AnalyticsDashboardLayout>
+      </MobileDashboardLayout>
     );
   }
 
-  // Prepare MetricData for KpiCard components using data from useDashboardData
   const volumeMetric: MetricData = {
     label: 'Total Volume (This Month)',
     value: data.monthlyStats.totalVolume,
@@ -122,125 +96,93 @@ const EnhancedDashboard: React.FC = () => {
   };
   
   return (
-    <AnalyticsDashboardLayout>
-      <div className="space-y-6">
-        {/* KPI Cards */}
-        <motion.div 
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ 
-            duration: 0.5,
-            staggerChildren: 0.1
-          }}
-        >
-          <motion.div
-            className="h-full"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3 }}
-          >
-            <KpiCard 
-              title={volumeMetric.label} 
-              value={volumeMetric.value.toLocaleString()} 
-              change={volumeMetric.change} 
-              icon={volumeMetric.icon}
-            />
-          </motion.div>
-          
-          <motion.div
-            className="h-full"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-          >
-            <KpiCard 
-              title={workoutsMetric.label} 
-              value={workoutsMetric.value.toString()} 
-              change={workoutsMetric.change} 
-              icon={workoutsMetric.icon}
-            />
-          </motion.div>
-          
-          <motion.div
-            className="h-full"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-          >
-            <KpiCard 
-              title={streakMetric.label} 
-              value={streakMetric.value.toString() + ' days'} 
-              change={streakMetric.change} 
-              icon={streakMetric.icon}
-            />
-          </motion.div>
-          
-          <motion.div
-            className="h-full"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-          >
-            <KpiCard 
-              title={completionMetric.label} 
-              value={completionMetric.value.toString() + '%'} 
-              change={completionMetric.change} 
-              icon={completionMetric.icon}
-            />
-          </motion.div>
-        </motion.div>
-        
-        {/* Middle Row Charts */}
-        <div className="grid grid-cols-12 gap-6">
-          {/* Donut Chart */}
-          <div className="col-span-12 md:col-span-4">
-            <DonutActivity 
-              title="New customer type" 
-              data={donutActivityData} 
-              centerText="150k"
-              onExport={() => console.log("Exporting donut data")}
-            />
+    <MobileDashboardLayout>
+      <>
+        <header className="mb-6">
+          <div className="flex justify-between items-center">
+            <h1 className="font-display text-3xl font-bold text-white mb-6">
+              Dashboard
+            </h1>
           </div>
+          <p className="text-text-secondary">An overview of your training analytics.</p>
+        </header>
+        <div className="space-y-6">
+          <motion.div 
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ 
+              duration: 0.5,
+              staggerChildren: 0.1
+            }}
+          >
+            <motion.div
+              className="h-full"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <KpiCard 
+                title={volumeMetric.label} 
+                value={volumeMetric.value.toLocaleString()} 
+                change={volumeMetric.change} 
+                icon={volumeMetric.icon}
+              />
+            </motion.div>
+            
+            <motion.div
+              className="h-full"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.1 }}
+            >
+              <KpiCard 
+                title={workoutsMetric.label} 
+                value={workoutsMetric.value.toString()} 
+                change={workoutsMetric.change} 
+                icon={workoutsMetric.icon}
+              />
+            </motion.div>
+            
+            <motion.div
+              className="h-full"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+            >
+              <KpiCard 
+                title={streakMetric.label} 
+                value={streakMetric.value.toString() + ' days'} 
+                change={streakMetric.change} 
+                icon={streakMetric.icon}
+              />
+            </motion.div>
+            
+            <motion.div
+              className="h-full"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.3, delay: 0.3 }}
+            >
+              <KpiCard 
+                title={completionMetric.label} 
+                value={completionMetric.value.toString() + '%'} 
+                change={completionMetric.change} 
+                icon={completionMetric.icon}
+              />
+            </motion.div>
+          </motion.div>
           
-          {/* Bar Chart */}
-          <div className="col-span-12 md:col-span-8">
-            <BarRevenue 
-              title="Revenue by all customer type" 
-              data={revenueData}
-              onDateRangeChange={() => console.log("Changing date range")}
-            />
-          </div>
-        </div>
-        
-        {/* Bottom Row Charts */}
-        <div className="grid grid-cols-12 gap-6">
-          {/* Task Timeline */}
-          <div className="col-span-12 md:col-span-7">
-            <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg p-5 h-full transition-all duration-150">
-              <div className="card-header mb-4">
-                <h3 className="text-lg font-semibold text-white">Completed tasks over time</h3>
-                
-                <button 
-                  className="flex items-center text-gray-300 hover:text-white text-sm bg-white/10 hover:bg-white/20 px-2 py-1 rounded-lg"
-                >
-                  <span className="mr-2">Jan 2024 - Dec 2024</span>
-                  <LineChart size={16} />
-                </button>
-              </div>
-              
-              {/* Value display */}
-              <div className="mb-4">
-                <div className="text-2xl font-bold text-white">388</div>
-                <div className="flex items-center text-sm">
-                  <span className="text-accent-lime bg-accent-lime/10 px-2 py-0.5 rounded-full flex items-center">
-                    16.9% <LineChart size={14} className="ml-1" />
-                  </span>
-                </div>
-              </div>
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 md:col-span-4">
+              <DonutActivity 
+                title="New customer type" 
+                data={donutActivityData} 
+                centerText="150k"
+                onExport={() => console.log("Exporting donut data")}
+              />
               
               <div className="h-[200px] relative">
-                {/* Simplified line chart for tasks */}
                 <svg width="100%" height="100%" className="overflow-visible">
                   <defs>
                     <linearGradient id="taskGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -249,7 +191,6 @@ const EnhancedDashboard: React.FC = () => {
                     </linearGradient>
                   </defs>
                   
-                  {/* Chart grid */}
                   <g className="grid">
                     {[0, 1, 2, 3, 4].map((i) => (
                       <line 
@@ -263,7 +204,6 @@ const EnhancedDashboard: React.FC = () => {
                       />
                     ))}
                     
-                    {/* X-axis labels */}
                     {["Jan 1", "Jan 8", "Jan 15", "Jan 24", "Jan 31", "Feb 1"].map((label, i, arr) => (
                       <text 
                         key={i} 
@@ -278,7 +218,6 @@ const EnhancedDashboard: React.FC = () => {
                     ))}
                   </g>
                   
-                  {/* Line path */}
                   <path 
                     d="M0,180 C50,150 100,80 150,100 C200,120 250,60 300,40 C350,20 400,60 450,40 C500,20 550,80 600,100 C650,120 700,60 750,80" 
                     fill="none" 
@@ -286,7 +225,6 @@ const EnhancedDashboard: React.FC = () => {
                     strokeWidth="2"
                   />
                   
-                  {/* Area under the line */}
                   <path 
                     d="M0,180 C50,150 100,80 150,100 C200,120 250,60 300,40 C350,20 400,60 450,40 C500,20 550,80 600,100 C650,120 700,60 750,80 L750,180 L0,180 Z" 
                     fill="url(#taskGradient)" 
@@ -297,7 +235,6 @@ const EnhancedDashboard: React.FC = () => {
             </div>
           </div>
           
-          {/* Top Products Chart */}
           <div className="col-span-12 md:col-span-5">
             <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-lg p-5 h-full transition-all duration-150">
               <div className="card-header mb-4">
@@ -312,7 +249,6 @@ const EnhancedDashboard: React.FC = () => {
               </div>
               
               <div className="relative h-[235px] flex items-center justify-center">
-                {/* Simplified semi-circle chart */}
                 <svg width="170" height="170" viewBox="0 0 170 170" className="transform -rotate-90">
                   <circle
                     cx="85"
@@ -323,7 +259,6 @@ const EnhancedDashboard: React.FC = () => {
                     strokeWidth="12"
                   />
                   
-                  {/* Website Segment */}
                   <circle
                     cx="85"
                     cy="85"
@@ -335,7 +270,6 @@ const EnhancedDashboard: React.FC = () => {
                     strokeDashoffset="264" // 440 - (440 * 0.4)
                   />
                   
-                  {/* Dashboard Segment */}
                   <circle
                     cx="85"
                     cy="85"
@@ -347,7 +281,6 @@ const EnhancedDashboard: React.FC = () => {
                     strokeDashoffset="154" // 264 - (440 * 0.25)
                   />
                   
-                  {/* MobiApp Segment */}
                   <circle
                     cx="85"
                     cy="85"
@@ -360,22 +293,19 @@ const EnhancedDashboard: React.FC = () => {
                   />
                 </svg>
                 
-                {/* Center text */}
                 <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 flex flex-col items-center justify-center">
                   <div className="text-3xl font-bold text-white">260.7K</div>
                   <div className="text-xs text-gray-400">Total score</div>
                 </div>
               </div>
               
-              {/* Legend */}
               <div className="space-y-2 mt-4">
                 {topProductsData.map((item, index) => (
                   <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center">
-                      <div 
-                        className="w-3 h-3 rounded-sm mr-2" 
-                        style={{ backgroundColor: item.color }}
-                      ></div>
+                    <div className="flex items-center text-sm">
+                      <span className="text-accent-lime bg-accent-lime/10 px-2 py-0.5 rounded-full flex items-center">
+                        16.9%
+                      </span>
                       <span className="text-sm text-gray-300">{item.name}</span>
                     </div>
                     <span className="text-sm font-medium text-white">{item.value}%</span>
@@ -385,8 +315,8 @@ const EnhancedDashboard: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
-    </AnalyticsDashboardLayout>
+      </>
+    </MobileDashboardLayout>
   );
 };
 

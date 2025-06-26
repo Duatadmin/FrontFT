@@ -11,35 +11,30 @@ interface SessionDetailPanelProps {
 }
 
 export const SessionDetailPanel: React.FC<SessionDetailPanelProps> = ({ selectedDate, sessions, onClose }) => {
-  const panelVariants = {
-    hidden: { x: '100%' },
-    visible: { x: '0%' },
+  const overlayVariants = {
+    hidden: { opacity: 0, scale: 0.95 },
+    visible: { opacity: 1, scale: 1 },
   };
 
   return (
     <AnimatePresence>
       {selectedDate && (
         <motion.div
-          className="fixed top-0 right-0 h-full w-full max-w-md bg-neutral-900/80 backdrop-blur-lg shadow-2xl z-50 border-l border-white/10"
-          variants={panelVariants}
+          className="absolute inset-0 bg-neutral-900/80 backdrop-blur-lg z-20 rounded-2xl"
+          variants={overlayVariants}
           initial="hidden"
           animate="visible"
           exit="hidden"
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          transition={{ duration: 0.3, ease: 'easeInOut' }}
         >
-          <div className="p-6 h-full flex flex-col">
-            <header className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-white">
-                Workouts for {selectedDate.toLocaleDateString()}
-              </h2>
-              <button onClick={onClose} className="p-2 rounded-full hover:bg-white/10 transition-colors">
-                <X className="h-6 w-6 text-white" />
-              </button>
-            </header>
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+          <>
+            <button onClick={onClose} className="absolute top-4 right-4 z-30 p-2 rounded-full bg-black/20 hover:bg-white/10 transition-colors">
+              <X className="h-6 w-6 text-white" />
+            </button>
+            <div className="h-full overflow-y-auto p-4 space-y-4">
               {sessions.length > 0 ? (
                 sessions.map(session => (
-                  <SessionCard key={session.sessionId} session={session} />
+                  <SessionCard key={session.sessionId} session={session} defaultExpanded onClick={() => {}} />
                 ))
               ) : (
                 <div className="text-center py-16 text-neutral-500">
@@ -48,7 +43,7 @@ export const SessionDetailPanel: React.FC<SessionDetailPanelProps> = ({ selected
                 </div>
               )}
             </div>
-          </div>
+          </>
         </motion.div>
       )}
     </AnimatePresence>

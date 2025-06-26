@@ -1,17 +1,9 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React from 'react';
 import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
 import MobileKpiCard from '../components/ui/MobileKpiCard';
 import MobileChartCarousel from '../components/charts/MobileChartCarousel';
 
-// Mock data for our mobile dashboard
-const volumeChartMockData = Array.from({ length: 12 }, (_, i) => {
-  const month = new Date(0, i).toLocaleString('default', { month: 'short' });
-  return {
-    date: month,
-    value: 10 + Math.random() * 80
-  };
-});
+
 
 const revenueMockData = Array.from({ length: 12 }, (_, i) => {
   const month = new Date(0, i).toLocaleString('default', { month: 'short' });
@@ -30,10 +22,18 @@ const donutActivityData = [
 ];
 
 const EnhancedMobileDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+
   
   return (
-    <MobileDashboardLayout title="Analytics Dashboard">
+    <MobileDashboardLayout>
+      <header className="mb-6 pt-6">
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-bold text-white mb-6">
+            Dashboard
+          </h1>
+        </div>
+        <p className="text-text-secondary">An overview of your training analytics.</p>
+      </header>
       {/* KPI Cards Row - Scrollable on smaller screens */}
       <div className="mb-6">
         <h2 className="text-lg font-semibold mb-3">Key Metrics</h2>

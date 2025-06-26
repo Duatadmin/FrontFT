@@ -4,6 +4,7 @@ import useDiaryStore from '../../../store/useDiaryStore';
 import type { Goal } from '../../../store/diaryTypes';
 import useUserStore from '../../../store/useUserStore';
 import createLogger from '../../../utils/logger';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 /**
  * Goal Tracker Component
@@ -155,19 +156,7 @@ const GoalTracker: React.FC = () => {
   
   // Loading state
   if (loading.goals) {
-    return (
-      <div className="bg-background-card rounded-2xl shadow-card p-5 animate-pulse" data-testid="goal-tracker-loading">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-6 h-6 bg-background-surface rounded-full"></div>
-          <div className="h-5 w-32 bg-background-surface rounded-md"></div>
-        </div>
-        <div className="space-y-4">
-          {[1, 2, 3].map((_, i) => (
-            <div key={i} className="h-24 bg-background-surface rounded-lg"></div>
-          ))}
-        </div>
-      </div>
-    );
+    return <div className="h-48"><LoadingSpinner /></div>;
   }
   
   // Error state

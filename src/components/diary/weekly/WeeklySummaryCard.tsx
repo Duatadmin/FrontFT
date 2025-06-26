@@ -3,6 +3,7 @@ import { CalendarClock, BarChart2, Award, Clock, Dumbbell, Heart } from 'lucide-
 import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
 import type { WeeklyReflection } from '../../../store/diaryTypes';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 /**
  * WeeklySummaryCard Component
@@ -28,19 +29,7 @@ const WeeklySummaryCard: React.FC = () => {
   
   // Loading state
   if (loading.weeklyReflection) {
-    return (
-      <div className="bg-neutral-800/50 rounded-2xl shadow-card p-6 h-[200px] animate-pulse" data-testid="weekly-summary-loading">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-8 h-8 bg-background-surface rounded-full"></div>
-          <div className="h-6 w-48 bg-background-surface rounded-md"></div>
-        </div>
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-          {[1, 2, 3, 4, 5, 6].map((_, i) => (
-            <div key={i} className="h-20 bg-background-surface rounded-lg"></div>
-          ))}
-        </div>
-      </div>
-    );
+    return <div className="h-48"><LoadingSpinner /></div>;
   }
   
   // Error state

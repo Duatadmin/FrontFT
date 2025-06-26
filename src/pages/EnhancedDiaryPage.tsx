@@ -26,13 +26,13 @@ const EnhancedDiaryPage: React.FC = () => {
   };
   
   return (
-    <div className="flex h-screen text-text-primary">
+            <div className="flex flex-col h-full text-text-primary">
       {/* Global DashboardBackground from main.tsx will now be visible */}
       
       {/* Main content */}
-      <div className="flex-1 overflow-auto">
-        <main className="container mx-auto px-4 py-6">
-          <header className="mb-6">
+            
+              <main className="flex-1 flex flex-col container mx-auto px-4 py-6">
+                    <header className="mb-6 flex-shrink-0">
             <h1 className="font-display text-3xl font-bold text-white mb-6">Training Journal</h1>
             <p className="text-text-secondary">Track your fitness journey and reflect on your progress</p>
           </header>
@@ -42,10 +42,10 @@ const EnhancedDiaryPage: React.FC = () => {
             defaultValue="daily" 
             value={activeTab} 
             onValueChange={handleTabChange}
-            className="w-full"
+                      className="w-full flex-1 flex flex-col"
             data-testid="journal-tabs"
           >
-            <TabsList className="grid w-full grid-cols-3 mb-6">
+                        <TabsList className="grid w-full grid-cols-3 mb-6 flex-shrink-0">
               <TabsTrigger 
                 value="daily"
                 className="flex items-center justify-center w-full px-[14px] py-2 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:outline-none data-[state=active]:bg-accent-lime/20 data-[state=active]:text-accent-lime"
@@ -81,7 +81,7 @@ const EnhancedDiaryPage: React.FC = () => {
             {/* {activeTab === 'daily' && <FiltersBar />} */}
             
             {/* Tab content */}
-            <TabsContent value="daily" className="mt-2">
+                        <TabsContent value="daily" className="mt-2 flex-1">
               <DailyLogTab />
             </TabsContent>
             
@@ -92,9 +92,8 @@ const EnhancedDiaryPage: React.FC = () => {
             <TabsContent value="goals" className="mt-2">
               <GoalsReflectionsTab />
             </TabsContent>
-          </Tabs>
-        </main>
-      </div>
+                    </Tabs>
+              </main>
     </div>
   );
 };

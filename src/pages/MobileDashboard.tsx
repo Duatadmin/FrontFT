@@ -73,7 +73,15 @@ const MobileDashboard: React.FC = () => {
 
   return (
     <MobileDashboardLayout>
-      <div className="space-y-4 p-4">
+      <header className="mb-6 pt-6">
+        <div className="flex justify-between items-center">
+          <h1 className="font-display text-3xl font-bold text-white mb-6">
+            Dashboard
+          </h1>
+        </div>
+        <p className="text-text-secondary">An overview of your training analytics.</p>
+      </header>
+      <div className="space-y-4">
         {/* Metrics - Stacked Vertically */}
         <div className="space-y-3">
           <GlassFrame><MobileMetricCard data={volumeMetric} /></GlassFrame>

@@ -4,6 +4,7 @@ import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
 import { cn } from '../../../lib/utils';
 import createLogger from '../../../utils/logger';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 const logger = createLogger('StreakCounter');
 
@@ -56,15 +57,7 @@ const StreakCounter: React.FC = () => {
   
   // Loading state
   if (loading.streak) {
-    return (
-      <div className="bg-neutral-800/50 rounded-2xl shadow-card p-4 h-[80px] animate-pulse" data-testid="streak-counter-loading">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="w-6 h-6 bg-background-surface rounded-full"></div>
-          <div className="h-5 w-32 bg-background-surface rounded-md"></div>
-        </div>
-        <div className="h-6 w-48 bg-background-surface rounded-md"></div>
-      </div>
-    );
+    return <div className="h-20"><LoadingSpinner /></div>;
   }
   
   // Error state

@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import DayCell from '@/components/diary/calendar/DayCell';
 import { useMonthlySessions } from '@/hooks/useMonthlySessions';
 import { SessionDetailPanel } from './SessionDetailPanel';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 
@@ -27,11 +28,7 @@ const generateDaysForMonth = (year: number, month: number, workoutDays: Set<numb
         });
     }
 
-    // Add filler days for the next month to complete the grid
-    const remaining = 42 - days.length; // Assumes a 6x7 grid
-    for (let i = 1; i <= remaining; i++) {
-        days.push({ day: `+${i}`, isCurrentMonth: false, hasWorkout: false });
-    }
+    // The grid will now dynamically adjust its rows based on the month's length.
     return days;
 }
 
@@ -80,11 +77,11 @@ const CalendarView: React.FC = () => {
   }, [selectedDate, sessions]);
 
   const monthDays = generateDaysForMonth(year, month, workoutDays);
-  const monthName = currentDate.toLocaleString('default', { month: 'long' });
+    const monthName = currentDate.toLocaleString('en-US', { month: 'long' });
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10">
-        <div className="flex items-center justify-between mb-4">
+    <div className="relative w-full max-w-4xl mx-auto p-4 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10">
+                <div className="flex items-center justify-between mb-6">
             <h2 className="text-2xl font-bold text-white tracking-wider">
                 {monthName} <span className="opacity-50">{year}</span>
             </h2>
@@ -105,10 +102,8 @@ const CalendarView: React.FC = () => {
             ))}
         </div>
         <div className="grid grid-cols-7 gap-2">
-            {isLoading 
-                ? [...Array(35)].map((_, i) => (
-                    <div key={i} className="h-20 rounded-xl bg-neutral-800/50 animate-pulse"></div>
-                  ))
+                        {isLoading 
+                ? <div className="col-span-7 h-48"><LoadingSpinner /></div>
                 : monthDays.map((dayInfo, index) => (
                     <DayCell key={index} dayInfo={dayInfo} onClick={() => handleDayClick(parseInt(dayInfo.day, 10))} />
                 ))

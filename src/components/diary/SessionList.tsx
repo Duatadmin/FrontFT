@@ -5,19 +5,14 @@ import { SessionCard } from './SessionCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
 import { SessionDetailsModal } from './SessionDetailsModal';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export const SessionList: React.FC = () => {
   const { data: sessions, isLoading, isError, error } = useCompletedSessions();
   const [selectedSession, setSelectedSession] = useState<CompletedSession | null>(null);
 
   if (isLoading) {
-    return (
-      <div className="space-y-4">
-        {[...Array(3)].map((_, i) => (
-          <div key={i} className="bg-white/5 rounded-2xl p-4 h-24 animate-pulse"></div>
-        ))}
-      </div>
-    );
+    return <div className="h-48"><LoadingSpinner /></div>;
   }
 
   if (isError) {

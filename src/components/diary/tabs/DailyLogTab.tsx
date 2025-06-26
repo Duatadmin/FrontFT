@@ -17,10 +17,10 @@ const DailyLogTab: React.FC = () => {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-shrink-0 p-4 pb-4 flex justify-start">
+      <div className="flex-shrink-0 mb-4 flex justify-start">
         <ViewModeSwitch currentMode={dailyViewMode} onModeChange={handleModeChange} />
       </div>
-      <div className="flex-1 overflow-y-auto">
+                        <div className={`flex-1 ${dailyViewMode === 'calendar' ? 'flex items-center' : ''}`}>
         {dailyViewMode === 'list' ? <SessionList /> : <CalendarView />}
       </div>
     </div>

@@ -15,6 +15,8 @@ const validMuscleGroupsList: MuscleGroup[] = [
 
 interface SessionCardProps {
   session: CompletedSession;
+  defaultExpanded?: boolean;
+  onClick: () => void;
 }
 
 const SetRow: React.FC<{ set: SessionSet }> = ({ set }) => (
@@ -35,8 +37,8 @@ const SetRow: React.FC<{ set: SessionSet }> = ({ set }) => (
   </div>
 );
 
-export const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
-  const [isExpanded, setIsExpanded] = useState(false);
+export const SessionCard: React.FC<SessionCardProps> = ({ session, defaultExpanded = false, onClick }) => {
+  const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const sessionDate = new Date(session.sessionDate);
 
   return (
@@ -46,7 +48,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session }) => {
       {/* Header Section */}
       <div 
         className={`p-4 flex items-center justify-between cursor-pointer hover:bg-white/10 ${isExpanded ? 'rounded-t-2xl' : 'rounded-2xl'} transition-colors duration-150`}
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={() => { onClick(); setIsExpanded(!isExpanded); }}
       >
         <div className="flex items-center gap-3 flex-grow min-w-0">
           <div className="text-center w-10 flex-shrink-0">

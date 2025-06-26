@@ -3,6 +3,7 @@ import { useWorkoutPlan } from '@/hooks/useWorkoutPlan';
 import { WeekTabs } from './WeekTabs'; // Assuming WeekTabs will be created next
 import { useWorkoutStore } from '@/stores/useWorkoutStore';
 import { formatText } from '../../utils/TextOutputAdapter';
+import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 // planId prop is no longer needed as useWorkoutPlan fetches based on user context
 // interface PlanCardProps {
@@ -19,14 +20,7 @@ export const PlanCard: React.FC = () => {
   }, [plan, setInitialPlan]);
 
   if (isLoading) {
-    return (
-      <div className="p-4 bg-neutral-800 rounded-lg shadow-md animate-pulse">
-        <div className="h-8 bg-neutral-700 rounded w-3/4 mb-4"></div>
-        <div className="h-6 bg-neutral-700 rounded w-1/2 mb-2"></div>
-        <div className="h-6 bg-neutral-700 rounded w-1/2 mb-2"></div>
-        <div className="h-40 bg-neutral-700 rounded mt-4"></div>
-      </div>
-    );
+    return <div className="h-64"><LoadingSpinner /></div>;
   }
 
   if (isError || (!isLoading && !plan)) { // Check !isLoading before !plan to avoid showing error during initial load
