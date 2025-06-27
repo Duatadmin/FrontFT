@@ -1,15 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useCompletedSessions } from '@/hooks/useCompletedSessions';
-import type { CompletedSession } from '@/utils/rowsToSessionHistory';
 import { SessionCard } from './SessionCard';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert';
 import { AlertCircle } from 'lucide-react';
-import { SessionDetailsModal } from './SessionDetailsModal';
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
 
 export const SessionList: React.FC = () => {
   const { data: sessions, isLoading, isError, error } = useCompletedSessions();
-  const [selectedSession, setSelectedSession] = useState<CompletedSession | null>(null);
 
   if (isLoading) {
     return <div className="h-48"><LoadingSpinner /></div>;
@@ -43,16 +40,11 @@ export const SessionList: React.FC = () => {
           <SessionCard 
             key={session.sessionId} 
             session={session} 
-            onClick={() => setSelectedSession(session)} 
+            onClick={() => {}} 
           />
         ))}
       </div>
-      {selectedSession && (
-        <SessionDetailsModal 
-          session={selectedSession} 
-          onClose={() => setSelectedSession(null)} 
-        />
-      )}
+
     </>
   );
 };
