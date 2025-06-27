@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import { AnimatePresence, motion } from "motion/react";
 
 import { DashboardButton } from '../chat/DashboardButton'; // Adjusted path
 import VoiceWidget from '../VoiceWidget'; // Added import for VoiceWidget
@@ -27,7 +28,24 @@ const ChatInput: React.FC<ChatInputProps> = ({
   console.log('[ChatInput] Initializing: isSending = false, isLoading =', isLoading); // Initial state log
   const isSendingRef = useRef(false); // Ref for immediate synchronous check
   const [inputValue, setInputValue] = useState('');
+  const [hasInteracted, setHasInteracted] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // ---------------- Animated Placeholder ----------------
+  const placeholders = [
+    "Let's start a new training session!",
+    "I am borred with my current training plan. Lets create a new one!",
+    "Tell me a joke!",
+    "Ask anything...",
+  ];
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setCurrentPlaceholder((prev) => (prev + 1) % placeholders.length);
+    }, 3000);
+    return () => clearInterval(id);
+  }, []);
+  // ------------------------------------------------------
   const chatInputId = 'chat-input'; 
 
 
@@ -90,6 +108,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
       setIsSending(false);
       isSendingRef.current = false; // Reset the lock when parent is done
       console.log('[ChatInput] Lock reset. isSendingRef is now:', isSendingRef.current);
+      
     } else {
       console.log('[ChatInput] isLoading is true, lock remains active or will be set by send action.');
     }
@@ -105,6 +124,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     isSendingRef.current = true; // Set lock immediately
     setIsSending(true); // Set state to trigger UI re-render
     onSendMessage(message);
+    
     console.log('[ChatInput] onSendMessage called with voice message.');
   };
 
@@ -145,6 +165,14 @@ const ChatInput: React.FC<ChatInputProps> = ({
   const isTickerActive = isRealVoiceActive || isDemoActive;
   const isTextInputDisabled = isVoiceWidgetDisabled || isTickerActive || voiceWidgetStatus === 'connecting';
 
+  // Focus management: when input becomes enabled after bot response, focus if user interacted before
+  useEffect(() => {
+    if (!isTextInputDisabled && hasInteracted) {
+      // small delay to let DOM update
+      setTimeout(() => textareaRef.current?.focus(), 0);
+    }
+  }, [isTextInputDisabled, hasInteracted]);
+
   return (
     <div 
       className="fixed bottom-0 left-0 right-0 z-10 pt-2"
@@ -157,25 +185,46 @@ const ChatInput: React.FC<ChatInputProps> = ({
           <textarea
             ref={textareaRef}
             value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
+            onChange={(e) => setInputValue(e.target.value) }
+             onFocus={() => {
+               if (!hasInteracted) setHasInteracted(true);
+             }}
             onKeyDown={handleKeyDown}
-            placeholder={isTickerActive ? '' : 'Ask anything...'}
+            
             className="w-full bg-transparent resize-none border-none focus:outline-none focus:ring-0 pr-4 text-text placeholder:text-text/60 text-sm max-h-[96px] font-normal font-sans"
             rows={1}
             disabled={isTextInputDisabled}
             autoComplete="off"
             style={{ scrollbarWidth: 'none' }}
           />
-          {/* VoiceTicker is rendered here, its internal logic handles visibility */}
+           {/* Animated placeholder overlay */}
+           <div className="absolute inset-0 flex items-center pointer-events-none">
+             <AnimatePresence mode="wait">
+               {!inputValue && !isTickerActive && !hasInteracted && (
+                 <motion.p
+                   key={`animated-placeholder-${currentPlaceholder}`}
+                   initial={{ y: 5, opacity: 0 }}
+                   animate={{ y: 0, opacity: 1 }}
+                   exit={{ y: -15, opacity: 0 }}
+                   transition={{ duration: 0.3, ease: "linear" }}
+                   className="text-text/60 text-sm font-normal font-sans pl-4 text-left w-[calc(100%-2rem)] truncate"
+                 >
+                   {placeholders[currentPlaceholder]}
+                 </motion.p>
+               )}
+             </AnimatePresence>
+           </div>
+
+           {/* VoiceTicker is rendered here, its internal logic handles visibility */}
           {isTickerActive && (
             <div className="absolute inset-0 pointer-events-none">
               <VoiceTicker isRecordingActive={true} recorder={voiceTickerRecorderRef} />
-            </div>
+
+           </div>
           )}
         </div>
 
         {/* Lower row for other action buttons */}
-
         {/* Lower row for other action buttons */}
         <div className="flex items-center justify-between pt-2">
           <div className="flex items-center gap-4">
