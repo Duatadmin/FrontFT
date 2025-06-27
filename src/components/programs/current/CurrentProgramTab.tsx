@@ -92,7 +92,7 @@ const CurrentProgramTab: React.FC = () => {
   
   // Normal state with program data
   return (
-    <div className="space-y-6" data-testid="current-program-content">
+        <div className="space-y-2" data-testid="current-program-content">
       {currentPlan && (
         <>
           <ProgramOverviewCard program={currentPlan} />
