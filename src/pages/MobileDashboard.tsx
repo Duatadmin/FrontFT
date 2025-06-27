@@ -2,7 +2,7 @@ import React from 'react';
 import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
 import MobileMetricCard from '../dashboard/components/MobileMetricCard';
 import GlassFrame from '../components/GlassFrame';
-import MobileChartTabs from '../dashboard/components/MobileChartTabs';
+
 import { useDashboardData } from '../dashboard/useDashboardData';
 // TimeRange is not used by the current useDashboardData hook
 // import { TimeRange } from '../dashboard/types'; 
@@ -90,17 +90,7 @@ const MobileDashboard: React.FC = () => {
           <GlassFrame><MobileMetricCard data={completionMetric} /></GlassFrame>
         </div>
 
-        {/* Charts - Tabbed Interface */}
-        {/* Passing empty arrays as placeholders for chart data for now */}
-        <GlassFrame>
-          <div className="mt-2">
-            <MobileChartTabs 
-              volumeData={[]}
-              prData={[]}
-              activityData={[]}
-            />
-          </div>
-        </GlassFrame>
+
       </div>
     </MobileDashboardLayout>
   );

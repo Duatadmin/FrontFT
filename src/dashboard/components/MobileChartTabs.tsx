@@ -47,33 +47,7 @@ const MobileChartTabs: React.FC<MobileChartTabsProps> = ({
 
   return (
     <div className="overflow-hidden">
-      {/* Tab Navigation */}
-      <div className="flex p-2 space-x-2">
-        <button
-          onClick={() => setActiveTab('volume')}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-colors ${
-            activeTab === 'volume' ? 'bg-primary text-dark-bg' : 'text-text-secondary hover:bg-white/10'
-          }`}
-        >
-          Volume
-        </button>
-        <button
-          onClick={() => setActiveTab('pr')}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-colors ${
-            activeTab === 'pr' ? 'bg-primary text-dark-bg' : 'text-text-secondary hover:bg-white/10'
-          }`}
-        >
-          PRs
-        </button>
-        <button
-          onClick={() => setActiveTab('activity')}
-          className={`flex-1 py-2.5 text-sm font-medium rounded-full transition-colors ${
-            activeTab === 'activity' ? 'bg-primary text-dark-bg' : 'text-text-secondary hover:bg-white/10'
-          }`}
-        >
-          Activity
-        </button>
-      </div>
+
       
       {/* Chart Content with Swipe Gesture */}
       <div 

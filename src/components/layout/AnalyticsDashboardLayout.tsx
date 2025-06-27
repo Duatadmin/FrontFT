@@ -24,7 +24,9 @@ const AnalyticsDashboardLayout: React.FC<AnalyticsDashboardLayoutProps> = ({
 
         {/* Dashboard Content */}
         <main className="flex-1 overflow-auto p-6 safe-left safe-right"> {/* Added safe-left, safe-right */}
-          {children}
+          <div className="max-w-7xl mx-auto">
+            {children}
+          </div>
         </main>
       </div>
     </div>
