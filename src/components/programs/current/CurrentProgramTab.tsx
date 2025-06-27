@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { useProgramStore } from '../../../lib/stores/useProgramStore';
 import ProgramOverviewCard from './ProgramOverviewCard';
 import WeeklyPlanGrid from './WeeklyPlanGrid';
@@ -11,7 +11,7 @@ const logger = createLogger('CurrentProgramTab');
  * CurrentProgramTab Component
  * Displays the active training program with overview and weekly plan
  */
-const CurrentProgramTab: React.FC = () => {
+const CurrentProgramTab = () => {
   const { currentPlan, isLoading, error } = useProgramStore();
   
   // Empty state - no active program

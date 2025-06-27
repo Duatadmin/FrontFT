@@ -1,5 +1,4 @@
 import React from 'react';
-import { TrainingPlan } from '../../../lib/stores/useProgramStore';
 
 // Define ProgramDay type as it might be missing from the store export
 interface ProgramDay {
@@ -33,7 +32,7 @@ interface DaySessionDrawerProps {
  * DaySessionDrawer Component
  * Displays detailed information about exercises for a specific day
  */
-const DaySessionDrawer: React.FC<DaySessionDrawerProps> = ({ day, isOpen, onClose, dayLabel }) => {
+const DaySessionDrawer = ({ day, isOpen, onClose, dayLabel }: DaySessionDrawerProps) => {
   // If no day data or drawer is closed, return null
   if (!day || !isOpen) return null;
   

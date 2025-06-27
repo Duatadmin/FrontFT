@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import { TrainingPlan } from '../../../lib/stores/useProgramStore';
+import { useState } from 'react';
 import DaySessionDrawer from './DaySessionDrawer';
 import createLogger from '../../../utils/logger';
 
@@ -23,7 +22,7 @@ interface ProgramDay {
 const logger = createLogger('WeeklyPlanGrid');
 
 interface WeeklyPlanGridProps {
-  program: TrainingPlan;
+  program: any;
 }
 
 // Day of week mapping
@@ -55,7 +54,7 @@ const FOCUS_EMOJIS: Record<string, string> = {
  * WeeklyPlanGrid Component
  * Displays a 7-day grid showing workout schedule for the current program
  */
-const WeeklyPlanGrid: React.FC<{ program: TrainingPlan }> = ({ program }) => {
+const WeeklyPlanGrid = ({ program }: WeeklyPlanGridProps) => {
   // Map weekday names to day numbers (0 = Sunday, 6 = Saturday)
   const dayMapping: Record<string, number> = {
     sunday: 0,
@@ -129,7 +128,7 @@ const WeeklyPlanGrid: React.FC<{ program: TrainingPlan }> = ({ program }) => {
                   </div>
                   
                   <div className="text-xs text-muted-foreground space-y-1.5">
-                    {exercises.slice(0, 3).map((ex, i) => (
+                    {exercises.slice(0, 3).map((ex: string, i: number) => (
                       <div key={i} className="flex justify-between">
                         <span>{ex}</span>
                         <span>--</span>
@@ -163,9 +162,9 @@ const WeeklyPlanGrid: React.FC<{ program: TrainingPlan }> = ({ program }) => {
           day={{
             dayOfWeek: selectedDay,
             focus: DAYS.find(d => d.value === selectedDay)?.label || '',
-            exercises: program.days[[
+            exercises: (program.days[[
               'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'
-            ][selectedDay]].map(name => ({
+            ][selectedDay]] || []).map((name: string) => ({
               id: `ex-${Math.random().toString(36).substr(2, 9)}`,
               name: name,
               sets: 3,

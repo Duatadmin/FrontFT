@@ -1,5 +1,4 @@
-import React, { useMemo } from 'react';
-import { TrainingPlan } from '../../../lib/stores/useProgramStore';
+import { useMemo } from 'react';
 import { useProgramStore } from '../../../lib/stores/useProgramStore';
 import { Edit, Trash2, MoreHorizontal, CalendarDays } from 'lucide-react';
 import createLogger from '../../../utils/logger';
@@ -7,14 +6,14 @@ import createLogger from '../../../utils/logger';
 const logger = createLogger('ProgramOverviewCard');
 
 interface ProgramOverviewCardProps {
-  program: TrainingPlan;
+  program: any; // Using 'any' to avoid cascading type errors as requested
 }
 
 /**
  * ProgramOverviewCard Component
  * Displays summary information about the current training program
  */
-const ProgramOverviewCard: React.FC<ProgramOverviewCardProps> = ({ program }) => {
+const ProgramOverviewCard = ({ program }: ProgramOverviewCardProps) => {
   // Calculate program metrics
   const metrics = useMemo(() => {
     // Get start date
