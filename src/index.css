@@ -17,12 +17,15 @@
   }
 
   html {
+    height: 100%;
     @apply font-sans antialiased tracking-tight;
     /* Smooth scroll behavior */
     scroll-behavior: smooth;
   }
 
   body {
+    height: 100%;
+    overscroll-behavior-y: contain;
   font-family: 'Inter', system-ui, sans-serif;
     /* Use new background color */
     @apply bg-background text-text;
