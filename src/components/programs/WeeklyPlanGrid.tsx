@@ -1,16 +1,14 @@
-import React from 'react';
-import { TrainingPlan } from '../../lib/stores/useProgramStore';
 import { Card, CardContent } from '../ui/Card';
 
 interface WeeklyPlanGridProps {
-  plan: TrainingPlan | null;
+  plan: any;
 }
 
 const daysOfWeek = [
   'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
 ];
 
-const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ plan }) => {
+const WeeklyPlanGrid = ({ plan }: WeeklyPlanGridProps) => {
   // Handler for empty state
   if (!plan || !plan.days || Object.keys(plan.days).length === 0) {
     return (
@@ -22,7 +20,7 @@ const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ plan }) => {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-7 gap-4 mb-8">
-      {daysOfWeek.map((day) => {
+      {daysOfWeek.map((day: string) => {
         const exercises = plan.days[day] || [];
         const dayFormatted = day.charAt(0).toUpperCase() + day.slice(1);
         const hasExercises = exercises.length > 0;
@@ -39,7 +37,7 @@ const WeeklyPlanGrid: React.FC<WeeklyPlanGridProps> = ({ plan }) => {
                 <p className="text-xs text-text-tertiary">Rest Day</p>
               ) : (
                 <ul className="space-y-1.5">
-                  {exercises.map((exerciseId, index) => (
+                  {exercises.map((exerciseId: string, index: number) => (
                     <li 
                       key={`${exerciseId}-${index}`} 
                       className="text-xs flex items-center text-text-secondary"
