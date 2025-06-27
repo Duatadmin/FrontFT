@@ -40,26 +40,28 @@ export const PlanCard: React.FC = () => {
   }
 
   return (
-    <div className="p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg text-neutral-100">
-      <header className="mb-6 pb-4 border-b border-neutral-700">
-        <h2 className="text-3xl font-rubik font-bold text-primary mb-2">
-          {formatText(plan.goal) || 'Workout Plan'}
-        </h2>
-        <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-neutral-400">
-          <span>
-            <strong>Split:</strong> {formatText(plan.splitType) || 'N/A'}
-          </span>
-          <span>
-            <strong>Level:</strong> {formatText(plan.level) || 'N/A'}
-          </span>
-          <span>
-            <strong>Status:</strong> <span className={`${plan.planStatus === 'active' ? 'bg-green-600/20 border-green-500/40 text-green-300' : 'bg-yellow-600/20 border-yellow-500/40 text-yellow-300'} border backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-medium`}>{plan.planStatus || 'N/A'}</span>
-          </span>
-        </div>
-      </header>
+    <div className="space-y-6">
+      <div className="p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-lg text-neutral-100">
+        <header>
+          <h2 className="text-3xl font-rubik font-bold text-primary mb-2">
+            {formatText(plan.goal) || 'Workout Plan'}
+          </h2>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-neutral-400">
+            <span>
+              <strong>Split:</strong> {formatText(plan.splitType) || 'N/A'}
+            </span>
+            <span>
+              <strong>Level:</strong> {formatText(plan.level) || 'N/A'}
+            </span>
+            <span>
+              <strong>Status:</strong> <span className={`${plan.planStatus === 'active' ? 'bg-green-600/20 border-green-500/40 text-green-300' : 'bg-yellow-600/20 border-yellow-500/40 text-yellow-300'} border backdrop-blur-sm px-3 py-1 rounded-lg text-xs font-medium`}>{plan.planStatus || 'N/A'}</span>
+            </span>
+          </div>
+        </header>
+      </div>
 
       {plan.weeks && plan.weeks.length > 0 ? (
-        <WeekTabs weeks={plan.weeks} /> // Remove planId prop
+        <WeekTabs weeks={plan.weeks} />
       ) : (
         <div className="text-center py-8 text-neutral-500">
           <p className="text-lg">This plan currently has no weeks defined.</p>
