@@ -41,6 +41,9 @@ export function useWalkie(options: UseWalkieOptions): {
   const walkieWSInstanceRef = useRef<WalkieWS | null>(null);
   const recorderInstanceRef = useRef<RecorderHandle | null>(null);
   const currentSessionIdRef = useRef<string | null>(null);
+  
+  // Mute timer management (per backend API spec)
+  const muteTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleInternalError = useCallback((error: Error, context: string) => {
     console.error(`Error ${context}:`, error);
@@ -55,13 +58,53 @@ export function useWalkie(options: UseWalkieOptions): {
     }
   }, [onError]);
 
+  const handleControlCommand = useCallback((cmd: 'mute' | 'unmute', durationMs?: number, source: 'ctrl' | 'audio-fallback' = 'ctrl') => {
+    if (cmd === 'mute') {
+      console.log(`[useWalkie] Processing MUTE command from ${source}:`, { cmd, durationMs });
+      
+      // Clear any existing mute timer
+      if (muteTimerRef.current) {
+        clearTimeout(muteTimerRef.current);
+        muteTimerRef.current = null;
+      }
+      
+      // Mute the microphone
+      micLocked.current = true;
+      
+      // Set auto-unmute timer if duration is specified (per backend API spec)
+      if (durationMs && durationMs > 0) {
+        console.log(`[useWalkie] Setting auto-unmute timer for ${durationMs}ms`);
+        muteTimerRef.current = setTimeout(() => {
+          console.log('[useWalkie] Auto-unmuting after timeout');
+          micLocked.current = false;
+          muteTimerRef.current = null;
+        }, durationMs);
+      }
+    } else if (cmd === 'unmute') {
+      console.log(`[useWalkie] Processing UNMUTE command from ${source}:`, cmd);
+      
+      // Clear any existing mute timer
+      if (muteTimerRef.current) {
+        clearTimeout(muteTimerRef.current);
+        muteTimerRef.current = null;
+      }
+      
+      // Unmute the microphone
+      micLocked.current = false;
+    }
+  }, []);
+
   const handleWalkieWSMessage = useCallback((message: WalkieMessage, channel: 'audio' | 'ctrl') => {
-    // Assuming WalkieMessage is a more specific type like: 
-    // { type: 'transcription', text: string, final: boolean } | { type: 'vad_status', speaking: boolean } | { cmd: 'mute' | 'unmute' }
     if (typeof message === 'object' && message !== null) {
       if (channel === 'audio') {
-        // Messages from audio channel are expected to be transcripts: {text: string, final: boolean}
-        if ('text' in message && typeof message.text === 'string' && 'final' in message && typeof message.final === 'boolean') {
+        // Check for control message fallback first
+        if ('type' in message && message.type === 'control' && 'data' in message) {
+          const controlMessage = message as { type: 'control'; data: { cmd: 'mute' | 'unmute'; ms?: number; [key: string]: any } };
+          console.log('[useWalkie] Processing AUDIO channel control fallback:', controlMessage);
+          handleControlCommand(controlMessage.data.cmd, controlMessage.data.ms, 'audio-fallback');
+        }
+        // Handle regular transcripts
+        else if ('text' in message && typeof message.text === 'string' && 'final' in message && typeof message.final === 'boolean') {
           const transcriptMessage = {
             text: message.text,
             final: message.final,
@@ -78,13 +121,10 @@ export function useWalkie(options: UseWalkieOptions): {
           console.warn('[useWalkie] Received unexpected message on AUDIO channel:', message);
         }
       } else if (channel === 'ctrl') {
-        // Messages from control channel
-        if ('cmd' in message && message.cmd === 'mute') {
-          console.log('[useWalkie] Processing CTRL channel MUTE command:', message);
-          micLocked.current = true;
-        } else if ('cmd' in message && message.cmd === 'unmute') {
-          console.log('[useWalkie] Processing CTRL channel UNMUTE command:', message);
-          micLocked.current = false;
+        // Messages from control channel (primary method)
+        if ('cmd' in message && (message.cmd === 'mute' || message.cmd === 'unmute')) {
+          const controlMessage = message as { cmd: 'mute' | 'unmute'; ms?: number };
+          handleControlCommand(controlMessage.cmd, controlMessage.ms, 'ctrl');
         } else if ('type' in message && message.type === 'vad_status' && onVadStatusChange) {
           console.log('[useWalkie] Processing CTRL channel VAD status:', message);
           onVadStatusChange((message as { speaking: boolean; type: 'vad_status' }).speaking);
@@ -93,7 +133,14 @@ export function useWalkie(options: UseWalkieOptions): {
         }
       }
     }
-  }, [onTranscription, onVadStatusChange]);
+  }, [onTranscription, onVadStatusChange, handleControlCommand]);
+
+  // Check if we're in degraded mode (audio works but control doesn't)
+  const isDegradedMode = useCallback(() => {
+    return walkieWSInstanceRef.current?.isConnected() && 
+           walkieWSInstanceRef.current?.isFullyConnected && 
+           !walkieWSInstanceRef.current.isFullyConnected();
+  }, []);
 
   const calculateRMS = (pcmData: Int16Array): number => {
     if (pcmData.length === 0) return 0;
@@ -107,6 +154,12 @@ export function useWalkie(options: UseWalkieOptions): {
   };
 
   const cleanupResources = useCallback(async () => {
+    // Clear mute timer
+    if (muteTimerRef.current) {
+      clearTimeout(muteTimerRef.current);
+      muteTimerRef.current = null;
+    }
+    
     if (recorderInstanceRef.current) {
       try {
         await recorderInstanceRef.current.stop(); // ensure stop is called before close if necessary
@@ -256,27 +309,38 @@ await ensureMicrophonePermission();
     };
   }, [cleanupResources]); // Ensure cleanupResources is stable or correctly listed
 
-  // Connection health monitoring - less aggressive checking
+  // Audio connection health monitoring - focuses only on essential audio socket
   useEffect(() => {
     let healthCheckInterval: NodeJS.Timeout | null = null;
-    let consecutiveFailures = 0;
+    let consecutiveAudioFailures = 0;
     
     if (state.status === 'active' && walkieWSInstanceRef.current) {
       healthCheckInterval = setInterval(() => {
-        if (walkieWSInstanceRef.current && !walkieWSInstanceRef.current.isConnected()) {
-          consecutiveFailures++;
-          console.warn(`[useWalkie] Connection health check failed (${consecutiveFailures}/3)`);
+        if (walkieWSInstanceRef.current) {
+          // Check specifically if audio socket is working (core functionality)
+          const audioWorking = walkieWSInstanceRef.current.isConnected();
           
-          // Only trigger error after 3 consecutive failures (6 seconds)
-          if (consecutiveFailures >= 3) {
-            console.error('[useWalkie] Connection persistently lost, cleaning up...');
-            handleInternalError(new Error('WebSocket connection lost unexpectedly'), 'connection health check');
+          if (!audioWorking) {
+            consecutiveAudioFailures++;
+            console.warn(`[useWalkie] Audio connection health check failed (${consecutiveAudioFailures}/5)`);
+            
+            // Only trigger error after 5 consecutive audio failures (10 seconds)
+            // More lenient since control socket issues shouldn't break audio
+            if (consecutiveAudioFailures >= 5) {
+              console.error('[useWalkie] Audio connection persistently lost, cleaning up...');
+              handleInternalError(new Error('Audio WebSocket connection lost unexpectedly'), 'audio connection health check');
+            }
+          } else {
+            // Reset failure counter on successful audio connection check
+            if (consecutiveAudioFailures > 0) {
+              console.log('[useWalkie] Audio connection recovered');
+              consecutiveAudioFailures = 0;
+            }
           }
-        } else {
-          // Reset failure counter on successful connection check
-          if (consecutiveFailures > 0) {
-            console.log('[useWalkie] Connection recovered');
-            consecutiveFailures = 0;
+          
+          // Log control socket status separately (for debugging, but don't fail on it)
+          if (walkieWSInstanceRef.current.isFullyConnected && !walkieWSInstanceRef.current.isFullyConnected()) {
+            console.log('[useWalkie] Control socket unavailable (mute/unmute may not work, but audio continues)');
           }
         }
       }, 2000); // Check every 2 seconds

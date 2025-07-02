@@ -1,11 +1,13 @@
 // src/services/WalkieWS.ts
 const KEEP_ALIVE_INTERVAL_MS = 5000; // Increased from 1.5s to 5s to reduce network pressure
 
-// Define message types that can be received from the server
-export type WalkieCommandMessage = { cmd: 'mute' | 'unmute'; sid?: string };
+// Define message types that can be received from the server (per backend API spec)
+export type WalkieCommandMessage = { cmd: 'mute' | 'unmute'; ms?: number; sid?: string };
 export type WalkieTranscriptionMessage = { type: 'transcription'; text: string; final: boolean; sid?: string };
 export type WalkieVadStatusMessage = { type: 'vad_status'; speaking: boolean; sid?: string };
 export type WalkieErrorResponseMessage = { type: 'error'; message: string; code?: number; sid?: string };
+// NEW: Control messages via audio channel fallback (backend spec format)
+export type WalkieControlFallbackMessage = { type: 'control'; data: { cmd: 'mute' | 'unmute'; ms?: number; [key: string]: any }; sid?: string };
 // A general type for other JSON messages or to allow extensibility
 export type WalkieGenericJsonMessage = { type: string; [key: string]: any; sid?: string };
 
@@ -15,6 +17,7 @@ export type WalkieMessage =
   | WalkieTranscriptionMessage
   | WalkieVadStatusMessage
   | WalkieErrorResponseMessage
+  | WalkieControlFallbackMessage
   | WalkieGenericJsonMessage
   | ArrayBuffer; // For binary data, though less common from server to client in this app
 
@@ -45,6 +48,14 @@ export class WalkieWS {
 
   private audioSocketOpened = false;
   private ctrlSocketOpened = false;
+  
+  private ctrlReconnectTimer: NodeJS.Timeout | number | null = null;
+  private ctrlReconnectAttempts = 0;
+  private maxCtrlReconnectAttempts = 5;
+  
+  // Connection state management (per backend API spec)
+  private handshakeTimeout: NodeJS.Timeout | number | null = null;
+  private readonly HANDSHAKE_TIMEOUT_MS = 5000;
 
   constructor(opts: WalkieWSOptions) {
     this.sid = opts.sid;
@@ -92,13 +103,43 @@ export class WalkieWS {
 
   private setupSocketEventListeners(socket: WebSocket, channel: 'audio' | 'ctrl') {
     socket.onopen = () => {
+      console.log(`[WalkieWS] ${channel} socket opened, sending handshake...`);
+      
+      // Send handshake (per backend API spec)
+      try {
+        socket.send(JSON.stringify({ sid: this.sid }));
+        console.log(`[WalkieWS] Handshake sent for ${channel} channel with SID: ${this.sid}`);
+        
+        // Set handshake timeout (per backend API spec)
+        if (this.handshakeTimeout) {
+          clearTimeout(this.handshakeTimeout);
+        }
+        this.handshakeTimeout = setTimeout(() => {
+          console.error(`[WalkieWS] Handshake timeout for ${channel} channel after ${this.HANDSHAKE_TIMEOUT_MS}ms`);
+          if (this.onError) {
+            this.onError(new Error(`Handshake timeout for ${channel} channel`), channel);
+          }
+          socket.close(1002, 'Handshake timeout');
+        }, this.HANDSHAKE_TIMEOUT_MS);
+        
+      } catch (error) {
+        console.error(`[WalkieWS] Failed to send handshake for ${channel}:`, error);
+        if (this.onError) {
+          this.onError(error instanceof Error ? error : new Error(String(error)), channel);
+        }
+        return;
+      }
+
       if (channel === 'audio') this.audioSocketOpened = true;
       if (channel === 'ctrl') this.ctrlSocketOpened = true;
 
-      // Send handshake
-      socket.send(JSON.stringify({ sid: this.sid }));
-
       if (this.audioSocketOpened && this.ctrlSocketOpened) {
+        // Clear handshake timeout on successful connection
+        if (this.handshakeTimeout) {
+          clearTimeout(this.handshakeTimeout);
+          this.handshakeTimeout = null;
+        }
+        
         if (this.onOpen) {
           this.onOpen();
         }
@@ -170,6 +211,12 @@ export class WalkieWS {
         }
       }
 
+      // Handle control socket reconnection
+      if (channel === 'ctrl' && wasCtrlOpen) {
+        console.log('[WalkieWS] Control socket closed, attempting reconnection...');
+        this.scheduleCtrlReconnect();
+      }
+
       // If both sockets are now confirmed closed, perform full cleanup.
       if (this.audioSocket?.readyState === WebSocket.CLOSED && this.ctrlSocket?.readyState === WebSocket.CLOSED) {
         this.cleanup();
@@ -217,8 +264,18 @@ export class WalkieWS {
   }
 
   public isConnected(): boolean {
-    // More lenient connection check - consider connected if at least audio socket is working
-    // Control socket can be temporarily down without breaking the voice connection
+    // Primary connection check: Audio socket is essential for voice functionality
+    const audioConnected = this.audioSocket !== null &&
+                           this.audioSocket.readyState === WebSocket.OPEN &&
+                           this.audioSocketOpened;
+    
+    // Return true if audio socket is working - control socket failures don't break voice streaming
+    // Control socket is only needed for mute/unmute commands, not core audio functionality
+    return audioConnected;
+  }
+
+  public isFullyConnected(): boolean {
+    // Check if both sockets are connected (used for optional features)
     const audioConnected = this.audioSocket !== null &&
                            this.audioSocket.readyState === WebSocket.OPEN &&
                            this.audioSocketOpened;
@@ -227,8 +284,7 @@ export class WalkieWS {
                          this.ctrlSocket.readyState === WebSocket.OPEN &&
                          this.ctrlSocketOpened;
     
-    // Return true if audio is connected (control socket is less critical for core functionality)
-    return audioConnected && (ctrlConnected || this.ctrlSocket?.readyState === WebSocket.CONNECTING);
+    return audioConnected && ctrlConnected;
   }
 
   sendFrame(frame: ArrayBuffer): void {
@@ -255,8 +311,87 @@ export class WalkieWS {
     }
   }
 
+  private scheduleCtrlReconnect() {
+    // Only attempt reconnection if audio socket is still active
+    if (!this.isConnected() || this.ctrlReconnectAttempts >= this.maxCtrlReconnectAttempts) {
+      console.log('[WalkieWS] Control socket reconnection not needed or max attempts reached');
+      return;
+    }
+
+    if (this.ctrlReconnectTimer) {
+      clearTimeout(this.ctrlReconnectTimer);
+    }
+
+    // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+    const delay = Math.min(1000 * Math.pow(2, this.ctrlReconnectAttempts), 16000);
+    console.log(`[WalkieWS] Scheduling control socket reconnection in ${delay}ms (attempt ${this.ctrlReconnectAttempts + 1}/${this.maxCtrlReconnectAttempts})`);
+
+    this.ctrlReconnectTimer = setTimeout(() => {
+      this.attemptCtrlReconnect();
+    }, delay);
+  }
+
+  private async attemptCtrlReconnect() {
+    if (!this.isConnected()) {
+      console.log('[WalkieWS] Audio socket down, skipping control socket reconnection');
+      return;
+    }
+
+    this.ctrlReconnectAttempts++;
+    console.log(`[WalkieWS] Attempting control socket reconnection (${this.ctrlReconnectAttempts}/${this.maxCtrlReconnectAttempts})`);
+
+    try {
+      // Create new control socket
+      this.ctrlSocket = new WebSocket(this.getCtrlUrl());
+      this.setupSocketEventListeners(this.ctrlSocket, 'ctrl');
+      
+      // Wait for connection
+      await new Promise<void>((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Control socket reconnection timeout'));
+        }, 5000);
+
+        this.ctrlSocket!.onopen = () => {
+          clearTimeout(timeout);
+          this.ctrlSocketOpened = true;
+          this.ctrlReconnectAttempts = 0; // Reset on successful reconnection
+          console.log('[WalkieWS] Control socket reconnected successfully');
+          this.startKeepAlive(); // Restart keep-alive
+          resolve();
+        };
+
+        this.ctrlSocket!.onerror = () => {
+          clearTimeout(timeout);
+          reject(new Error('Control socket reconnection failed'));
+        };
+      });
+
+    } catch (error) {
+      console.error('[WalkieWS] Control socket reconnection failed:', error);
+      if (this.ctrlReconnectAttempts < this.maxCtrlReconnectAttempts) {
+        this.scheduleCtrlReconnect();
+      } else {
+        console.error('[WalkieWS] Max control socket reconnection attempts reached');
+      }
+    }
+  }
+
   private cleanup() {
     this.stopKeepAlive();
+    
+    // Clear reconnection timers
+    if (this.ctrlReconnectTimer) {
+      clearTimeout(this.ctrlReconnectTimer);
+      this.ctrlReconnectTimer = null;
+    }
+    this.ctrlReconnectAttempts = 0;
+    
+    // Clear handshake timeout
+    if (this.handshakeTimeout) {
+      clearTimeout(this.handshakeTimeout);
+      this.handshakeTimeout = null;
+    }
+    
     this.audioSocketOpened = false;
     this.ctrlSocketOpened = false;
     // Reset connection promise state for potential future connect calls

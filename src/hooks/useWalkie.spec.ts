@@ -159,7 +159,7 @@ describe('useWalkie Hook', () => {
     await act(async () => { onChunkCallback!(frame); });
     expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(1); // Still 1
 
-    // 4. Simulate unmute command from server (NEW BEHAVIOR: final transcripts no longer auto-unmute)
+    // 4. Simulate unmute command from server via control channel (NEW BEHAVIOR: final transcripts no longer auto-unmute)
     await act(async () => {
       capturedWalkieWSOnMessage!({ cmd: 'unmute' }, 'ctrl');
     });
@@ -201,6 +201,39 @@ describe('useWalkie Hook', () => {
 
     expect(mockRecorderInstance.close).toHaveBeenCalledOnce();
     expect(mockWalkieWSInstance.close).toHaveBeenCalledOnce(); // Should be called by cleanup
+  });
+
+  it('should handle control commands via audio channel fallback', async () => {
+    const { result } = renderHook(() => useWalkie(mockWalkieOptions));
+    let onChunkCallback: ((pcm: Int16Array) => void) | null = null;
+    mockRecorderInstance.start = vi.fn(async (cb: (pcm: Int16Array) => void) => { onChunkCallback = cb; });
+
+    await act(async () => { result.current.start('test-session-id-fallback'); });
+    expect(capturedWalkieWSOnMessage).not.toBeNull();
+
+    const frame = new Int16Array(480);
+
+    // 1. Send a frame normally
+    await act(async () => { onChunkCallback!(frame); });
+    expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(1);
+
+    // 2. Simulate mute command via audio channel fallback
+    await act(async () => {
+      capturedWalkieWSOnMessage!({ type: 'control', data: { cmd: 'mute' } }, 'audio');
+    });
+
+    // 3. Send another frame - should be skipped
+    await act(async () => { onChunkCallback!(frame); });
+    expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(1); // Still 1
+
+    // 4. Simulate unmute command via audio channel fallback
+    await act(async () => {
+      capturedWalkieWSOnMessage!({ type: 'control', data: { cmd: 'unmute' } }, 'audio');
+    });
+
+    // 5. Send another frame - should be sent now
+    await act(async () => { onChunkCallback!(frame); });
+    expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(2);
   });
 
   it('should maintain infinite message loop without connection drops', async () => {
