@@ -71,10 +71,9 @@ export function useWalkie(options: UseWalkieOptions): {
           if (onTranscription) {
             onTranscription(transcriptMessage);
           }
-          if (transcriptMessage.final) {
-            console.log('[useWalkie] Final transcript received, unmuting mic.');
-            micLocked.current = false;
-          }
+          // REMOVED: Do not automatically unlock mic on final transcript
+          // This was causing connection instability after 4-5 messages
+          // Let the server control mute/unmute via CTRL channel commands
         } else {
           console.warn('[useWalkie] Received unexpected message on AUDIO channel:', message);
         }
@@ -156,6 +155,7 @@ const start = useCallback(async (sessionId: string) => {
 
     setState(prevState => ({ ...prevState, status: 'connecting', errorMessage: null, isStreaming: false, level: 0 }));
     currentSessionIdRef.current = sessionId;
+    // Initialize mic as unlocked for consistent behavior across all messages
     micLocked.current = false;
     frameCount.current = 0;
 
@@ -213,6 +213,11 @@ await ensureMicrophonePermission();
             // Ensure we are sending a slice of the buffer if pcm is a view
             const bufferToSend = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength);
             walkieWSInstanceRef.current.sendFrame(bufferToSend);
+          } else {
+            // Log when audio is blocked due to mic lock for debugging
+            if (frameCount.current % (METER_EVERY_N_FRAMES * 10) === 0) {
+              console.log('[useWalkie] Audio blocked - mic is locked');
+            }
           }
         }
 
@@ -250,6 +255,26 @@ await ensureMicrophonePermission();
       // setState({ isStreaming: false, level: 0, status: 'idle', errorMessage: null });
     };
   }, [cleanupResources]); // Ensure cleanupResources is stable or correctly listed
+
+  // Connection health monitoring
+  useEffect(() => {
+    let healthCheckInterval: NodeJS.Timeout | null = null;
+    
+    if (state.status === 'active' && walkieWSInstanceRef.current) {
+      healthCheckInterval = setInterval(() => {
+        if (walkieWSInstanceRef.current && !walkieWSInstanceRef.current.isConnected()) {
+          console.warn('[useWalkie] Connection lost during health check, cleaning up...');
+          handleInternalError(new Error('WebSocket connection lost unexpectedly'), 'connection health check');
+        }
+      }, 2000); // Check every 2 seconds
+    }
+    
+    return () => {
+      if (healthCheckInterval) {
+        clearInterval(healthCheckInterval);
+      }
+    };
+  }, [state.status, handleInternalError]);
 
   return { state, start, stop };
 }

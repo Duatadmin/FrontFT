@@ -190,8 +190,12 @@ export class WalkieWS {
         this.ctrlSocket.send(JSON.stringify({ type: 'KeepAlive' }));
       } else {
         // If ctrlSocket is not open, stop keep-alive to prevent errors
+        console.warn('[WalkieWS] Control socket not open, stopping keep-alive');
         this.stopKeepAlive();
-        // Optionally, trigger an error or attempt reconnection if that logic were added
+        // Trigger error to notify the client of connection issues
+        if (this.onError) {
+          this.onError(new Error('Control socket lost during keep-alive'), 'ctrl');
+        }
       }
     }, KEEP_ALIVE_INTERVAL_MS);
   }
@@ -220,7 +224,14 @@ export class WalkieWS {
       this.handleGeneralError(error);
       throw error;
     }
-    this.audioSocket.send(frame);
+    
+    try {
+      this.audioSocket.send(frame);
+    } catch (error) {
+      console.error('[WalkieWS] Error sending audio frame:', error);
+      this.handleGeneralError(error);
+      throw error;
+    }
   }
 
   private handleGeneralError(error: any) {
