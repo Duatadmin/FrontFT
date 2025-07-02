@@ -256,15 +256,28 @@ await ensureMicrophonePermission();
     };
   }, [cleanupResources]); // Ensure cleanupResources is stable or correctly listed
 
-  // Connection health monitoring
+  // Connection health monitoring - less aggressive checking
   useEffect(() => {
     let healthCheckInterval: NodeJS.Timeout | null = null;
+    let consecutiveFailures = 0;
     
     if (state.status === 'active' && walkieWSInstanceRef.current) {
       healthCheckInterval = setInterval(() => {
         if (walkieWSInstanceRef.current && !walkieWSInstanceRef.current.isConnected()) {
-          console.warn('[useWalkie] Connection lost during health check, cleaning up...');
-          handleInternalError(new Error('WebSocket connection lost unexpectedly'), 'connection health check');
+          consecutiveFailures++;
+          console.warn(`[useWalkie] Connection health check failed (${consecutiveFailures}/3)`);
+          
+          // Only trigger error after 3 consecutive failures (6 seconds)
+          if (consecutiveFailures >= 3) {
+            console.error('[useWalkie] Connection persistently lost, cleaning up...');
+            handleInternalError(new Error('WebSocket connection lost unexpectedly'), 'connection health check');
+          }
+        } else {
+          // Reset failure counter on successful connection check
+          if (consecutiveFailures > 0) {
+            console.log('[useWalkie] Connection recovered');
+            consecutiveFailures = 0;
+          }
         }
       }, 2000); // Check every 2 seconds
     }

@@ -130,8 +130,8 @@ describe('WalkieWS', () => {
     audioMessagesReceived.length = 0;
     ctrlMessagesReceived.length = 0;
 
-    // Advance time for approximately 3 keep-alive intervals (1.5s * 3 = 4.5s)
-    await vi.advanceTimersByTimeAsync(4600);
+    // Advance time for approximately 3 keep-alive intervals (5s * 3 = 15s)
+    await vi.advanceTimersByTimeAsync(15100);
 
     const ctrlKeepAliveMessages = ctrlMessagesReceived.filter(msg => msg.type === 'KeepAlive');
     expect(ctrlKeepAliveMessages.length).toBe(3);

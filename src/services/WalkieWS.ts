@@ -1,5 +1,5 @@
 // src/services/WalkieWS.ts
-const KEEP_ALIVE_INTERVAL_MS = 1500;
+const KEEP_ALIVE_INTERVAL_MS = 5000; // Increased from 1.5s to 5s to reduce network pressure
 
 // Define message types that can be received from the server
 export type WalkieCommandMessage = { cmd: 'mute' | 'unmute'; sid?: string };
@@ -187,14 +187,23 @@ export class WalkieWS {
     }
     this.keepAliveTimer = setInterval(() => {
       if (this.ctrlSocket && this.ctrlSocket.readyState === WebSocket.OPEN) {
-        this.ctrlSocket.send(JSON.stringify({ type: 'KeepAlive' }));
+        try {
+          this.ctrlSocket.send(JSON.stringify({ type: 'KeepAlive' }));
+        } catch (error) {
+          console.warn('[WalkieWS] Failed to send keep-alive:', error);
+          // Don't immediately trigger error - socket might recover
+        }
       } else {
-        // If ctrlSocket is not open, stop keep-alive to prevent errors
+        // If ctrlSocket is not open, stop keep-alive but don't trigger error immediately
+        // The socket might be temporarily disconnected during network issues
         console.warn('[WalkieWS] Control socket not open, stopping keep-alive');
         this.stopKeepAlive();
-        // Trigger error to notify the client of connection issues
-        if (this.onError) {
-          this.onError(new Error('Control socket lost during keep-alive'), 'ctrl');
+        // Only trigger error if both sockets are completely closed
+        if (this.ctrlSocket?.readyState === WebSocket.CLOSED && 
+            this.audioSocket?.readyState === WebSocket.CLOSED) {
+          if (this.onError) {
+            this.onError(new Error('Both WebSocket connections closed'), 'general');
+          }
         }
       }
     }, KEEP_ALIVE_INTERVAL_MS);
@@ -208,14 +217,18 @@ export class WalkieWS {
   }
 
   public isConnected(): boolean {
-    return (
-      this.audioSocket !== null &&
-      this.audioSocket.readyState === WebSocket.OPEN &&
-      this.ctrlSocket !== null &&
-      this.ctrlSocket.readyState === WebSocket.OPEN &&
-      this.audioSocketOpened && // Confirms handshake completed for audio
-      this.ctrlSocketOpened   // Confirms handshake completed for ctrl
-    );
+    // More lenient connection check - consider connected if at least audio socket is working
+    // Control socket can be temporarily down without breaking the voice connection
+    const audioConnected = this.audioSocket !== null &&
+                           this.audioSocket.readyState === WebSocket.OPEN &&
+                           this.audioSocketOpened;
+                           
+    const ctrlConnected = this.ctrlSocket !== null &&
+                         this.ctrlSocket.readyState === WebSocket.OPEN &&
+                         this.ctrlSocketOpened;
+    
+    // Return true if audio is connected (control socket is less critical for core functionality)
+    return audioConnected && (ctrlConnected || this.ctrlSocket?.readyState === WebSocket.CONNECTING);
   }
 
   sendFrame(frame: ArrayBuffer): void {
