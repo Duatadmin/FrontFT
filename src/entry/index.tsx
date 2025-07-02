@@ -74,6 +74,7 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   console.log('[ProtectedRoute] Rendering...');
   const isLoading = useUserStore((state: UserState) => state.isLoading);
   const isAuthenticated = useUserStore((state: UserState) => state.isAuthenticated);
+  const user = useUserStore((state: UserState) => state.user);
   console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   if (isLoading) {
@@ -83,11 +84,20 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
     return null; 
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || !user) {
     console.log('[ProtectedRoute] User not authenticated. Redirecting to /login via <Navigate />.');
     return <Navigate to="/login" replace />;
   }
 
-  console.log('[ProtectedRoute] User authenticated. Rendering children.');
+  // Check if user is banned (requires premium subscription)
+  const bannedUntil = (user.user_metadata as any)?.banned_until;
+  const banned = bannedUntil && new Date(bannedUntil) > new Date();
+
+  if (banned) {
+    console.log('[ProtectedRoute] User is banned. Redirecting to /login for subscription check.');
+    return <Navigate to="/login" replace />;
+  }
+
+  console.log('[ProtectedRoute] User authenticated and has premium access. Rendering children.');
   return children;
 };

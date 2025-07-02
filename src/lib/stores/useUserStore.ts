@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
+import { getStripe } from '@/lib/stripe';
 import type { User } from '@supabase/supabase-js';
 
 export interface UserState {
@@ -55,12 +56,31 @@ export const useUserStore = create<UserState>()(
       /* ② email-password login ******************************************* */
       login: async (email, password) => {
         set({ isLoading: true, error: null });
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { data: { session }, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
           set({ error: error.message, isLoading: false });
         } else {
-          // onAuthStateChange will update user/isAuthenticated
-          set({ isLoading: false });
+          const bannedUntil = (session?.user.user_metadata as any)?.banned_until;
+          const banned = bannedUntil && new Date(bannedUntil) > new Date();
+
+          if (banned) {
+            try {
+              const { data, error } = await supabase.functions.invoke(
+                'create-checkout-session',
+                { body: { user_id: session!.user.id } }
+              );
+              if (error) throw error;
+              const stripe = await getStripe();
+              await stripe.redirectToCheckout({ sessionId: data.sessionId });
+            } catch (checkoutError) {
+              console.error('Checkout error:', checkoutError);
+              set({ error: 'Failed to initiate checkout', isLoading: false });
+            }
+          } else {
+            // User is not banned, proceed normally
+            set({ isLoading: false });
+            // Navigate to app (this will be handled by the component using this store)
+          }
         }
       },
 

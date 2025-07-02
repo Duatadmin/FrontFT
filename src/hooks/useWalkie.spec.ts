@@ -236,6 +236,51 @@ describe('useWalkie Hook', () => {
     expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(2);
   });
 
+  it('should handle mute command with timer duration (per backend API spec)', async () => {
+    vi.useFakeTimers();
+    const { result } = renderHook(() => useWalkie(mockWalkieOptions));
+    let onChunkCallback: ((pcm: Int16Array) => void) | null = null;
+    mockRecorderInstance.start = vi.fn(async (cb: (pcm: Int16Array) => void) => { onChunkCallback = cb; });
+
+    await act(async () => { result.current.start('test-session-id-timer'); });
+    expect(capturedWalkieWSOnMessage).not.toBeNull();
+
+    const frame = new Int16Array(480);
+
+    // 1. Send a frame normally
+    await act(async () => { onChunkCallback!(frame); });
+    expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(1);
+
+    // 2. Simulate mute command with 1500ms duration (per backend API spec)
+    await act(async () => {
+      capturedWalkieWSOnMessage!({ cmd: 'mute', ms: 1500 }, 'ctrl');
+    });
+
+    // 3. Send frame - should be blocked
+    await act(async () => { onChunkCallback!(frame); });
+    expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(1); // Still 1
+
+    // 4. Advance timer by 1400ms (not quite to auto-unmute)
+    await act(async () => {
+      vi.advanceTimersByTime(1400);
+    });
+
+    // 5. Send frame - should still be blocked
+    await act(async () => { onChunkCallback!(frame); });
+    expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(1); // Still 1
+
+    // 6. Advance timer to complete the 1500ms (auto-unmute should trigger)
+    await act(async () => {
+      vi.advanceTimersByTime(100);
+    });
+
+    // 7. Send frame - should now be sent (auto-unmuted)
+    await act(async () => { onChunkCallback!(frame); });
+    expect(mockWalkieWSInstance.sendFrame).toHaveBeenCalledTimes(2);
+
+    vi.useRealTimers();
+  });
+
   it('should maintain infinite message loop without connection drops', async () => {
     const { result } = renderHook(() => useWalkie(mockWalkieOptions));
 
