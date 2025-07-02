@@ -56,31 +56,74 @@ export const useUserStore = create<UserState>()(
       /* ② email-password login ******************************************* */
       login: async (email, password) => {
         set({ isLoading: true, error: null });
+        console.log('[useUserStore] Starting login process...');
+        
         const { data: { session }, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
+          console.error('[useUserStore] Login error:', error);
           set({ error: error.message, isLoading: false });
-        } else {
-          const bannedUntil = (session?.user.user_metadata as any)?.banned_until;
-          const banned = bannedUntil && new Date(bannedUntil) > new Date();
+          return;
+        }
 
-          if (banned) {
-            try {
-              const { data, error } = await supabase.functions.invoke(
-                'create-checkout-session',
-                { body: { user_id: session!.user.id } }
-              );
-              if (error) throw error;
-              const stripe = await getStripe();
-              await stripe.redirectToCheckout({ sessionId: data.sessionId });
-            } catch (checkoutError) {
-              console.error('Checkout error:', checkoutError);
-              set({ error: 'Failed to initiate checkout', isLoading: false });
+        console.log('[useUserStore] Login successful, checking user status...');
+        console.log('[useUserStore] Full user object:', session?.user);
+        console.log('[useUserStore] User metadata:', session?.user.user_metadata);
+        console.log('[useUserStore] App metadata:', session?.user.app_metadata);
+        
+        // Check multiple possible locations for banned_until
+        const userMetadataBanned = (session?.user.user_metadata as any)?.banned_until;
+        const appMetadataBanned = (session?.user.app_metadata as any)?.banned_until;
+        const rawUserBanned = (session?.user as any)?.banned_until;
+        
+        // Use the first available banned_until value
+        const bannedUntil = userMetadataBanned || appMetadataBanned || rawUserBanned;
+        const banned = bannedUntil && new Date(bannedUntil) > new Date();
+        
+        console.log('[useUserStore] bannedUntil from user_metadata:', userMetadataBanned);
+        console.log('[useUserStore] bannedUntil from app_metadata:', appMetadataBanned);
+        console.log('[useUserStore] bannedUntil from raw user:', rawUserBanned);
+        console.log('[useUserStore] Final bannedUntil:', bannedUntil);
+        console.log('[useUserStore] User is banned:', banned);
+
+        if (banned) {
+          console.log('[useUserStore] User is banned, initiating checkout...');
+          try {
+            console.log('[useUserStore] Calling create-checkout-session function...');
+            const { data, error } = await supabase.functions.invoke(
+              'create-checkout-session',
+              { body: { user_id: session!.user.id } }
+            );
+            
+            console.log('[useUserStore] Checkout session response:', { data, error });
+            
+            if (error) {
+              console.error('[useUserStore] Edge function error:', error);
+              throw error;
             }
-          } else {
-            // User is not banned, proceed normally
-            set({ isLoading: false });
-            // Navigate to app (this will be handled by the component using this store)
+            
+            if (!data?.sessionId) {
+              console.error('[useUserStore] No session ID received:', data);
+              throw new Error('No session ID received from checkout');
+            }
+            
+            console.log('[useUserStore] Redirecting to Stripe checkout...');
+            const stripe = await getStripe();
+            const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
+            
+            if (result.error) {
+              console.error('[useUserStore] Stripe redirect error:', result.error);
+              throw result.error;
+            }
+          } catch (checkoutError) {
+            console.error('[useUserStore] Checkout error:', checkoutError);
+            set({ 
+              error: `Failed to initiate checkout: ${checkoutError instanceof Error ? checkoutError.message : 'Unknown error'}`, 
+              isLoading: false 
+            });
           }
+        } else {
+          console.log('[useUserStore] User is not banned, proceeding normally');
+          set({ isLoading: false });
         }
       },
 

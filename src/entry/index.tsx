@@ -90,7 +90,12 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   }
 
   // Check if user is banned (requires premium subscription)
-  const bannedUntil = (user.user_metadata as any)?.banned_until;
+  // Check multiple possible locations for banned_until
+  const userMetadataBanned = (user.user_metadata as any)?.banned_until;
+  const appMetadataBanned = (user.app_metadata as any)?.banned_until;
+  const rawUserBanned = (user as any)?.banned_until;
+  
+  const bannedUntil = userMetadataBanned || appMetadataBanned || rawUserBanned;
   const banned = bannedUntil && new Date(bannedUntil) > new Date();
 
   if (banned) {
