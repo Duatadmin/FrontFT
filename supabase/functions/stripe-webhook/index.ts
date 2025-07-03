@@ -64,6 +64,21 @@ async function ensureCustomerRecord(userId: string, customerId: string) {
 //  Main handler
 // ────────────────────────────────────────────────────────────────────────────────
 serve(async (req) => {
+  // CORS headers for webhook responses
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'stripe-signature, content-type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  }
+
+  // Handle preflight requests (though Stripe won't send these)
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { 
+      headers: corsHeaders,
+      status: 200 
+    })
+  }
+
   const sig  = req.headers.get('stripe-signature') || ''
   const body = await req.text()
 
@@ -75,7 +90,11 @@ serve(async (req) => {
       Deno.env.get('STRIPE_WEBHOOK_SECRET')!
     )
   } catch (err) {
-    return new Response(`Bad signature: ${(err as Error).message}`, { status: 400 })
+    console.error('[stripe-webhook] Signature verification failed:', err)
+    return new Response(`Bad signature: ${(err as Error).message}`, { 
+      status: 400,
+      headers: corsHeaders
+    })
   }
 
   try {
@@ -195,9 +214,15 @@ serve(async (req) => {
         console.log(`Unhandled event type: ${event.type}`)
     }
 
-    return new Response('ok', { status: 200 })
+    return new Response('ok', { 
+      status: 200,
+      headers: corsHeaders
+    })
   } catch (err) {
-    console.error('stripe-webhook error', err)
-    return new Response((err as Error).message, { status: 500 })
+    console.error('[stripe-webhook] Processing error:', err)
+    return new Response((err as Error).message, { 
+      status: 500,
+      headers: corsHeaders
+    })
   }
 })

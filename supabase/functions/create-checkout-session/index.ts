@@ -1,85 +1,89 @@
-/*
+/**
  * Edge Function: create-checkout-session
- * ------------------------------------------------------------
- * Создаёт Checkout Session в Stripe и отдаёт sessionId клиенту.
+ * -------------------------------------
+ * • CORS pre-flight всегда отвечает 200 OK
+ * • Stripe и прочие SDK инициализируются ТОЛЬКО после OPTIONS
+ * • Ожидает body: { successUrl, cancelUrl } или { priceId, successUrl, cancelUrl }
  *
- * Требуемые секреты:
- *   SUPABASE_URL
- *   SUPABASE_SERVICE_ROLE_KEY
- *   STRIPE_SECRET_KEY   sk_test_ / sk_live_
- *   STRIPE_PRICE_BASIC  price_...
- *   CHECKOUT_SUCCESS_URL https://your-app.com/pay/success
- *   CHECKOUT_CANCEL_URL  https://your-app.com/pay/cancel
+ * Требуемые переменные окружения (загрузите через `supabase secrets set`):
+ *   STRIPE_SECRET               – sk_test_… или sk_live_…
+ *   STRIPE_PRICE_ID             – price_... (default subscription price)
+ *   CHECKOUT_SUCCESS_URL        – URL для успешного завершения
+ *   CHECKOUT_CANCEL_URL         – URL для отмены
+ *   SUPABASE_URL                – если нужна работа с БД (необязательно)
+ *   SUPABASE_SERVICE_ROLE_KEY   – ″
  */
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
-import Stripe from 'npm:stripe'                        // 🟢 фиксация импорта
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2'
+import Stripe from 'npm:stripe@18.3.0'
 
-// ────────────────────────────────────────────────────────────────────────────────
-// Init SDKs
-// ────────────────────────────────────────────────────────────────────────────────
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
-  apiVersion: '2025-05-28',
-})
+// --- CORS --------------------------------------------------------------------
+const corsHeaders = {
+  'Access-Control-Allow-Origin': 'https://main.jarvis-ai.online', // prod-origin
+  // Для локальных тестов можно временно заменить на '*'
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+} as const
 
-const supabase = createClient(
-  Deno.env.get('SUPABASE_URL')!,
-  Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-)
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ────────────────────────────────────────────────────────────────────────────────
-async function getOrCreateCustomer(userId: string): Promise<string> {
-  const { data } = await supabase
-    .from('customers')
-    .select('stripe_customer_id')
-    .eq('id', userId)
-    .maybeSingle()
-
-  if (data?.stripe_customer_id) return data.stripe_customer_id
-
-  const customer = await stripe.customers.create({
-    metadata: { supabase_uid: userId }
-  })
-
-  await supabase.from('customers').insert({
-    id: userId,
-    stripe_customer_id: customer.id,
-  })
-
-  return customer.id
-}
-
-// ────────────────────────────────────────────────────────────────────────────────
-// Main handler
-// ────────────────────────────────────────────────────────────────────────────────
+// -----------------------------------------------------------------------------
 serve(async (req) => {
+  /* 1. PRE-FLIGHT ----------------------------------------------------------- */
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { status: 200, headers: corsHeaders })
+  }
+
+  /* 2. ПАРСИРУЕМ BODY ------------------------------------------------------- */
+  let body: { priceId?: string; successUrl?: string; cancelUrl?: string }
   try {
-    const { user_id } = await req.json()
-    if (!user_id) return new Response('Missing user_id', { status: 400 })
+    body = await req.json()
+  } catch {
+    return respond(400, 'Invalid JSON')
+  }
 
-    const customerId = await getOrCreateCustomer(user_id)
+  // Get URLs from body or environment
+  const successUrl = body.successUrl || Deno.env.get('CHECKOUT_SUCCESS_URL')
+  const cancelUrl = body.cancelUrl || Deno.env.get('CHECKOUT_CANCEL_URL')
+  
+  if (!successUrl || !cancelUrl) {
+    return respond(400, 'successUrl, cancelUrl are required (either in body or CHECKOUT_SUCCESS_URL/CHECKOUT_CANCEL_URL env vars)')
+  }
 
+  // Get priceId from body or environment
+  const priceId = body.priceId || Deno.env.get('STRIPE_PRICE_ID')
+  if (!priceId) {
+    return respond(400, 'priceId is required (either in body or STRIPE_PRICE_ID env var)')
+  }
+
+  /* 3. STRIPE ---------------------------------------------------------------- */
+  const stripeKey = Deno.env.get('STRIPE_SECRET')
+  if (!stripeKey) return respond(500, 'Server misconfigured: STRIPE_SECRET')
+
+  const stripe = new Stripe(stripeKey, { apiVersion: '2023-10-16' })
+
+  try {
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      customer: customerId,
-      success_url: `${Deno.env.get('CHECKOUT_SUCCESS_URL')}?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url:  Deno.env.get('CHECKOUT_CANCEL_URL')!,
-      line_items: [{
-        price: Deno.env.get('STRIPE_PRICE_BASIC')!,
-        quantity: 1,
-      }],
-      allow_promotion_codes: true,
-      metadata: { supabase_uid: user_id },
+      line_items: [{ price: priceId, quantity: 1 }],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
     })
 
-    return new Response(JSON.stringify({ sessionId: session.id }), {
-      headers: { 'Content-Type': 'application/json' },
-    })
+    return respond(200, { url: session.url })
   } catch (err) {
-    console.error('create-checkout-session error', err)
-    return new Response((err as Error).message, { status: 500 })
+    console.error('[Stripe] create session error:', err)
+    return respond(500, (err as Error).message)
   }
 })
+
+/* ──────────────────────────────────────────────────────────────────────────── */
+function respond(status: number, payload: unknown) {
+  const headers = {
+    ...corsHeaders,
+    'Content-Type': 'application/json',
+  }
+  return new Response(
+    typeof payload === 'string' ? JSON.stringify({ error: payload }) : JSON.stringify(payload),
+    { status, headers },
+  )
+}

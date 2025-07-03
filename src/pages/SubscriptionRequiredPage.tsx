@@ -18,7 +18,7 @@ export default function SubscriptionRequiredPage() {
 
     try {
       console.log('[SubscriptionRequiredPage] Creating checkout session...');
-      const { sessionId, error: checkoutError } = await SubscriptionService.createCheckoutSession(user);
+      const { url, error: checkoutError } = await SubscriptionService.createCheckoutSession(user);
       
       if (checkoutError) {
         console.error('[SubscriptionRequiredPage] Checkout error:', checkoutError);
@@ -26,13 +26,13 @@ export default function SubscriptionRequiredPage() {
         return;
       }
 
-      if (!sessionId) {
+      if (!url) {
         setError('Failed to create checkout session');
         return;
       }
 
       console.log('[SubscriptionRequiredPage] Redirecting to checkout...');
-      const { error: redirectError } = await SubscriptionService.redirectToCheckout(sessionId);
+      const { error: redirectError } = await SubscriptionService.redirectToCheckout(url);
       
       if (redirectError) {
         console.error('[SubscriptionRequiredPage] Redirect error:', redirectError);

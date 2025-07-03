@@ -184,13 +184,15 @@ export class SubscriptionService {
   /**
    * Create a Stripe checkout session for the user
    */
-  static async createCheckoutSession(user: User): Promise<{ sessionId?: string; error?: string }> {
+  static async createCheckoutSession(user: User): Promise<{ sessionId?: string; url?: string; error?: string }> {
     try {
       console.log('[SubscriptionService] Creating checkout session for user:', user.id);
       
       const { data, error } = await supabase.functions.invoke(
         'create-checkout-session',
-        { body: { user_id: user.id } }
+        { 
+          body: {} // All parameters (priceId, successUrl, cancelUrl) are now in edge function environment
+        }
       );
       
       if (error) {
@@ -198,13 +200,13 @@ export class SubscriptionService {
         return { error: error.message || 'Failed to create checkout session' };
       }
       
-      if (!data?.sessionId) {
-        console.error('[SubscriptionService] No session ID received:', data);
-        return { error: 'No session ID received from checkout service' };
+      if (!data?.url) {
+        console.error('[SubscriptionService] No checkout URL received:', data);
+        return { error: 'No checkout URL received from checkout service' };
       }
       
-      console.log('[SubscriptionService] Checkout session created:', data.sessionId);
-      return { sessionId: data.sessionId };
+      console.log('[SubscriptionService] Checkout session created:', data.url);
+      return { url: data.url };
       
     } catch (error) {
       console.error('[SubscriptionService] Checkout creation error:', error);
@@ -217,19 +219,10 @@ export class SubscriptionService {
   /**
    * Redirect user to Stripe checkout
    */
-  static async redirectToCheckout(sessionId: string): Promise<{ error?: string }> {
+  static async redirectToCheckout(checkoutUrl: string): Promise<{ error?: string }> {
     try {
-      const { getStripe } = await import('@/lib/stripe');
-      const stripe = await getStripe();
-      
-      console.log('[SubscriptionService] Redirecting to checkout:', sessionId);
-      const result = await stripe.redirectToCheckout({ sessionId });
-      
-      if (result.error) {
-        console.error('[SubscriptionService] Stripe redirect error:', result.error);
-        return { error: result.error.message };
-      }
-      
+      console.log('[SubscriptionService] Redirecting to checkout:', checkoutUrl);
+      window.location.href = checkoutUrl;
       return {};
     } catch (error) {
       console.error('[SubscriptionService] Redirect error:', error);
