@@ -16,6 +16,7 @@
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts'
 import Stripe from 'npm:stripe@18.3.0'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2'
 
 // --- CORS --------------------------------------------------------------------
 const corsHeaders = {
@@ -33,7 +34,25 @@ serve(async (req) => {
     return new Response('ok', { status: 200, headers: corsHeaders })
   }
 
-  /* 2. ПАРСИРУЕМ BODY ------------------------------------------------------- */
+  /* 2. AUTH & SUPABASE CLIENT --------------------------------------------- */
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  )
+
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    return respond(401, 'Missing Authorization header')
+  }
+
+  const jwt = authHeader.replace('Bearer ', '')
+  const { data: { user }, error: userError } = await supabase.auth.getUser(jwt)
+  if (userError || !user) {
+    console.error('Auth error:', userError)
+    return respond(401, 'User not authenticated')
+  }
+
+  /* 3. ПАРСИРУЕМ BODY ------------------------------------------------------- */
   let body: { priceId?: string; successUrl?: string; cancelUrl?: string }
   try {
     body = await req.json()
@@ -55,7 +74,7 @@ serve(async (req) => {
     return respond(400, 'priceId is required (either in body or STRIPE_PRICE_ID env var)')
   }
 
-  /* 3. STRIPE ---------------------------------------------------------------- */
+  /* 4. STRIPE ---------------------------------------------------------------- */
   const stripeKey = Deno.env.get('STRIPE_SECRET')
   if (!stripeKey) return respond(500, 'Server misconfigured: STRIPE_SECRET')
 
@@ -67,6 +86,11 @@ serve(async (req) => {
       line_items: [{ price: priceId, quantity: 1 }],
       success_url: successUrl,
       cancel_url: cancelUrl,
+      allow_promotion_codes: true,
+      customer_email: user.email,
+      metadata: {
+        supabase_uid: user.id,
+      },
     })
 
     return respond(200, { url: session.url })

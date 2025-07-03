@@ -8,7 +8,7 @@
  * Требуемые Secrets (Project → Settings → Secrets):
  *   SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *   STRIPE_SECRET_KEY     sk_test_… / sk_live_…
+ *   STRIPE_SECRET     sk_test_… / sk_live_…
  *   STRIPE_WEBHOOK_SECRET whsec_…
  */
 
@@ -19,8 +19,9 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.50.2'
 // ────────────────────────────────────────────────────────────────────────────────
 //  Init SDKs
 // ────────────────────────────────────────────────────────────────────────────────
-const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY')!, {
-  apiVersion: '2025-05-28',
+const stripe = new Stripe(Deno.env.get('STRIPE_SECRET')!, {
+  apiVersion: '2023-10-16', // Align with the working checkout function
+  httpClient: Stripe.createFetchHttpClient(),
 })
 
 const supabase = createClient(
@@ -40,18 +41,53 @@ async function upsertSubscription(data: Record<string, any>) {
   }
 }
 
+async function upsertProduct(product: Stripe.Product) {
+  const { error } = await supabase.from('stripe_products').upsert({
+    id: product.id,
+    active: product.active,
+    name: product.name,
+    description: product.description,
+    image: product.images?.[0] ?? null,
+    metadata: product.metadata,
+  })
+  if (error) {
+    console.error('Error upserting product:', error)
+    throw error
+  }
+}
+
+async function upsertPrice(price: Stripe.Price) {
+  const { error } = await supabase.from('stripe_prices').upsert({
+    id: price.id,
+    product_id: typeof price.product === 'string' ? price.product : price.product.id,
+    active: price.active,
+    description: price.description,
+    unit_amount: price.unit_amount,
+    currency: price.currency,
+    type: price.type,
+    interval: price.recurring?.interval,
+    interval_count: price.recurring?.interval_count,
+    trial_period_days: price.recurring?.trial_period_days,
+    metadata: price.metadata,
+  })
+  if (error) {
+    console.error('Error upserting price:', error)
+    throw error
+  }
+}
+
 async function getUserIdByCustomer(customerId: string): Promise<string | null> {
   const { data } = await supabase
-    .from('customers')
-    .select('id')
+    .from('stripe_customers')
+    .select('user_id')
     .eq('stripe_customer_id', customerId)
     .maybeSingle()
-  return data?.id ?? null
+  return data?.user_id ?? null
 }
 
 async function ensureCustomerRecord(userId: string, customerId: string) {
-  const { error } = await supabase.from('customers').upsert({
-    id: userId,
+  const { error } = await supabase.from('stripe_customers').upsert({
+    user_id: userId,
     stripe_customer_id: customerId,
   })
   if (error) {
@@ -120,11 +156,21 @@ serve(async (req) => {
 
         // Get full subscription details
         const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
-          expand: ['line_items.data.price', 'subscription']
+          expand: ['line_items.data.price.product', 'subscription'],
         })
         const lineItem = fullSession.line_items?.data[0]
         const price = lineItem?.price as Stripe.Price | undefined
+        const product = price?.product as Stripe.Product | undefined
         const subscription = fullSession.subscription as Stripe.Subscription
+
+        if (!price || !product || !subscription) {
+          console.error('Missing price, product, or subscription in checkout session.')
+          break
+        }
+
+        // Upsert product and price first to satisfy foreign key constraints
+        await upsertProduct(product)
+        await upsertPrice(price)
 
         // Store subscription in database - RLS will handle access control
         await upsertSubscription({
@@ -133,10 +179,16 @@ serve(async (req) => {
           status: subscription.status,
           price_id: price?.id ?? null,
           quantity: lineItem?.quantity ?? 1,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+          metadata: subscription.metadata,
+          created: new Date(subscription.created * 1000),
           current_period_start: new Date(subscription.current_period_start * 1000),
           current_period_end: new Date(subscription.current_period_end * 1000),
-          created: new Date(subscription.created * 1000),
           ended_at: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null,
+          cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
+          canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+          trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000) : null,
+          trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
         })
 
         console.log(`Subscription ${subscription.id} created for user ${userId}`)
@@ -153,14 +205,24 @@ serve(async (req) => {
           break
         }
 
+        const firstItem = subscription.items?.data?.[0]
+
         // Update subscription in database - RLS will handle access control automatically
         await upsertSubscription({
           id: subscription.id,
           user_id: userId,
           status: subscription.status,
+          price_id: firstItem?.price?.id ?? null,
+          quantity: firstItem?.quantity ?? null,
+          cancel_at_period_end: subscription.cancel_at_period_end,
+          metadata: subscription.metadata,
           current_period_start: new Date(subscription.current_period_start * 1000),
           current_period_end: new Date(subscription.current_period_end * 1000),
           ended_at: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null,
+          cancel_at: subscription.cancel_at ? new Date(subscription.cancel_at * 1000) : null,
+          canceled_at: subscription.canceled_at ? new Date(subscription.canceled_at * 1000) : null,
+          trial_start: subscription.trial_start ? new Date(subscription.trial_start * 1000) : null,
+          trial_end: subscription.trial_end ? new Date(subscription.trial_end * 1000) : null,
         })
 
         console.log(`Subscription ${subscription.id} updated for user ${userId} - status: ${subscription.status}`)
@@ -183,6 +245,7 @@ serve(async (req) => {
           status: subscription.status,
           current_period_start: new Date(subscription.current_period_start * 1000),
           current_period_end: new Date(subscription.current_period_end * 1000),
+          ended_at: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null, // Keep it concise for invoice events
         })
 
         console.log(`Payment succeeded for subscription ${subscription.id}, user ${userId}`)
@@ -204,6 +267,7 @@ serve(async (req) => {
           status: subscription.status,
           current_period_start: new Date(subscription.current_period_start * 1000),
           current_period_end: new Date(subscription.current_period_end * 1000),
+          ended_at: subscription.ended_at ? new Date(subscription.ended_at * 1000) : null, // Keep it concise for invoice events
         })
 
         console.log(`Payment failed for subscription ${subscription.id}, user ${userId}`)

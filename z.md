@@ -19,3 +19,5 @@ run the project in windsurf preview browser
 usmbvieiwmnzbqbhhbob
 
 npx supabase gen types typescript --project-id usmbvieiwmnzbqbhhbob > src\lib\supabase\schema.types.ts
+
+supabase functions deploy create-checkout-session

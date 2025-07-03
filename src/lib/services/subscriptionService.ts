@@ -184,17 +184,17 @@ export class SubscriptionService {
   /**
    * Create a Stripe checkout session for the user
    */
-  static async createCheckoutSession(user: User): Promise<{ sessionId?: string; url?: string; error?: string }> {
+  static async createCheckoutSession(
+    user: User,
+    couponId?: string,
+  ): Promise<{ sessionId?: string; url?: string; error?: string }> {
     try {
       console.log('[SubscriptionService] Creating checkout session for user:', user.id);
-      
-      const { data, error } = await supabase.functions.invoke(
-        'create-checkout-session',
-        { 
-          body: {} // All parameters (priceId, successUrl, cancelUrl) are now in edge function environment
-        }
-      );
-      
+
+      const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+        body: { couponId }, // Pass couponId to the edge function
+      });
+
       if (error) {
         console.error('[SubscriptionService] Edge function error:', error);
         return { error: error.message || 'Failed to create checkout session' };
