@@ -8,42 +8,21 @@ export default function CheckoutSuccessPage() {
   useEffect(() => {
     const syncAndRedirect = async () => {
       try {
-        // Refresh the session to get updated user metadata
+        console.log('[CheckoutSuccessPage] Payment completed, refreshing session...');
+        
+        // Refresh the session to get any updated information
         await supabase.auth.refreshSession();
         
-        const { data: { session } } = await supabase.auth.getSession();
-        const bannedUntil = (session?.user.user_metadata as any)?.banned_until;
-        const banned = bannedUntil && new Date(bannedUntil) > new Date();
-
-        if (!banned || new Date(bannedUntil) <= new Date()) {
-          // User is unbanned, redirect to app
-          navigate('/app', { replace: true });
-        } else {
-          // Rare latency case: subscribe for unban update
-          const uid = session?.user.id;
-          if (uid) {
-            supabase
-              .channel('unban')
-              .on(
-                'postgres_changes',
-                { 
-                  event: 'UPDATE', 
-                  schema: 'auth', 
-                  table: 'users', 
-                  filter: `id=eq.${uid}` 
-                },
-                async () => {
-                  await supabase.auth.refreshSession();
-                  navigate('/app', { replace: true });
-                }
-              )
-              .subscribe();
-          }
-        }
+        // Wait a moment for the webhook to process (webhook should have updated subscription)
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        console.log('[CheckoutSuccessPage] Redirecting to app...');
+        navigate('/', { replace: true });
+        
       } catch (error) {
-        console.error('Error syncing subscription status:', error);
+        console.error('[CheckoutSuccessPage] Error during redirect:', error);
         // On error, still try to redirect after a delay
-        setTimeout(() => navigate('/app', { replace: true }), 2000);
+        setTimeout(() => navigate('/', { replace: true }), 3000);
       }
     };
 

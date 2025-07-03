@@ -74,35 +74,25 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   console.log('[ProtectedRoute] Rendering...');
   const isLoading = useUserStore((state: UserState) => state.isLoading);
   const isAuthenticated = useUserStore((state: UserState) => state.isAuthenticated);
-  const user = useUserStore((state: UserState) => state.user);
   console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   if (isLoading) {
-    console.log('[ProtectedRoute] Auth state is loading. Rendering null (or a spinner).');
-    // Optionally, render a loading spinner here instead of null
-    // For example: return <div className="flex h-screen items-center justify-center">Loading...</div>;
-    return null; 
+    console.log('[ProtectedRoute] Auth state is loading. Rendering loading spinner.');
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
     console.log('[ProtectedRoute] User not authenticated. Redirecting to /login via <Navigate />.');
     return <Navigate to="/login" replace />;
   }
 
-  // Check if user is banned (requires premium subscription)
-  // Check multiple possible locations for banned_until
-  const userMetadataBanned = (user.user_metadata as any)?.banned_until;
-  const appMetadataBanned = (user.app_metadata as any)?.banned_until;
-  const rawUserBanned = (user as any)?.banned_until;
-  
-  const bannedUntil = userMetadataBanned || appMetadataBanned || rawUserBanned;
-  const banned = bannedUntil && new Date(bannedUntil) > new Date();
-
-  if (banned) {
-    console.log('[ProtectedRoute] User is banned. Redirecting to /login for subscription check.');
-    return <Navigate to="/login" replace />;
-  }
-
-  console.log('[ProtectedRoute] User authenticated and has premium access. Rendering children.');
+  console.log('[ProtectedRoute] User authenticated. Rendering children.');
   return children;
 };

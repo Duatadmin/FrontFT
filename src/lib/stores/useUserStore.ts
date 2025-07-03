@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
-import { getStripe } from '@/lib/stripe';
 import type { User } from '@supabase/supabase-js';
 
 export interface UserState {
@@ -60,71 +59,30 @@ export const useUserStore = create<UserState>()(
         
         const { data: { session }, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) {
-          console.error('[useUserStore] Login error:', error);
-          set({ error: error.message, isLoading: false });
+          console.error('[useUserStore] Login error details:', {
+            message: error.message,
+            status: error.status,
+            name: error.name,
+            cause: error.cause
+          });
+          
+          // Provide more specific error messages
+          let userFriendlyError = error.message;
+          if (error.message.includes('Invalid login credentials')) {
+            userFriendlyError = 'Invalid email or password. Please check your credentials.';
+          } else if (error.message.includes('Email not confirmed')) {
+            userFriendlyError = 'Please check your email and confirm your account before logging in.';
+          } else if (error.status === 400) {
+            userFriendlyError = 'Login failed. Please check your email and password.';
+          }
+          
+          set({ error: userFriendlyError, isLoading: false });
           return;
         }
 
-        console.log('[useUserStore] Login successful, checking user status...');
-        console.log('[useUserStore] Full user object:', session?.user);
-        console.log('[useUserStore] User metadata:', session?.user.user_metadata);
-        console.log('[useUserStore] App metadata:', session?.user.app_metadata);
-        
-        // Check multiple possible locations for banned_until
-        const userMetadataBanned = (session?.user.user_metadata as any)?.banned_until;
-        const appMetadataBanned = (session?.user.app_metadata as any)?.banned_until;
-        const rawUserBanned = (session?.user as any)?.banned_until;
-        
-        // Use the first available banned_until value
-        const bannedUntil = userMetadataBanned || appMetadataBanned || rawUserBanned;
-        const banned = bannedUntil && new Date(bannedUntil) > new Date();
-        
-        console.log('[useUserStore] bannedUntil from user_metadata:', userMetadataBanned);
-        console.log('[useUserStore] bannedUntil from app_metadata:', appMetadataBanned);
-        console.log('[useUserStore] bannedUntil from raw user:', rawUserBanned);
-        console.log('[useUserStore] Final bannedUntil:', bannedUntil);
-        console.log('[useUserStore] User is banned:', banned);
-
-        if (banned) {
-          console.log('[useUserStore] User is banned, initiating checkout...');
-          try {
-            console.log('[useUserStore] Calling create-checkout-session function...');
-            const { data, error } = await supabase.functions.invoke(
-              'create-checkout-session',
-              { body: { user_id: session!.user.id } }
-            );
-            
-            console.log('[useUserStore] Checkout session response:', { data, error });
-            
-            if (error) {
-              console.error('[useUserStore] Edge function error:', error);
-              throw error;
-            }
-            
-            if (!data?.sessionId) {
-              console.error('[useUserStore] No session ID received:', data);
-              throw new Error('No session ID received from checkout');
-            }
-            
-            console.log('[useUserStore] Redirecting to Stripe checkout...');
-            const stripe = await getStripe();
-            const result = await stripe.redirectToCheckout({ sessionId: data.sessionId });
-            
-            if (result.error) {
-              console.error('[useUserStore] Stripe redirect error:', result.error);
-              throw result.error;
-            }
-          } catch (checkoutError) {
-            console.error('[useUserStore] Checkout error:', checkoutError);
-            set({ 
-              error: `Failed to initiate checkout: ${checkoutError instanceof Error ? checkoutError.message : 'Unknown error'}`, 
-              isLoading: false 
-            });
-          }
-        } else {
-          console.log('[useUserStore] User is not banned, proceeding normally');
-          set({ isLoading: false });
-        }
+        console.log('[useUserStore] Login successful! User:', session?.user?.email);
+        // onAuthStateChange will update user/isAuthenticated automatically
+        set({ isLoading: false });
       },
 
       /* ③ logout ********************************************************* */
