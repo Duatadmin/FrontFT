@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { Check, CircleAlert, LoaderCircle, Lock, CreditCard } from 'lucide-react';
 
