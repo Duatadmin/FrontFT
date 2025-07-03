@@ -1,7 +1,7 @@
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/lib/stores/useUserStore';
-import { SubscriptionService, type SubscriptionStatus } from '@/lib/services/subscriptionService';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
 
 interface SubscriptionGateProps {
   children: ReactNode;
@@ -10,66 +10,40 @@ interface SubscriptionGateProps {
 export default function SubscriptionGate({ children }: SubscriptionGateProps) {
   const { user, isAuthenticated } = useUserStore();
   const navigate = useNavigate();
-  const [subscriptionStatus, setSubscriptionStatus] = useState<SubscriptionStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const checkSubscription = async () => {
+      // The ProtectedRoute component will handle redirection for unauthenticated users,
+      // so we just need to ensure we don't run the subscription check if there's no user.
       if (!isAuthenticated || !user) {
-        console.log('[SubscriptionGate] User not authenticated');
-        setIsLoading(false);
         return;
       }
 
-      console.log('[SubscriptionGate] Checking subscription status...');
-      setIsLoading(true);
-      
+      console.log('[SubscriptionGate] Checking subscription status in the background...');
+
       try {
         const status = await SubscriptionService.checkSubscriptionStatus(user);
-        console.log('[SubscriptionGate] Subscription status:', status);
-        setSubscriptionStatus(status);
+        console.log('[SubscriptionGate] Background subscription check status:', status);
+
+        // If the subscription is not active, then we redirect.
+        if (!status.isActive) {
+          console.log('[SubscriptionGate] Subscription inactive. Redirecting...');
+          navigate('/subscription-required', { replace: true });
+        }
       } catch (error) {
         console.error('[SubscriptionGate] Error checking subscription:', error);
-        setSubscriptionStatus({
-          isActive: false,
-          status: 'unknown',
-          error: 'Failed to check subscription status'
-        });
-      } finally {
-        setIsLoading(false);
+        // On error, we'll redirect to the subscription page as a fallback.
+        console.log('[SubscriptionGate] Error during background check. Redirecting...');
+        navigate('/subscription-required', { replace: true });
       }
     };
 
     checkSubscription();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, navigate]);
 
-  // If not authenticated, redirect to login
-  if (!isAuthenticated) {
-    console.log('[SubscriptionGate] Redirecting to login - not authenticated');
-    navigate('/login', { replace: true });
-    return null;
-  }
-
-  // Show loading state while checking subscription
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Checking subscription status...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // If subscription check failed or user needs subscription, redirect to subscription page
-  if (!subscriptionStatus?.isActive) {
-    console.log('[SubscriptionGate] Redirecting to subscription required page');
-    navigate('/subscription-required', { replace: true });
-    return null;
-  }
-
-  // User has active subscription, render children
-  console.log('[SubscriptionGate] User has active subscription, rendering app');
+  // The gate now renders its children immediately, while the subscription
+  // check runs in the background. If the check fails, the useEffect
+  // hook above will handle the redirection.
+  console.log('[SubscriptionGate] Rendering children while subscription check runs in background.');
   return <>{children}</>;
 }

@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
 
@@ -33,21 +34,26 @@ export default function CheckoutSuccessPage() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4">
-      <div className="relative z-10 w-full max-w-[440px] rounded-[12px] bg-[#1d1d1d] p-8 shadow-xl shadow-orange-700/15">
-        <div className="flex flex-col items-center text-center">
-          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-900/50 mb-4 border border-green-700">
-            <CheckCircle2 className="h-10 w-10 text-green-400" />
+            <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.3, ease: 'easeOut' }}
+        className="relative z-10 w-full max-w-[480px] rounded-2xl border border-white/10 bg-white/5 p-8 shadow-2xl shadow-black/40 backdrop-blur-xl"
+      >
+                <div className="flex flex-col items-center text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full border border-green-500/30 bg-green-500/10 mb-5">
+                        <CheckCircle2 className="h-10 w-10 text-green-400" />
           </div>
-          <h1 className="text-3xl font-bold text-white">Payment Successful!</h1>
-          <p className="text-neutral-400 mt-2">
+                    <h1 className="font-title text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-br from-white to-neutral-300">Payment Successful!</h1>
+                    <p className="text-neutral-300 mt-3 text-lg">
             Your subscription is now active. You will be redirected shortly.
           </p>
-          <div className="mt-6 flex items-center justify-center text-neutral-500">
-            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                    <div className="mt-8 flex items-center justify-center text-neutral-400">
+                        <LoaderCircle className="mr-3 h-5 w-5 animate-spin" />
             Redirecting...
           </div>
-        </div>
-      </div>
+                </div>
+      </motion.div>
     </div>
   );
 }
