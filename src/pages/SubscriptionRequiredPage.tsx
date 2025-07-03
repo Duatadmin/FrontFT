@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Alert } from '@/components/ui/Alert';
 import { Check, CircleAlert, LoaderCircle, Lock, CreditCard } from 'lucide-react';
 
 export default function SubscriptionRequiredPage() {
@@ -51,72 +49,72 @@ export default function SubscriptionRequiredPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <Card className="shadow-lg">
-          <CardHeader className="text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-primary/10 mb-4">
-              <Lock className="h-6 w-6 text-primary" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Subscription Required</CardTitle>
-            <CardDescription className="text-muted-foreground">
-              Unlock all features by subscribing to our premium plan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="bg-muted/50 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-foreground mb-3">Premium Access Includes:</h3>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-3" />
-                  Full access to all workout programs
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-3" />
-                  Advanced analytics and progress tracking
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-3" />
-                  Priority email and chat support
-                </li>
-                <li className="flex items-center">
-                  <Check className="h-4 w-4 text-green-500 mr-3" />
-                  Exclusive access to new features
-                </li>
-              </ul>
-            </div>
+    <div className="min-h-screen w-full flex items-center justify-center p-4">
+      <div className="relative z-10 w-full max-w-[440px] rounded-[12px] bg-[#1d1d1d] p-8 shadow-xl shadow-orange-700/15">
+        <div className="mb-6 flex flex-col items-center gap-2 text-center">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-white/10 mb-4">
+            <Lock className="h-6 w-6 text-[#ff6700]" />
+          </div>
+          <h1 className="text-3xl font-bold text-white">Subscription Required</h1>
+          <p className="text-neutral-400">
+            Unlock all features by subscribing to our premium plan.
+          </p>
+        </div>
 
-            {error && (
-              <Alert variant="destructive">
-                <CircleAlert className="h-4 w-4" />
-                <p>{error}</p>
-              </Alert>
+        <div className="space-y-6">
+          <div className="bg-white/5 rounded-lg p-4">
+            <h3 className="text-lg font-semibold text-white mb-3">Premium Access Includes:</h3>
+            <ul className="space-y-2 text-sm text-neutral-300">
+              <li className="flex items-center">
+                <Check className="h-4 w-4 text-green-500 mr-3" />
+                Full access to all workout programs
+              </li>
+              <li className="flex items-center">
+                <Check className="h-4 w-4 text-green-500 mr-3" />
+                Advanced analytics and progress tracking
+              </li>
+              <li className="flex items-center">
+                <Check className="h-4 w-4 text-green-500 mr-3" />
+                Priority email and chat support
+              </li>
+              <li className="flex items-center">
+                <Check className="h-4 w-4 text-green-500 mr-3" />
+                Exclusive access to new features
+              </li>
+            </ul>
+          </div>
+
+          {error && (
+            <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-3 rounded-lg text-sm flex items-center">
+              <CircleAlert className="h-4 w-4 mr-3" />
+              <p>{error}</p>
+            </div>
+          )}
+
+          <Button 
+            onClick={handleSubscribe} 
+            disabled={isLoading} 
+            className="w-full font-semibold bg-[#ff6700] hover:bg-[#e65c00] text-white transition-colors duration-200"
+            style={{ borderRadius: '8px' }}
+            size="lg"
+          >
+            {isLoading ? (
+              <>
+                <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <CreditCard className="mr-2 h-4 w-4" />
+                Upgrade to Premium
+              </>
             )}
+          </Button>
 
-            <Button 
-              onClick={handleSubscribe} 
-              disabled={isLoading} 
-              className="w-full font-semibold"
-              size="lg"
-            >
-              {isLoading ? (
-                <>
-                  <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Upgrade to Premium
-                </>
-              )}
-            </Button>
-
-            <p className="text-xs text-center text-muted-foreground">
-              Secure payment processing by Stripe
-            </p>
-          </CardContent>
-        </Card>
+          <p className="text-xs text-center text-neutral-500">
+            Secure payment processing by Stripe
+          </p>
+        </div>
       </div>
     </div>
   );

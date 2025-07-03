@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabase';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
+
 import { CheckCircle2, LoaderCircle } from 'lucide-react';
 
 export default function CheckoutSuccessPage() {
@@ -32,25 +32,21 @@ export default function CheckoutSuccessPage() {
   }, [navigate]);
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-background p-4">
-      <div className="w-full max-w-md">
-        <Card className="shadow-lg">
-          <CardHeader className="text-center items-center">
-            <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-              <CheckCircle2 className="h-10 w-10 text-green-600" />
-            </div>
-            <CardTitle className="text-2xl font-bold">Payment Successful!</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <p className="text-muted-foreground">
-              Your subscription is now active. You will be redirected shortly.
-            </p>
-            <div className="flex items-center justify-center text-muted-foreground">
-              <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
-              Redirecting...
-            </div>
-          </CardContent>
-        </Card>
+    <div className="min-h-screen w-full flex items-center justify-center p-4">
+      <div className="relative z-10 w-full max-w-[440px] rounded-[12px] bg-[#1d1d1d] p-8 shadow-xl shadow-orange-700/15">
+        <div className="flex flex-col items-center text-center">
+          <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-900/50 mb-4 border border-green-700">
+            <CheckCircle2 className="h-10 w-10 text-green-400" />
+          </div>
+          <h1 className="text-3xl font-bold text-white">Payment Successful!</h1>
+          <p className="text-neutral-400 mt-2">
+            Your subscription is now active. You will be redirected shortly.
+          </p>
+          <div className="mt-6 flex items-center justify-center text-neutral-500">
+            <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />
+            Redirecting...
+          </div>
+        </div>
       </div>
     </div>
   );
