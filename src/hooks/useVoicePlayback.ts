@@ -73,6 +73,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   }
 
   const OGG_OPUS_MIME = 'audio/ogg; codecs="opus"';
+  const WEBM_OPUS_MIME = 'audio/webm; codecs="opus"';
+  const MP4_AAC_MIME = 'audio/mp4; codecs="mp4a.40.2"';
   
   console.log('[TTS] About to calculate MediaSource capabilities...');
   // Enhanced MediaSource support detection for mobile compatibility (direct calculation)
