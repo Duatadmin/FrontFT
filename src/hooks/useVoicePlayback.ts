@@ -75,9 +75,9 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const OGG_OPUS_MIME = 'audio/ogg; codecs="opus"';
   
   console.log('[TTS] About to calculate MediaSource capabilities...');
-  // Enhanced MediaSource support detection for mobile compatibility (memoized)
-  const mediaSourceCapabilities = useMemo(() => {
-    console.log('[TTS] Inside useMemo - calculating MediaSource capabilities');
+  // Enhanced MediaSource support detection for mobile compatibility (direct calculation)
+  const calculateMediaSourceCapabilities = () => {
+    console.log('[TTS] Calculating MediaSource capabilities directly');
     const MediaSourceConstructor = getManagedMediaSource();
     
     if (!MediaSourceConstructor) {
@@ -122,7 +122,9 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       isManagedMediaSource,
       constructor: MediaSourceConstructor
     };
-  }, [FORCE_DEBUG_RECALC]); // Include debug flag to force recalculation
+  };
+  
+  const mediaSourceCapabilities = calculateMediaSourceCapabilities();
 
   useEffect(() => {
     localStorage.setItem('voiceEnabled', JSON.stringify(voiceEnabled));
