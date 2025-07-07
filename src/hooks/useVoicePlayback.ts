@@ -1,6 +1,6 @@
 console.log('[TTS Module] useVoicePlayback.ts module loaded');
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { supportsMediaSource } from '../lib/supportsMediaSource';
+import { supportsMediaSource, getManagedMediaSource, canUseStreamingAudio } from '../lib/supportsMediaSource';
 
 const TTS_BASE_URL = 'https://ftvoiceservice-production-6960.up.railway.app/tts/v1/tts';
 const VOICE_ENABLED_KEY = 'voiceEnabled';
@@ -66,22 +66,126 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   }
 
   const OGG_OPUS_MIME = 'audio/ogg; codecs="opus"';
-  const oggMseSupported = (() => {
-    if (typeof window === 'undefined' || !('MediaSource' in window)) return false;
-    try {
-      const isMediaSourceSupported = MediaSource.isTypeSupported?.(OGG_OPUS_MIME);
-      // For MediaSource streaming, MediaSource.isTypeSupported is the definitive check.
-      // The canPlayType check is more for direct <audio src> playback and can be unreliable for MSE.
-      return !!isMediaSourceSupported;
-    } catch (e) {
-      console.error('Error checking Ogg/Opus MSE support:', e);
-      return false;
+  
+  // Enhanced MediaSource support detection for mobile compatibility
+  const mediaSourceCapabilities = (() => {
+    const MediaSourceConstructor = getManagedMediaSource();
+    
+    if (!MediaSourceConstructor) {
+      console.log('[TTS] No MediaSource API available - will use progressive download fallback');
+      return {
+        hasMediaSource: false,
+        canStreamOggOpus: false,
+        isManagedMediaSource: false,
+        constructor: null
+      };
     }
+    
+    const isManagedMediaSource = window.ManagedMediaSource && MediaSourceConstructor === window.ManagedMediaSource;
+    const canStreamOggOpus = canUseStreamingAudio(OGG_OPUS_MIME);
+    
+    console.log(`[TTS] MediaSource capabilities: ${isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource'}, Ogg/Opus streaming: ${canStreamOggOpus}`);
+    
+    return {
+      hasMediaSource: true,
+      canStreamOggOpus,
+      isManagedMediaSource,
+      constructor: MediaSourceConstructor
+    };
   })();
 
   useEffect(() => {
     localStorage.setItem('voiceEnabled', JSON.stringify(voiceEnabled));
   }, [voiceEnabled]);
+
+  // Mobile browser detection utility
+  const isMobileBrowser = useCallback(() => {
+    if (typeof window === 'undefined') return false;
+    
+    const userAgent = navigator.userAgent.toLowerCase();
+    const isMobile = /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent);
+    const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    return isMobile || isTouch;
+  }, []);
+
+  // Enhanced audio context unlock for mobile browsers
+  const unlockAudioContext = useCallback(async (): Promise<boolean> => {
+    if (!audioPlayerRef.current) return false;
+    
+    const audio = audioPlayerRef.current;
+    
+    try {
+      console.log('[TTS] Attempting to unlock audio context via user gesture...');
+      
+      // Create a silent play attempt to unlock the audio context
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        await playPromise;
+        audio.pause();
+        audio.currentTime = 0;
+        console.log('[TTS] Audio context successfully unlocked');
+        return true;
+      } else {
+        // Fallback for browsers that don't return a promise
+        audio.pause();
+        audio.currentTime = 0;
+        console.log('[TTS] Audio unlock attempted (no promise returned)');
+        return true;
+      }
+    } catch (error: any) {
+      if (error.name === 'NotAllowedError') {
+        console.warn('[TTS] Audio unlock failed: User gesture required');
+        return false;
+      } else if (error.name === 'AbortError') {
+        console.log('[TTS] Audio unlock: Expected AbortError from immediate pause');
+        return true;
+      } else {
+        console.warn('[TTS] Audio unlock failed with unexpected error:', error);
+        return false;
+      }
+    }
+  }, []);
+
+  // Progressive download fallback for browsers without MediaSource support
+  const playWithProgressiveDownload = useCallback(async (response: Response, audio: HTMLAudioElement, textToPlay: string) => {
+    console.log('[TTS] Using progressive download fallback');
+    try {
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      audio.src = blobUrl;
+
+      const cleanup = () => {
+        URL.revokeObjectURL(blobUrl);
+        audio.onerror = null;
+        audio.onended = null;
+      };
+
+      audio.onended = () => {
+        console.log('[TTS] Audio playback ended successfully (Progressive download)');
+        cleanup();
+        setIsPlaying(false);
+        setCurrentRequestId(null);
+        setQueue(prev => prev.slice(1));
+      };
+      
+      audio.onerror = (e) => {
+        console.error('[TTS] Audio playback error (Progressive download):', e);
+        cleanup();
+        setIsPlaying(false);
+        setCurrentRequestId(null);
+        setQueue(prev => prev.slice(1));
+      };
+
+      await audio.play();
+    } catch (error) {
+      console.error('[TTS] Progressive download error:', error);
+      setIsPlaying(false);
+      setCurrentRequestId(null);
+      setQueue(prev => prev.slice(1));
+    }
+  }, []);
 
   const playNext = useCallback(async () => {
     console.log('[TTS] playNext called. Queue length:', queue.length, 'Voice enabled:', voiceEnabled);
@@ -148,25 +252,34 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       audio.onended = null;
       audio.onloadeddata = null;
 
-      if (!supportsMediaSource()) {
-        console.warn('[TTS] MediaSource API not supported. Streaming audio will be disabled.');
-        setIsPlaying(false);
-        setCurrentRequestId(null);
-        setQueue(prev => prev.slice(1));
-        if (audioPlayerRef.current) {
-          audioPlayerRef.current.onerror = null;
-          audioPlayerRef.current.onended = null;
-          audioPlayerRef.current.src = '';
-        }
+      // Determine playback strategy based on browser capabilities
+      if (!mediaSourceCapabilities.hasMediaSource) {
+        console.log('[TTS] Using progressive download fallback (no MediaSource support)');
+        await playWithProgressiveDownload(response, audio, textToPlay);
         return;
       }
 
-      if (oggMseSupported) {
-        // Branch 1: Real-time streaming for compatible browsers (e.g., modern Safari)
-        console.log('[TTS] Ogg/Opus with MediaSource is supported. Using low-latency streaming path.');
-        mediaSourceRef.current = new MediaSource();
+      if (mediaSourceCapabilities.canStreamOggOpus) {
+        // Branch 1: Real-time streaming for compatible browsers
+        const msType = mediaSourceCapabilities.isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource';
+        console.log(`[TTS] Using ${msType} streaming with Ogg/Opus support`);
+        
+        mediaSourceRef.current = new mediaSourceCapabilities.constructor!();
         audio.src = URL.createObjectURL(mediaSourceRef.current);
         oggPageBufferRef.current = new Uint8Array(0); // Initialize Ogg page buffer
+
+        // Add ManagedMediaSource specific event listeners for iOS Safari 17+
+        if (mediaSourceCapabilities.isManagedMediaSource) {
+          const managedMS = mediaSourceRef.current as ManagedMediaSource;
+          
+          managedMS.addEventListener('startstreaming', () => {
+            console.log('[TTS] ManagedMediaSource: Start streaming event');
+          });
+          
+          managedMS.addEventListener('endstreaming', () => {
+            console.log('[TTS] ManagedMediaSource: End streaming event - pause processing');
+          });
+        }
 
         mediaSourceRef.current.addEventListener('sourceopen', async () => {
           if (!mediaSourceRef.current || mediaSourceRef.current.readyState !== 'open') return;
@@ -259,30 +372,10 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           setQueue(prev => prev.slice(1));
         };
       } else {
-        // Branch 2: Progressive download for incompatible browsers (e.g., Chrome)
-        console.log('[TTS] Ogg/Opus with MediaSource not supported. Falling back to progressive download.');
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        audio.src = blobUrl;
-
-        const cleanup = () => {
-          URL.revokeObjectURL(blobUrl);
-          audio.onerror = null;
-          audio.onended = null;
-        };
-
-        audio.onended = () => {
-          console.log('[TTS] Audio playback ended successfully (Fallback path)');
-          cleanup();
-          setIsPlaying(false); setCurrentRequestId(null);
-          setQueue(prev => prev.slice(1));
-        };
-        audio.onerror = (e) => {
-          console.error('[TTS] Audio playback error (Fallback path):', e);
-          cleanup();
-          setIsPlaying(false); setCurrentRequestId(null);
-          setQueue(prev => prev.slice(1));
-        };
+        // Branch 2: Progressive download for browsers without Ogg/Opus streaming support
+        console.log('[TTS] MediaSource available but Ogg/Opus streaming not supported. Using progressive download.');
+        await playWithProgressiveDownload(response, audio, textToPlay);
+        return;
       }
 
       try {
@@ -317,7 +410,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         setQueue(prev => prev.slice(1));
       }
     }
-  }, [queue, voiceEnabled, oggMseSupported]);
+  }, [queue, voiceEnabled, playWithProgressiveDownload]);
 
   const stopCurrentPlayback = useCallback(async (calledByToggleOff = false) => {
     if (abortControllerRef.current) {
@@ -367,55 +460,50 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     // and calledByToggleOff is false (e.g. navigating away)
   }, [currentRequestId]);
 
-  const toggleVoice = useCallback(() => {
+  const toggleVoice = useCallback(async () => {
     const newVoiceEnabled = !voiceEnabled;
     setVoiceEnabled(newVoiceEnabled);
     localStorage.setItem(VOICE_ENABLED_KEY, JSON.stringify(newVoiceEnabled));
 
     if (newVoiceEnabled) {
-      // Attempt to unlock audio when voice is enabled
-      if (audioPlayerRef.current) {
-        const playPromise = audioPlayerRef.current.play();
-        if (playPromise !== undefined) {
-          playPromise
-            .then(() => {
-              audioPlayerRef.current?.pause(); // Pause immediately after unlocking
-              console.log('[TTS] Audio context likely unlocked by toggle.');
-              // If queue has items and not already playing, start
-              if (queue.length > 0 && !isPlaying) {
-                console.log('[TTS] Voice toggled on, queue has items, starting playNext after unlock attempt.');
-                playNext();
-              }
-            })
-            .catch(err => {
-              if (err.name === 'AbortError') {
-                console.info('[TTS] Audio unlock attempt (play then pause) resulted in an expected AbortError. Playback will proceed via playNext if items are in queue.');
-              } else {
-                console.warn('[TTS] Failed to unlock audio via toggle (unexpected error), play will be attempted by playNext:', err);
-              }
-              // If unlock attempt fails (for any reason), and conditions are still met, try to playNext.
-              // This ensures that even if the explicit unlock logs an error, the queue processing continues.
-              if (queue.length > 0 && !isPlaying) {
-                playNext();
-              }
-            });
-        } else {
-          // Fallback if play() doesn't return a promise (older browsers) or if audioPlayerRef.current.play() is not available
-          // Still try to playNext if conditions are met, as the audio might be unlocked by other means or not need unlocking.
-          if (queue.length > 0 && !isPlaying) {
-            console.log('[TTS] Voice toggled on (playPromise undefined), queue has items, attempting playNext.');
-            playNext();
-          }
+      const mobile = isMobileBrowser();
+      console.log(`[TTS] Voice enabled on ${mobile ? 'mobile' : 'desktop'} browser`);
+      
+      // Enhanced mobile audio unlock
+      if (mobile && audioPlayerRef.current) {
+        console.log('[TTS] Mobile browser detected - attempting audio context unlock');
+        const unlocked = await unlockAudioContext();
+        
+        if (!unlocked) {
+          console.warn('[TTS] Failed to unlock audio context - TTS may not work until user interacts with audio');
         }
-      } else if (queue.length > 0 && !isPlaying) {
-        // Audio player not yet available, but queue has items. playNext will be called by useEffect.
-        console.log('[TTS] Voice toggled on (audio player not ready), queue has items. Effect will call playNext.');
+      } else if (audioPlayerRef.current) {
+        // Desktop browser - simple unlock attempt
+        try {
+          const playPromise = audioPlayerRef.current.play();
+          if (playPromise !== undefined) {
+            await playPromise;
+            audioPlayerRef.current.pause();
+            audioPlayerRef.current.currentTime = 0;
+            console.log('[TTS] Desktop audio context unlocked');
+          }
+        } catch (err) {
+          console.log('[TTS] Desktop audio unlock attempt completed with expected error:', err);
+        }
       }
-    } else { // Voice is being disabled
-      stopCurrentPlayback(true); // Pass true to indicate it's due to toggle off
-      setQueue([]); // Clear queue when disabling voice
+
+      // Start playing queued items if available
+      if (queue.length > 0 && !isPlaying) {
+        console.log('[TTS] Voice enabled with queued items - starting playback');
+        playNext();
+      }
+    } else {
+      // Voice is being disabled
+      console.log('[TTS] Voice disabled - stopping playback and clearing queue');
+      stopCurrentPlayback(true);
+      setQueue([]);
     }
-  }, [voiceEnabled, stopCurrentPlayback, queue, isPlaying, playNext]);
+  }, [voiceEnabled, stopCurrentPlayback, queue, isPlaying, playNext, isMobileBrowser, unlockAudioContext]);
 
   const enqueueBotUtterance = useCallback((text: string, messageId: string) => {
     if (!voiceEnabled || playedIds.has(messageId)) {

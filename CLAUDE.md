@@ -10,7 +10,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run test` - Run tests with Vitest
 - `npm run serve:api` - Start backend API server with ts-node
 - `npm run build:api` - Build API server for production
-- `npm run build:legacy-voice` - Build legacy voice module
+- `npm run build:legacy-voice` - Build legacy voice module (requires yarn in legacy/voice-module/)
+- `npm run start` - Serve production build (for deployment)
+- `npm run start:api:prod` - Start production API server
 
 ## Project Architecture
 
@@ -80,18 +82,25 @@ Required environment variables:
 - `VITE_SUPABASE_URL` - Supabase project URL
 - `VITE_SUPABASE_ANON_KEY` - Supabase anonymous key
 - `VITE_USE_MOCK_DATA` - Force mock data usage (optional)
+- `VITE_STRIPE_PUBLISHABLE_KEY` - Stripe publishable key for payments
+- `VITE_WALKIE_HOOK_WS_URL` - WebSocket URL for voice features
+- `VITE_ASR_WS_URL` - WebSocket URL for automatic speech recognition
+- `VITE_CF_IMG_BASE` - Cloudflare image delivery base URL
 
 ### Development Notes
 
 **Testing Strategy**:
 - Component tests in `src/**/*.{test,spec}.ts(x)`
 - Mock implementations in `src/mocks/`
-- Vitest configured with jsdom environment
+- Vitest configured with jsdom environment in vite.config.ts
+- Notable test files: `useWalkie.spec.ts`, `WalkieWS.test.ts`, `ChatInput.test.tsx`
 
 **Build Configuration**:
 - Vite with React plugin and PWA capabilities
 - Path aliases: `@/*` maps to `src/*`
 - Legacy voice module requires separate Yarn build process
+- Service worker configured via vite-plugin-pwa
+- Proxy configuration for /api/tts requests to localhost:3001
 
 **Code Patterns**:
 - TypeScript strict mode throughout
@@ -113,3 +122,45 @@ The app is designed to integrate with a FastAPI backend:
 - Installable app manifest
 - Background sync capabilities (placeholder)
 - Push notification ready (future enhancement)
+
+### Key Architectural Patterns
+
+**Data Flow & State Management**:
+- Dual store approach: modern stores in `src/lib/stores/` and legacy in `src/store/`
+- Hybrid data strategy: Real Supabase data with automatic mock fallback
+- SWR for API caching and revalidation
+- Zustand with persist middleware for state persistence
+
+**Authentication & Authorization**:
+- Supabase auth with session management in `useUserStore`
+- Protected routes with subscription gates
+- Auth state synchronized across components via onAuthStateChange
+
+**Voice Integration Architecture**:
+- Modern implementation in `src/components/voice/` and `src/hooks/useWalkie.ts`
+- Legacy voice module in `legacy/voice-module/` with separate build process
+- WebSocket-based real-time voice streaming via `WalkieWS` service
+- AudioWorklet for low-latency audio processing
+
+**Component Architecture**:
+- Route-based code splitting with lazy loading
+- Chakra UI + Tailwind CSS hybrid styling approach
+- Mobile-first responsive design patterns
+- Error boundaries for robust error handling
+
+### Common Development Patterns
+
+**Database Integration**:
+- Use `getCurrentUserId()` from supabase client for user-scoped queries
+- All data services implement mock fallback (check `VITE_USE_MOCK_DATA`)
+- Typed database schema in `src/lib/supabase/schema.types.ts`
+
+**API Service Pattern**:
+- Services in `src/services/` handle external API communication
+- `apiService.ts` for REST endpoints, `WalkieWS.ts` for WebSocket connections
+- Error handling with toast notifications via `src/lib/utils/toast.ts`
+
+**Testing Approach**:
+- Component tests use Testing Library with jsdom
+- Service tests mock WebSocket and API calls
+- Snapshot testing for UI components
