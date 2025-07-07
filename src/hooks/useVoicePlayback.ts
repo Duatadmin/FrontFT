@@ -9,6 +9,7 @@ const VOICE_ENABLED_KEY = 'voiceEnabled';
 const FORCE_PROGRESSIVE_FALLBACK = false; // Set to true to force fallback, false for original logic
 const FORCE_STREAMING_MODE = false; // Set to true to force streaming even if codec detection fails
 const DEBUG_STREAMING = true; // Enable detailed streaming debug logs
+const FORCE_DEBUG_RECALC = true; // Force recalculation of capabilities to see debug output
 
 interface UseVoicePlayback {
   voiceEnabled: boolean;
@@ -19,6 +20,7 @@ interface UseVoicePlayback {
 }
 
 export const useVoicePlayback = (): UseVoicePlayback => {
+  console.log('[TTS Module] useVoicePlayback hook initialized');
   const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false);
   const [queue, setQueue] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
@@ -72,8 +74,10 @@ export const useVoicePlayback = (): UseVoicePlayback => {
 
   const OGG_OPUS_MIME = 'audio/ogg; codecs="opus"';
   
+  console.log('[TTS] About to calculate MediaSource capabilities...');
   // Enhanced MediaSource support detection for mobile compatibility (memoized)
   const mediaSourceCapabilities = useMemo(() => {
+    console.log('[TTS] Inside useMemo - calculating MediaSource capabilities');
     const MediaSourceConstructor = getManagedMediaSource();
     
     if (!MediaSourceConstructor) {
@@ -118,7 +122,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       isManagedMediaSource,
       constructor: MediaSourceConstructor
     };
-  }, []); // Empty dependency array - only calculate once
+  }, [FORCE_DEBUG_RECALC]); // Include debug flag to force recalculation
 
   useEffect(() => {
     localStorage.setItem('voiceEnabled', JSON.stringify(voiceEnabled));
