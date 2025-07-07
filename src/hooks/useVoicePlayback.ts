@@ -1,9 +1,14 @@
 console.log('[TTS Module] useVoicePlayback.ts module loaded');
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supportsMediaSource, getManagedMediaSource, canUseStreamingAudio } from '../lib/supportsMediaSource';
 
 const TTS_BASE_URL = 'https://ftvoiceservice-production-6960.up.railway.app/tts/v1/tts';
 const VOICE_ENABLED_KEY = 'voiceEnabled';
+
+// Debug flags to control TTS behavior
+const FORCE_PROGRESSIVE_FALLBACK = false; // Set to true to force fallback, false for original logic
+const FORCE_STREAMING_MODE = false; // Set to true to force streaming even if codec detection fails
+const DEBUG_STREAMING = true; // Enable detailed streaming debug logs
 
 interface UseVoicePlayback {
   voiceEnabled: boolean;
@@ -67,8 +72,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
 
   const OGG_OPUS_MIME = 'audio/ogg; codecs="opus"';
   
-  // Enhanced MediaSource support detection for mobile compatibility
-  const mediaSourceCapabilities = (() => {
+  // Enhanced MediaSource support detection for mobile compatibility (memoized)
+  const mediaSourceCapabilities = useMemo(() => {
     const MediaSourceConstructor = getManagedMediaSource();
     
     if (!MediaSourceConstructor) {
@@ -82,9 +87,30 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     }
     
     const isManagedMediaSource = window.ManagedMediaSource && MediaSourceConstructor === window.ManagedMediaSource;
-    const canStreamOggOpus = canUseStreamingAudio(OGG_OPUS_MIME);
+    
+    // Enhanced debugging for streaming capability detection
+    let canStreamOggOpus = false;
+    try {
+      if (FORCE_PROGRESSIVE_FALLBACK) {
+        console.log('[TTS] FORCE_PROGRESSIVE_FALLBACK is enabled - forcing fallback mode');
+        canStreamOggOpus = false;
+      } else if (FORCE_STREAMING_MODE) {
+        console.log('[TTS] FORCE_STREAMING_MODE is enabled - forcing streaming mode');
+        canStreamOggOpus = true;
+      } else {
+        canStreamOggOpus = canUseStreamingAudio(OGG_OPUS_MIME);
+        if (DEBUG_STREAMING) {
+          console.log(`[TTS] MediaSource.isTypeSupported('${OGG_OPUS_MIME}'): ${MediaSourceConstructor.isTypeSupported?.(OGG_OPUS_MIME)}`);
+          console.log(`[TTS] canUseStreamingAudio result: ${canStreamOggOpus}`);
+        }
+      }
+    } catch (e) {
+      console.error('[TTS] Error checking streaming audio support:', e);
+      canStreamOggOpus = false;
+    }
     
     console.log(`[TTS] MediaSource capabilities: ${isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource'}, Ogg/Opus streaming: ${canStreamOggOpus}`);
+    console.log(`[TTS] Will use: ${canStreamOggOpus ? 'STREAMING' : 'PROGRESSIVE DOWNLOAD'}`);
     
     return {
       hasMediaSource: true,
@@ -92,7 +118,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       isManagedMediaSource,
       constructor: MediaSourceConstructor
     };
-  })();
+  }, []); // Empty dependency array - only calculate once
 
   useEffect(() => {
     localStorage.setItem('voiceEnabled', JSON.stringify(voiceEnabled));

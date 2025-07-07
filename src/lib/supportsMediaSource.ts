@@ -15,7 +15,26 @@ export const canUseStreamingAudio = (mimeType: string = 'audio/ogg; codecs="opus
   if (!MediaSourceConstructor) return false;
   
   try {
-    return MediaSourceConstructor.isTypeSupported?.(mimeType) ?? false;
+    const isSupported = MediaSourceConstructor.isTypeSupported?.(mimeType) ?? false;
+    
+    // Debug: Check various audio formats that might be supported
+    if (!isSupported) {
+      console.log('[MediaSource] Testing alternative audio formats:');
+      const formats = [
+        'audio/mp4; codecs="mp4a.40.2"',
+        'audio/webm; codecs="opus"', 
+        'audio/mpeg',
+        'audio/mp4',
+        'audio/webm'
+      ];
+      
+      formats.forEach(format => {
+        const supported = MediaSourceConstructor.isTypeSupported?.(format) ?? false;
+        console.log(`[MediaSource] ${format}: ${supported}`);
+      });
+    }
+    
+    return isSupported;
   } catch (e) {
     console.warn('[MediaSource] Error checking type support:', e);
     return false;
