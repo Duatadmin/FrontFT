@@ -35,15 +35,14 @@ export function useWalkie(options: UseWalkieOptions): {
     errorMessage: null,
   });
 
-  const micLocked = useRef<boolean>(false);
+  // Mic locking removed - all audio will be sent continuously
   const frameCount = useRef<number>(0);
   // sidRef is now passed to start method, so not needed as a ref here for that purpose.
   const walkieWSInstanceRef = useRef<WalkieWS | null>(null);
   const recorderInstanceRef = useRef<RecorderHandle | null>(null);
   const currentSessionIdRef = useRef<string | null>(null);
   
-  // Mute timer management (per backend API spec)
-  const muteTimerRef = useRef<NodeJS.Timeout | null>(null);
+  // Mute timer removed - no client-side muting
 
   const handleInternalError = useCallback((error: Error, context: string) => {
     console.error(`Error ${context}:`, error);
@@ -58,53 +57,13 @@ export function useWalkie(options: UseWalkieOptions): {
     }
   }, [onError]);
 
-  const handleControlCommand = useCallback((cmd: 'mute' | 'unmute', durationMs?: number, source: 'ctrl' | 'audio-fallback' = 'ctrl') => {
-    if (cmd === 'mute') {
-      console.log(`[useWalkie] Processing MUTE command from ${source}:`, { cmd, durationMs });
-      
-      // Clear any existing mute timer
-      if (muteTimerRef.current) {
-        clearTimeout(muteTimerRef.current);
-        muteTimerRef.current = null;
-      }
-      
-      // Mute the microphone
-      micLocked.current = true;
-      
-      // Set auto-unmute timer if duration is specified (per backend API spec)
-      if (durationMs && durationMs > 0) {
-        console.log(`[useWalkie] Setting auto-unmute timer for ${durationMs}ms`);
-        muteTimerRef.current = setTimeout(() => {
-          console.log('[useWalkie] Auto-unmuting after timeout');
-          micLocked.current = false;
-          muteTimerRef.current = null;
-        }, durationMs);
-      }
-    } else if (cmd === 'unmute') {
-      console.log(`[useWalkie] Processing UNMUTE command from ${source}:`, cmd);
-      
-      // Clear any existing mute timer
-      if (muteTimerRef.current) {
-        clearTimeout(muteTimerRef.current);
-        muteTimerRef.current = null;
-      }
-      
-      // Unmute the microphone
-      micLocked.current = false;
-    }
-  }, []);
+  // Mute/unmute handling removed - all control commands will be ignored
 
   const handleWalkieWSMessage = useCallback((message: WalkieMessage, channel: 'audio' | 'ctrl') => {
     if (typeof message === 'object' && message !== null) {
       if (channel === 'audio') {
-        // Check for control message fallback first
-        if ('type' in message && message.type === 'control' && 'data' in message) {
-          const controlMessage = message as { type: 'control'; data: { cmd: 'mute' | 'unmute'; ms?: number; [key: string]: any } };
-          console.log('[useWalkie] Processing AUDIO channel control fallback:', controlMessage);
-          handleControlCommand(controlMessage.data.cmd, controlMessage.data.ms, 'audio-fallback');
-        }
         // Handle regular transcripts
-        else if ('text' in message && typeof message.text === 'string' && 'final' in message && typeof message.final === 'boolean') {
+        if ('text' in message && typeof message.text === 'string' && 'final' in message && typeof message.final === 'boolean') {
           const transcriptMessage = {
             text: message.text,
             final: message.final,
@@ -121,10 +80,9 @@ export function useWalkie(options: UseWalkieOptions): {
           console.warn('[useWalkie] Received unexpected message on AUDIO channel:', message);
         }
       } else if (channel === 'ctrl') {
-        // Messages from control channel (primary method)
+        // Messages from control channel - ignore mute/unmute commands
         if ('cmd' in message && (message.cmd === 'mute' || message.cmd === 'unmute')) {
-          const controlMessage = message as { cmd: 'mute' | 'unmute'; ms?: number };
-          handleControlCommand(controlMessage.cmd, controlMessage.ms, 'ctrl');
+          console.log('[useWalkie] Ignoring mute/unmute command (muting disabled):', message);
         } else if ('type' in message && message.type === 'vad_status' && onVadStatusChange) {
           console.log('[useWalkie] Processing CTRL channel VAD status:', message);
           onVadStatusChange((message as { speaking: boolean; type: 'vad_status' }).speaking);
@@ -133,7 +91,7 @@ export function useWalkie(options: UseWalkieOptions): {
         }
       }
     }
-  }, [onTranscription, onVadStatusChange, handleControlCommand]);
+  }, [onTranscription, onVadStatusChange]);
 
   // Check if we're in degraded mode (audio works but control doesn't)
   const isDegradedMode = useCallback(() => {
@@ -154,11 +112,7 @@ export function useWalkie(options: UseWalkieOptions): {
   };
 
   const cleanupResources = useCallback(async () => {
-    // Clear mute timer
-    if (muteTimerRef.current) {
-      clearTimeout(muteTimerRef.current);
-      muteTimerRef.current = null;
-    }
+    // No mute timers to clear
     
     if (recorderInstanceRef.current) {
       try {
@@ -208,8 +162,7 @@ const start = useCallback(async (sessionId: string) => {
 
     setState(prevState => ({ ...prevState, status: 'connecting', errorMessage: null, isStreaming: false, level: 0 }));
     currentSessionIdRef.current = sessionId;
-    // Initialize mic as unlocked for consistent behavior across all messages
-    micLocked.current = false;
+    // No mic locking - all audio will be sent
     frameCount.current = 0;
 
     try {
@@ -262,16 +215,10 @@ await ensureMicrophonePermission();
 
       const onChunk = (pcm: Int16Array) => {
         if (walkieWSInstanceRef.current && walkieWSInstanceRef.current.isConnected()) {
-          if (!micLocked.current) {
-            // Ensure we are sending a slice of the buffer if pcm is a view
-            const bufferToSend = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength);
-            walkieWSInstanceRef.current.sendFrame(bufferToSend);
-          } else {
-            // Log when audio is blocked due to mic lock for debugging
-            if (frameCount.current % (METER_EVERY_N_FRAMES * 10) === 0) {
-              console.log('[useWalkie] Audio blocked - mic is locked');
-            }
-          }
+          // Always send audio - no mic locking
+          // Ensure we are sending a slice of the buffer if pcm is a view
+          const bufferToSend = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength);
+          walkieWSInstanceRef.current.sendFrame(bufferToSend);
         }
 
         if (frameCount.current % METER_EVERY_N_FRAMES === 0) {

@@ -1,7 +1,7 @@
 // src/components/VoiceWidget.tsx
 import React, { useRef, useState, Fragment, useEffect } from 'react';
 import { useVoice } from '../hooks/VoiceContext';
-import { useWalkie } from '../hooks/useWalkie';
+import { useWalkieV3 } from '../hooks/useWalkieV3';
 import { v4 as uuid } from 'uuid';
 import { Player } from '@lottiefiles/react-lottie-player';
 import { Mic } from 'lucide-react';
@@ -45,19 +45,22 @@ interface VoiceWidgetProps {
 const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange, isSendingRef, onRmsData }) => {
   console.log('[VoiceWidget] Initializing / Re-rendering. isChatProcessing:', isChatProcessing);
   const { voiceEnabled, toggleVoice } = useVoice();
-  const walkie = useWalkie({
-    wsUrl: import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws',
+  // Extract host from the full WebSocket URL
+  const wsUrl = import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws';
+  const wsHost = wsUrl.replace(/^wss?:\/\//, '').replace(/\/.*$/, ''); // Remove protocol and path
+  
+  const walkie = useWalkieV3({
+    wsHost,
+    mode: 'walkie', // Always-on listening mode
     recorderConfig: {
       targetSampleRate: 16000,
       mono: true,
       sepiaModulesPath: '/sepia/modules/'
     },
-    onVadStatusChange: (isSpeaking: boolean) => {
-      console.log('VAD Status changed:', isSpeaking);
-    },
-    onTranscription: (transcript: { text: string; final: boolean; type: string }) => {
+    onTranscription: (transcript: { text: string; final: boolean }) => {
       console.log('VoiceWidget received transcript:', transcript);
-      if (transcript.final && transcript.text.trim() && onFinalTranscriptCommitted) {
+      // Only final transcripts are passed through by useWalkieV3
+      if (transcript.text.trim() && onFinalTranscriptCommitted) {
         onFinalTranscriptCommitted(transcript.text);
       }
     },
@@ -114,7 +117,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
         console.log('[VoiceWidget] voiceEnabled is false, calling toggleVoice() to enable TTS.');
         toggleVoice();
       }
-      await walkie.start(newSid);
+      await walkie.start(); // V3 doesn't need session ID
       console.log('[VoiceWidget] walkie.start() called successfully.');
     } catch (e: any) {
       console.error('Failed to start walkie:', e);
