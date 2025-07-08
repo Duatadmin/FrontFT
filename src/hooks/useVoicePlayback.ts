@@ -11,7 +11,7 @@ const VOICE_ENABLED_KEY = 'voiceEnabled';
 
 // Debug flags to control TTS behavior
 const FORCE_PROGRESSIVE_FALLBACK = false; // Set to true to force fallback, false for original logic
-const FORCE_STREAMING_MODE = false; // Set to true to force streaming even if codec detection fails
+const FORCE_STREAMING_MODE = true; // Set to true to force streaming even if codec detection fails
 const DEBUG_STREAMING = true; // Enable detailed streaming debug logs
 const FORCE_DEBUG_RECALC = true; // Force recalculation of capabilities to see debug output
 
@@ -97,8 +97,10 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       return {
         hasMediaSource: false,
         canStreamOggOpus: false,
+        canStreamMP4AAC: false,
         isManagedMediaSource: false,
-        constructor: null
+        constructor: null,
+        preferredMimeType: null
       };
     }
     
@@ -106,19 +108,38 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     
     // Enhanced debugging for streaming capability detection
     let canStreamOggOpus = false;
+    let canStreamMP4AAC = false;
+    let preferredMimeType = null;
+    
     try {
       if (FORCE_PROGRESSIVE_FALLBACK) {
         console.log('[TTS] FORCE_PROGRESSIVE_FALLBACK is enabled - forcing fallback mode');
         canStreamOggOpus = false;
+        canStreamMP4AAC = false;
       } else if (FORCE_STREAMING_MODE) {
         console.log('[TTS] FORCE_STREAMING_MODE is enabled - forcing streaming mode');
         canStreamOggOpus = true;
+        preferredMimeType = STREAMING_MIME;
       } else {
         // Test WebM container support for Opus (MediaSource doesn't support Ogg containers)
         canStreamOggOpus = canUseStreamingAudio(STREAMING_MIME);
+        
+        // For Safari/ManagedMediaSource, also test MP4/AAC support
+        if (isManagedMediaSource && !canStreamOggOpus) {
+          canStreamMP4AAC = canUseStreamingAudio(MP4_AAC_MIME);
+          if (canStreamMP4AAC) {
+            console.log('[TTS] Safari/ManagedMediaSource supports MP4/AAC but not WebM/Opus');
+            preferredMimeType = MP4_AAC_MIME;
+          }
+        } else if (canStreamOggOpus) {
+          preferredMimeType = STREAMING_MIME;
+        }
+        
         if (DEBUG_STREAMING) {
           console.log(`[TTS] MediaSource.isTypeSupported('${STREAMING_MIME}'): ${MediaSourceConstructor.isTypeSupported?.(STREAMING_MIME)}`);
           console.log(`[TTS] canUseStreamingAudio result for WebM/Opus: ${canStreamOggOpus}`);
+          console.log(`[TTS] MediaSource.isTypeSupported('${MP4_AAC_MIME}'): ${MediaSourceConstructor.isTypeSupported?.(MP4_AAC_MIME)}`);
+          console.log(`[TTS] canUseStreamingAudio result for MP4/AAC: ${canStreamMP4AAC}`);
           // Also log Ogg support for comparison
           console.log(`[TTS] For comparison - Ogg/Opus support: ${MediaSourceConstructor.isTypeSupported?.(OGG_OPUS_MIME)}`);
         }
@@ -126,16 +147,21 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     } catch (e) {
       console.error('[TTS] Error checking streaming audio support:', e);
       canStreamOggOpus = false;
+      canStreamMP4AAC = false;
     }
     
-    console.log(`[TTS] MediaSource capabilities: ${isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource'}, WebM/Opus streaming: ${canStreamOggOpus}`);
-    console.log(`[TTS] Will use: ${canStreamOggOpus ? 'STREAMING' : 'PROGRESSIVE DOWNLOAD'}`);
+    const canStream = canStreamOggOpus || canStreamMP4AAC;
+    console.log(`[TTS] MediaSource capabilities: ${isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource'}, WebM/Opus: ${canStreamOggOpus}, MP4/AAC: ${canStreamMP4AAC}`);
+    console.log(`[TTS] Preferred MIME type: ${preferredMimeType}`);
+    console.log(`[TTS] Will use: ${canStream ? 'STREAMING' : 'PROGRESSIVE DOWNLOAD'}`);
     
     return {
       hasMediaSource: true,
       canStreamOggOpus,
+      canStreamMP4AAC,
       isManagedMediaSource,
-      constructor: MediaSourceConstructor
+      constructor: MediaSourceConstructor,
+      preferredMimeType
     };
   }, []); // Empty dependency array means this only runs once per component lifecycle
 
@@ -286,6 +312,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       // Log response content type to verify WebM format
       const contentType = response.headers.get('content-type');
       console.log('[TTS] Response Content-Type:', contentType);
+      console.log('[TTS] Response headers:', Array.from(response.headers.entries()));
       
       if (!response.body) {
         throw new Error('TTS API response has no body');
@@ -332,6 +359,16 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       // WebM container enables true streaming with lower latency compared to Ogg/Opus
       const backendSupportsWebM = true; // Backend now supports WebM streaming
       
+      console.log('[TTS] Streaming decision - canStreamOggOpus:', mediaSourceCapabilities.canStreamOggOpus, 'backendSupportsWebM:', backendSupportsWebM);
+      
+      // Additional debugging for Safari
+      if (mediaSourceCapabilities.isManagedMediaSource) {
+        console.log('[TTS] ManagedMediaSource codec support check:');
+        console.log('[TTS] - WebM/Opus:', mediaSourceCapabilities.constructor?.isTypeSupported?.(WEBM_OPUS_MIME));
+        console.log('[TTS] - MP4/AAC:', mediaSourceCapabilities.constructor?.isTypeSupported?.(MP4_AAC_MIME));
+        console.log('[TTS] - Ogg/Opus:', mediaSourceCapabilities.constructor?.isTypeSupported?.(OGG_OPUS_MIME));
+      }
+      
       if (mediaSourceCapabilities.canStreamOggOpus && backendSupportsWebM) {
         // Branch 1: Real-time streaming for compatible browsers
         const msType = mediaSourceCapabilities.isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource';
@@ -345,23 +382,33 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           return;
         }
         
-        mediaSourceRef.current = new mediaSourceCapabilities.constructor!();
-        console.log('[TTS] Created MediaSource, initial readyState:', mediaSourceRef.current.readyState);
-        
-        const sourceUrl = URL.createObjectURL(mediaSourceRef.current);
-        console.log('[TTS] Created blob URL for MediaSource');
-        
-        // For Safari, ensure audio element is ready before setting src
-        if (mediaSourceCapabilities.isManagedMediaSource) {
-          // Clear any existing src first
-          audio.removeAttribute('src');
-          audio.load();
+        try {
+          mediaSourceRef.current = new mediaSourceCapabilities.constructor!();
+          console.log('[TTS] Created MediaSource, initial readyState:', mediaSourceRef.current.readyState);
+          console.log('[TTS] MediaSource constructor type:', mediaSourceCapabilities.isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource');
+          
+          const sourceUrl = URL.createObjectURL(mediaSourceRef.current);
+          console.log('[TTS] Created blob URL for MediaSource:', sourceUrl);
+          
+          // For Safari, ensure audio element is ready before setting src
+          if (mediaSourceCapabilities.isManagedMediaSource) {
+            // Clear any existing src first
+            audio.removeAttribute('src');
+            audio.load();
+            console.log('[TTS] Cleared src and called load() for ManagedMediaSource');
+          }
+          
+          audio.src = sourceUrl;
+          oggPageBufferRef.current = new Uint8Array(0); // Initialize buffer for WebM chunks
+          console.log('[TTS] MediaSource URL assigned to audio element');
+          console.log('[TTS] MediaSource readyState after URL assignment:', mediaSourceRef.current.readyState);
+          console.log('[TTS] Audio element readyState:', audio.readyState);
+        } catch (msError) {
+          console.error('[TTS] Failed to create MediaSource:', msError);
+          console.log('[TTS] Falling back to progressive download due to MediaSource error');
+          await playWithProgressiveDownload(response, audio, textToPlay);
+          return;
         }
-        
-        audio.src = sourceUrl;
-        oggPageBufferRef.current = new Uint8Array(0); // Initialize buffer for WebM chunks
-        console.log('[TTS] MediaSource URL assigned to audio element');
-        console.log('[TTS] MediaSource readyState after URL assignment:', mediaSourceRef.current.readyState);
         
         // For Safari, we need to ensure the audio element is ready
         if (mediaSourceCapabilities.isManagedMediaSource) {
@@ -553,15 +600,31 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           console.log('[TTS] ManagedMediaSource already open, handling immediately');
           handleSourceOpen();
         } else {
-          mediaSourceRef.current.addEventListener('sourceopen', handleSourceOpen, { once: true });
+          console.log('[TTS] Adding sourceopen event listener. Current readyState:', mediaSourceRef.current.readyState);
+          mediaSourceRef.current.addEventListener('sourceopen', () => {
+            console.log('[TTS] sourceopen event fired!');
+            handleSourceOpen();
+          }, { once: true });
           
           // Safari sometimes needs an explicit load() call to trigger sourceopen
           if (mediaSourceCapabilities.isManagedMediaSource) {
             console.log('[TTS] Setting up timeout to check sourceopen for ManagedMediaSource');
             setTimeout(() => {
               if (mediaSourceRef.current && mediaSourceRef.current.readyState !== 'open') {
-                console.log('[TTS] ManagedMediaSource not open after timeout, calling load()');
+                console.log('[TTS] ManagedMediaSource not open after timeout, readyState:', mediaSourceRef.current.readyState);
+                console.log('[TTS] Calling audio.load() to trigger sourceopen');
                 audio.load();
+                
+                // If still not open after load, try progressive download
+                setTimeout(() => {
+                  if (mediaSourceRef.current && mediaSourceRef.current.readyState !== 'open') {
+                    console.warn('[TTS] ManagedMediaSource failed to open, falling back to progressive download');
+                    URL.revokeObjectURL(audio.src);
+                    playWithProgressiveDownload(response, audio, textToPlay);
+                  }
+                }, 500);
+              } else {
+                console.log('[TTS] ManagedMediaSource opened successfully within timeout');
               }
             }, 100);
           }
