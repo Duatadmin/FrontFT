@@ -18,7 +18,8 @@ export const canUseStreamingAudio = (mimeType: string = 'audio/ogg; codecs="opus
     const isSupported = MediaSourceConstructor.isTypeSupported?.(mimeType) ?? false;
     
     // Debug: Check various audio formats that might be supported
-    if (!isSupported) {
+    const DEBUG_MEDIA_FORMATS = false; // Set to true to enable format testing logs
+    if (!isSupported && DEBUG_MEDIA_FORMATS) {
       console.log('[MediaSource] Testing alternative audio formats:');
       const formats = [
         'audio/mp4; codecs="mp4a.40.2"',
