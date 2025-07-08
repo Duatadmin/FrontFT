@@ -2,7 +2,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ASRServiceV3, ASRTranscriptMessage } from '../services/ASRServiceV3';
 import { createRecorder, RecorderHandle, CreateRecorderOptions } from '../lib/sepiaRecorder';
-import { useIsTTSPlaying } from './useTTSPlaybackState';
+import { useTTSPlaybackState } from './useTTSPlaybackState';
 import { getASRAudioConstraints } from '../lib/audioConstraints';
 
 const METER_EVERY_N_FRAMES = 4;
@@ -184,7 +184,7 @@ export function useWalkieV3(options: UseWalkieV3Options): {
         if (!isActiveRef.current || !asrServiceRef.current) return;
 
         // Check if TTS is playing - if so, don't send audio to ASR
-        const isTTSPlaying = useIsTTSPlaying.getState();
+        const isTTSPlaying = useTTSPlaybackState.getState().isTTSPlaying;
         
         // Send audio to ASR service only if TTS is not playing
         if (asrServiceRef.current.isConnected() && !isTTSPlaying) {
