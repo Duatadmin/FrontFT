@@ -253,6 +253,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     const { signal } = abortControllerRef.current;
 
     try {
+      console.log('[TTS] Sending request to:', TTS_BASE_URL);
       const response = await fetch(TTS_BASE_URL, {
         method: 'POST',
         headers: {
@@ -271,6 +272,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         }),
         signal,
       });
+      console.log('[TTS] Response received:', response.status, response.statusText);
 
       if (!response.ok) {
         throw new Error(`TTS API request failed: ${response.status} ${response.statusText}`);
@@ -313,6 +315,14 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         // Branch 1: Real-time streaming for compatible browsers
         const msType = mediaSourceCapabilities.isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource';
         console.log(`[TTS] Using ${msType} streaming with WebM/Opus support`);
+        console.log('[TTS] Content-Type indicates:', contentType?.includes('webm') ? 'WebM format' : contentType?.includes('ogg') ? 'Ogg format' : 'Unknown format');
+        
+        // Check if we actually received WebM
+        if (!contentType?.includes('webm')) {
+          console.warn('[TTS] Backend returned non-WebM format despite request. Falling back to progressive download.');
+          await playWithProgressiveDownload(response, audio, textToPlay);
+          return;
+        }
         
         mediaSourceRef.current = new mediaSourceCapabilities.constructor!();
         audio.src = URL.createObjectURL(mediaSourceRef.current);
@@ -333,6 +343,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         }
 
         mediaSourceRef.current.addEventListener('sourceopen', async () => {
+          console.log('[TTS] MediaSource opened, readyState:', mediaSourceRef.current?.readyState);
           if (!mediaSourceRef.current || mediaSourceRef.current.readyState !== 'open') return;
 
           try {
