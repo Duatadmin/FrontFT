@@ -276,6 +276,10 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         throw new Error(`TTS API request failed: ${response.status} ${response.statusText}`);
       }
 
+      // Log response content type to verify WebM format
+      const contentType = response.headers.get('content-type');
+      console.log('[TTS] Response Content-Type:', contentType);
+      
       if (!response.body) {
         throw new Error('TTS API response has no body');
       }
@@ -312,7 +316,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         
         mediaSourceRef.current = new mediaSourceCapabilities.constructor!();
         audio.src = URL.createObjectURL(mediaSourceRef.current);
-        oggPageBufferRef.current = new Uint8Array(0); // Initialize buffer (will handle WebM chunks)
+        oggPageBufferRef.current = new Uint8Array(0); // Initialize buffer for WebM chunks
+        console.log('[TTS] MediaSource URL created and assigned to audio element');
 
         // Add ManagedMediaSource specific event listeners for iOS Safari 17+
         if (mediaSourceCapabilities.isManagedMediaSource) {
@@ -333,6 +338,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           try {
             // Use WebM container for streaming (MediaSource doesn't support Ogg)
             sourceBufferRef.current = mediaSourceRef.current.addSourceBuffer(STREAMING_MIME);
+            console.log('[TTS] Created SourceBuffer with MIME type:', STREAMING_MIME);
             const reader = response.body!.getReader();
             let streamEndedByReader = false;
 
@@ -340,17 +346,33 @@ export const useVoicePlayback = (): UseVoicePlayback => {
               if (!sourceBufferRef.current || sourceBufferRef.current.updating || !oggPageBufferRef.current) {
                 return;
               }
-              const { page, remainingBuffer } = extractOggPage(oggPageBufferRef.current, isFinalAttempt);
-              if (page && page.length > 0) {
+              
+              // For WebM streaming, we can append chunks directly without page extraction
+              if (backendSupportsWebM && oggPageBufferRef.current.length > 0) {
                 try {
-                  sourceBufferRef.current.appendBuffer(page);
-                  oggPageBufferRef.current = remainingBuffer;
+                  sourceBufferRef.current.appendBuffer(oggPageBufferRef.current);
+                  oggPageBufferRef.current = new Uint8Array(0); // Clear buffer after appending
                 } catch (appendError) {
-                  console.error('[TTS] Error appending Ogg page:', appendError);
+                  console.error('[TTS] Error appending WebM chunk:', appendError);
                   if (mediaSourceRef.current && mediaSourceRef.current.readyState === 'open') {
                     try { mediaSourceRef.current.endOfStream(); } catch (eosErr) { console.warn('[TTS] Error ending stream after append error:', eosErr); }
                   }
                   throw appendError;
+                }
+              } else {
+                // Legacy Ogg page extraction (kept for backwards compatibility)
+                const { page, remainingBuffer } = extractOggPage(oggPageBufferRef.current, isFinalAttempt);
+                if (page && page.length > 0) {
+                  try {
+                    sourceBufferRef.current.appendBuffer(page);
+                    oggPageBufferRef.current = remainingBuffer;
+                  } catch (appendError) {
+                    console.error('[TTS] Error appending Ogg page:', appendError);
+                    if (mediaSourceRef.current && mediaSourceRef.current.readyState === 'open') {
+                      try { mediaSourceRef.current.endOfStream(); } catch (eosErr) { console.warn('[TTS] Error ending stream after append error:', eosErr); }
+                    }
+                    throw appendError;
+                  }
                 }
               }
             };
@@ -380,10 +402,12 @@ export const useVoicePlayback = (): UseVoicePlayback => {
               streamEndedByReader = done;
 
               if (value) {
+                console.log('[TTS] Received chunk:', value.length, 'bytes');
                 const newCombinedBuffer = new Uint8Array((oggPageBufferRef.current?.length || 0) + value.length);
                 if (oggPageBufferRef.current) newCombinedBuffer.set(oggPageBufferRef.current, 0);
                 newCombinedBuffer.set(value, oggPageBufferRef.current?.length || 0);
                 oggPageBufferRef.current = newCombinedBuffer;
+                console.log('[TTS] Buffer size after append:', oggPageBufferRef.current.length, 'bytes');
               }
 
               await processData(done);
