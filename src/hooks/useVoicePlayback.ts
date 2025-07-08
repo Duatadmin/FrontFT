@@ -38,6 +38,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const mediaSourceRef = useRef<MediaSource | null>(null);
   const sourceBufferRef = useRef<SourceBuffer | null>(null);
   const oggPageBufferRef = useRef<Uint8Array | null>(null); // Buffer for Ogg page aggregation
+  const isStreamingRef = useRef<boolean>(false); // Track ManagedMediaSource streaming state
+  const pendingBuffersRef = useRef<Uint8Array[]>([]); // Queue buffers when not streaming
 
   const OGG_PAGE_HEADER = new Uint8Array([0x4f, 0x67, 0x67, 0x53]); // "OggS"
 
@@ -299,6 +301,17 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         audioPlayerRef.current = audio;
       }
       const audio = audioPlayerRef.current;
+      
+      // For ManagedMediaSource on iOS Safari - must disable remote playback BEFORE setting src
+      if (mediaSourceCapabilities.isManagedMediaSource && 'disableRemotePlayback' in audio) {
+        try {
+          (audio as any).disableRemotePlayback = true;
+          console.log('[TTS] disableRemotePlayback set for ManagedMediaSource');
+        } catch (e) {
+          console.warn('[TTS] Failed to set disableRemotePlayback:', e);
+        }
+      }
+      
       audio.pause();
       audio.currentTime = 0;
       // Clear previous event handlers to prevent stale events from firing
@@ -336,15 +349,32 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         console.log('[TTS] Created MediaSource, initial readyState:', mediaSourceRef.current.readyState);
         
         const sourceUrl = URL.createObjectURL(mediaSourceRef.current);
+        console.log('[TTS] Created blob URL for MediaSource');
+        
+        // For Safari, ensure audio element is ready before setting src
+        if (mediaSourceCapabilities.isManagedMediaSource) {
+          // Clear any existing src first
+          audio.removeAttribute('src');
+          audio.load();
+        }
+        
         audio.src = sourceUrl;
         oggPageBufferRef.current = new Uint8Array(0); // Initialize buffer for WebM chunks
-        console.log('[TTS] MediaSource URL created and assigned to audio element');
+        console.log('[TTS] MediaSource URL assigned to audio element');
         console.log('[TTS] MediaSource readyState after URL assignment:', mediaSourceRef.current.readyState);
         
-        // For Safari, sometimes we need to load() explicitly
+        // For Safari, we need to ensure the audio element is ready
         if (mediaSourceCapabilities.isManagedMediaSource) {
-          console.log('[TTS] Calling audio.load() for ManagedMediaSource');
-          audio.load();
+          console.log('[TTS] ManagedMediaSource detected, setting up Safari-specific handling');
+          // Safari requires the audio element to be in the DOM and visible
+          if (!audio.parentElement) {
+            document.body.appendChild(audio);
+          }
+          // Wait a tick before calling load to ensure DOM is ready
+          setTimeout(() => {
+            console.log('[TTS] Calling audio.load() for ManagedMediaSource');
+            audio.load();
+          }, 0);
         }
 
         // Add ManagedMediaSource specific event listeners for iOS Safari 17+
@@ -353,6 +383,30 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           
           managedMS.addEventListener('startstreaming', () => {
             console.log('[TTS] ManagedMediaSource: Start streaming event');
+            isStreamingRef.current = true;
+            
+            // Process any pending buffers
+            if (pendingBuffersRef.current.length > 0 && sourceBufferRef.current && !sourceBufferRef.current.updating) {
+              console.log('[TTS] Processing', pendingBuffersRef.current.length, 'pending buffers');
+              const buffers = pendingBuffersRef.current;
+              pendingBuffersRef.current = [];
+              
+              // Append buffers sequentially
+              const appendNext = () => {
+                if (buffers.length > 0 && sourceBufferRef.current && !sourceBufferRef.current.updating && isStreamingRef.current) {
+                  const buffer = buffers.shift()!;
+                  try {
+                    sourceBufferRef.current.appendBuffer(buffer);
+                  } catch (e) {
+                    console.error('[TTS] Error appending pending buffer:', e);
+                  }
+                }
+              };
+              
+              sourceBufferRef.current.addEventListener('updateend', appendNext, { once: true });
+              appendNext();
+            }
+            
             // Ensure audio plays when streaming starts
             if (!playbackStarted && audio.paused) {
               audio.play().catch(e => console.error('[TTS] Play on startstreaming error:', e));
@@ -362,6 +416,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           
           managedMS.addEventListener('endstreaming', () => {
             console.log('[TTS] ManagedMediaSource: End streaming event - pause processing');
+            isStreamingRef.current = false;
           });
         }
 
@@ -387,6 +442,14 @@ export const useVoicePlayback = (): UseVoicePlayback => {
               // For WebM streaming, we can append chunks directly without page extraction
               if (backendSupportsWebM && oggPageBufferRef.current.length > 0) {
                 try {
+                  // For ManagedMediaSource, only append during streaming windows
+                  if (mediaSourceCapabilities.isManagedMediaSource && !isStreamingRef.current) {
+                    console.log('[TTS] ManagedMediaSource not streaming, queuing buffer');
+                    pendingBuffersRef.current.push(new Uint8Array(oggPageBufferRef.current));
+                    oggPageBufferRef.current = new Uint8Array(0);
+                    return;
+                  }
+                  
                   sourceBufferRef.current.appendBuffer(oggPageBufferRef.current);
                   oggPageBufferRef.current = new Uint8Array(0); // Clear buffer after appending
                   
@@ -491,6 +554,17 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           handleSourceOpen();
         } else {
           mediaSourceRef.current.addEventListener('sourceopen', handleSourceOpen, { once: true });
+          
+          // Safari sometimes needs an explicit load() call to trigger sourceopen
+          if (mediaSourceCapabilities.isManagedMediaSource) {
+            console.log('[TTS] Setting up timeout to check sourceopen for ManagedMediaSource');
+            setTimeout(() => {
+              if (mediaSourceRef.current && mediaSourceRef.current.readyState !== 'open') {
+                console.log('[TTS] ManagedMediaSource not open after timeout, calling load()');
+                audio.load();
+              }
+            }, 100);
+          }
         }
 
         // Start playback as soon as audio element has enough data
@@ -536,12 +610,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           await audio.play();
         } catch (e) {
           console.error('[TTS] Error calling audio.play() (MediaSource path):', e);
-        setIsPlaying(false); setCurrentRequestId(null);
-        setQueue(prev => prev.slice(1));
-        if (mediaSourceRef.current) {
-          if (mediaSourceRef.current.readyState === 'open') try { mediaSourceRef.current.endOfStream(); } catch (eosErr) { console.warn('[TTS] Error ending stream after play() error:', eosErr); }
-          URL.revokeObjectURL(audio.src); audio.src = '';
-          mediaSourceRef.current = null;
+          setIsPlaying(false); setCurrentRequestId(null);
+          setQueue(prev => prev.slice(1));
+          if (mediaSourceRef.current) {
+            if (mediaSourceRef.current.readyState === 'open') try { mediaSourceRef.current.endOfStream(); } catch (eosErr) { console.warn('[TTS] Error ending stream after play() error:', eosErr); }
+            URL.revokeObjectURL(audio.src); audio.src = '';
+            mediaSourceRef.current = null;
+          }
         }
       }
     } catch (error) {
@@ -591,6 +666,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     }
     mediaSourceRef.current = null;
     sourceBufferRef.current = null;
+    isStreamingRef.current = false;
+    pendingBuffersRef.current = [];
 
     if (currentRequestId) {
       try {
