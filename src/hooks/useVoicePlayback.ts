@@ -402,6 +402,43 @@ export const useVoicePlayback = (): UseVoicePlayback => {
             console.log('[TTS] Cleared src and called load() for ManagedMediaSource');
           }
           
+          // Set up audio element event handlers BEFORE setting src
+          // This ensures they're ready when the browser starts loading
+          
+          // Start playback as soon as audio element has enough data
+          audio.oncanplay = () => {
+            if (!playbackStartedRef.current) {
+              console.log('[TTS] Audio canplay event - starting playback immediately');
+              audio.play().catch(e => console.error('[TTS] Play on canplay error:', e));
+              playbackStartedRef.current = true;
+            }
+          };
+          
+          // For mobile Safari, also listen to loadedmetadata
+          audio.onloadedmetadata = () => {
+            console.log('[TTS] Audio loadedmetadata event');
+            if (!playbackStartedRef.current && audio.buffered.length > 0) {
+              console.log('[TTS] Attempting play on loadedmetadata');
+              audio.play().catch(e => console.error('[TTS] Play on loadedmetadata error:', e));
+              playbackStartedRef.current = true;
+            }
+          };
+          
+          audio.onended = () => {
+            console.log('[TTS] Audio playback ended successfully (MediaSource path)');
+            setIsPlaying(false); 
+            setCurrentRequestId(null);
+            setQueue(prev => prev.slice(1));
+          };
+          
+          audio.onerror = (e) => {
+            console.error('[TTS] Audio playback error (MediaSource path):', e);
+            setIsPlaying(false); 
+            setCurrentRequestId(null);
+            setQueue(prev => prev.slice(1));
+          };
+          
+          // Now set the src
           audio.src = sourceUrl;
           oggPageBufferRef.current = new Uint8Array(0); // Initialize buffer for WebM chunks
           console.log('[TTS] MediaSource URL assigned to audio element');
@@ -421,11 +458,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           if (!audio.parentElement) {
             document.body.appendChild(audio);
           }
-          // Wait a tick before calling load to ensure DOM is ready
-          setTimeout(() => {
-            console.log('[TTS] Calling audio.load() for ManagedMediaSource');
-            audio.load();
-          }, 0);
+          // Important: Don't call load() here - it can interfere with MediaSource setup
+          // The browser will handle loading when we set the src
         }
 
         // Add ManagedMediaSource specific event listeners for iOS Safari 17+
@@ -633,36 +667,6 @@ export const useVoicePlayback = (): UseVoicePlayback => {
             }, 100);
           }
         }
-
-        // Start playback as soon as audio element has enough data
-        audio.oncanplay = () => {
-          if (!playbackStartedRef.current) {
-            console.log('[TTS] Audio canplay event - starting playback immediately');
-            audio.play().catch(e => console.error('[TTS] Play on canplay error:', e));
-            playbackStartedRef.current = true;
-          }
-        };
-        
-        // For mobile Safari, also listen to loadedmetadata
-        audio.onloadedmetadata = () => {
-          console.log('[TTS] Audio loadedmetadata event');
-          if (!playbackStartedRef.current && audio.buffered.length > 0) {
-            console.log('[TTS] Attempting play on loadedmetadata');
-            audio.play().catch(e => console.error('[TTS] Play on loadedmetadata error:', e));
-            playbackStartedRef.current = true;
-          }
-        };
-        
-        audio.onended = () => {
-          console.log('[TTS] Audio playback ended successfully (MediaSource path)');
-          setIsPlaying(false); setCurrentRequestId(null);
-          setQueue(prev => prev.slice(1));
-        };
-        audio.onerror = (e) => {
-          console.error('[TTS] Audio playback error (MediaSource path):', e);
-          setIsPlaying(false); setCurrentRequestId(null);
-          setQueue(prev => prev.slice(1));
-        };
       } else {
         // Branch 2: Progressive download for browsers without WebM/Opus streaming support
         console.log('[TTS] MediaSource available but WebM/Opus streaming not supported. Using progressive download.');
@@ -670,22 +674,12 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         return;
       }
 
-      // Only try to play if we haven't started playback early
-      if (!playbackStartedRef.current) {
-        try {
-          console.log('[TTS] Starting playback (late start - not optimal)');
-          await audio.play();
-        } catch (e) {
-          console.error('[TTS] Error calling audio.play() (MediaSource path):', e);
-          setIsPlaying(false); setCurrentRequestId(null);
-          setQueue(prev => prev.slice(1));
-          if (mediaSourceRef.current) {
-            if (mediaSourceRef.current.readyState === 'open') try { mediaSourceRef.current.endOfStream(); } catch (eosErr) { console.warn('[TTS] Error ending stream after play() error:', eosErr); }
-            URL.revokeObjectURL(audio.src); audio.src = '';
-            mediaSourceRef.current = null;
-          }
-        }
-      }
+      // Don't try to play here - let the sourceopen event or the event handlers trigger playback
+      // The audio will start playing when:
+      // 1. sourceopen event fires and streaming starts
+      // 2. oncanplay event fires
+      // 3. onloadedmetadata event fires
+      // This prevents AbortError from trying to play too early
     } catch (error) {
       if ((error as Error).name === 'AbortError') {
         console.log('TTS fetch aborted for request ID:', newRequestId);
