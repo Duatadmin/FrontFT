@@ -11,9 +11,9 @@ const VOICE_ENABLED_KEY = 'voiceEnabled';
 
 // Debug flags to control TTS behavior
 const FORCE_PROGRESSIVE_FALLBACK = false; // Set to true to force fallback, false for original logic
-const FORCE_STREAMING_MODE = true; // Set to true to force streaming even if codec detection fails
-const DEBUG_STREAMING = true; // Enable detailed streaming debug logs
-const FORCE_DEBUG_RECALC = true; // Force recalculation of capabilities to see debug output
+const FORCE_STREAMING_MODE = false; // Set to true to force streaming even if codec detection fails
+const DEBUG_STREAMING = false; // Enable detailed streaming debug logs
+const FORCE_DEBUG_RECALC = false; // Force recalculation of capabilities to see debug output
 
 interface UseVoicePlayback {
   voiceEnabled: boolean;
@@ -467,6 +467,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           });
         }
 
+        let playbackStarted = false; // Move this outside handleSourceOpen
+        
         const handleSourceOpen = async () => {
           console.log('[TTS] MediaSource opened, readyState:', mediaSourceRef.current?.readyState);
           if (!mediaSourceRef.current || mediaSourceRef.current.readyState !== 'open') return;
@@ -477,7 +479,6 @@ export const useVoicePlayback = (): UseVoicePlayback => {
             console.log('[TTS] Created SourceBuffer with MIME type:', STREAMING_MIME);
             const reader = response.body!.getReader();
             let streamEndedByReader = false;
-            let playbackStarted = false;
             const MIN_BUFFER_DURATION = 0.3; // Start playback after 0.3 seconds of audio
             const startTime = Date.now();
 
