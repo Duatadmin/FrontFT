@@ -76,6 +76,9 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const WEBM_OPUS_MIME = 'audio/webm; codecs="opus"';
   const MP4_AAC_MIME = 'audio/mp4; codecs="mp4a.40.2"';
   
+  // Use WebM for streaming since MediaSource doesn't support Ogg containers
+  const STREAMING_MIME = WEBM_OPUS_MIME;
+  
   console.log('[TTS] About to calculate MediaSource capabilities...');
   // Enhanced MediaSource support detection for mobile compatibility (direct calculation)
   const calculateMediaSourceCapabilities = () => {
@@ -104,10 +107,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         console.log('[TTS] FORCE_STREAMING_MODE is enabled - forcing streaming mode');
         canStreamOggOpus = true;
       } else {
-        canStreamOggOpus = canUseStreamingAudio(OGG_OPUS_MIME);
+        // Test WebM container support for Opus (MediaSource doesn't support Ogg containers)
+        canStreamOggOpus = canUseStreamingAudio(STREAMING_MIME);
         if (DEBUG_STREAMING) {
-          console.log(`[TTS] MediaSource.isTypeSupported('${OGG_OPUS_MIME}'): ${MediaSourceConstructor.isTypeSupported?.(OGG_OPUS_MIME)}`);
-          console.log(`[TTS] canUseStreamingAudio result: ${canStreamOggOpus}`);
+          console.log(`[TTS] MediaSource.isTypeSupported('${STREAMING_MIME}'): ${MediaSourceConstructor.isTypeSupported?.(STREAMING_MIME)}`);
+          console.log(`[TTS] canUseStreamingAudio result for WebM/Opus: ${canStreamOggOpus}`);
+          // Also log Ogg support for comparison
+          console.log(`[TTS] For comparison - Ogg/Opus support: ${MediaSourceConstructor.isTypeSupported?.(OGG_OPUS_MIME)}`);
         }
       }
     } catch (e) {
@@ -115,7 +121,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       canStreamOggOpus = false;
     }
     
-    console.log(`[TTS] MediaSource capabilities: ${isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource'}, Ogg/Opus streaming: ${canStreamOggOpus}`);
+    console.log(`[TTS] MediaSource capabilities: ${isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource'}, WebM/Opus streaming: ${canStreamOggOpus}`);
     console.log(`[TTS] Will use: ${canStreamOggOpus ? 'STREAMING' : 'PROGRESSIVE DOWNLOAD'}`);
     
     return {
@@ -250,6 +256,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       const response = await fetch(TTS_BASE_URL, {
         method: 'POST',
         headers: {
+          'Accept': 'audio/webm; codecs=opus, audio/ogg; codecs=opus',
           'Content-Type': 'application/json',
           'X-Request-ID': newRequestId,
         },
@@ -259,6 +266,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           voice: 'shimmer',
           speed: 1.0,
           response_format: 'opus',
+          container_format: 'webm', // Request WebM container for streaming
           instructions: 'You are a personal trainer. Speak motivating and respectfull and calm.'
         }),
         signal,
@@ -293,14 +301,18 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         return;
       }
 
-      if (mediaSourceCapabilities.canStreamOggOpus) {
+      // Backend now supports WebM/Opus format for streaming via MediaSource API
+      // WebM container enables true streaming with lower latency compared to Ogg/Opus
+      const backendSupportsWebM = true; // Backend now supports WebM streaming
+      
+      if (mediaSourceCapabilities.canStreamOggOpus && backendSupportsWebM) {
         // Branch 1: Real-time streaming for compatible browsers
         const msType = mediaSourceCapabilities.isManagedMediaSource ? 'ManagedMediaSource' : 'MediaSource';
-        console.log(`[TTS] Using ${msType} streaming with Ogg/Opus support`);
+        console.log(`[TTS] Using ${msType} streaming with WebM/Opus support`);
         
         mediaSourceRef.current = new mediaSourceCapabilities.constructor!();
         audio.src = URL.createObjectURL(mediaSourceRef.current);
-        oggPageBufferRef.current = new Uint8Array(0); // Initialize Ogg page buffer
+        oggPageBufferRef.current = new Uint8Array(0); // Initialize buffer (will handle WebM chunks)
 
         // Add ManagedMediaSource specific event listeners for iOS Safari 17+
         if (mediaSourceCapabilities.isManagedMediaSource) {
@@ -319,7 +331,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           if (!mediaSourceRef.current || mediaSourceRef.current.readyState !== 'open') return;
 
           try {
-            sourceBufferRef.current = mediaSourceRef.current.addSourceBuffer(OGG_OPUS_MIME);
+            // Use WebM container for streaming (MediaSource doesn't support Ogg)
+            sourceBufferRef.current = mediaSourceRef.current.addSourceBuffer(STREAMING_MIME);
             const reader = response.body!.getReader();
             let streamEndedByReader = false;
 
@@ -406,8 +419,8 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           setQueue(prev => prev.slice(1));
         };
       } else {
-        // Branch 2: Progressive download for browsers without Ogg/Opus streaming support
-        console.log('[TTS] MediaSource available but Ogg/Opus streaming not supported. Using progressive download.');
+        // Branch 2: Progressive download for browsers without WebM/Opus streaming support
+        console.log('[TTS] MediaSource available but WebM/Opus streaming not supported. Using progressive download.');
         await playWithProgressiveDownload(response, audio, textToPlay);
         return;
       }
