@@ -101,6 +101,7 @@ export interface CreateRecorderOptions {
   mono: boolean;
   onError?: ErrorCallback;
   sepiaModulesPath?: string;
+  audioConstraints?: MediaTrackConstraints; // Custom audio constraints for echo cancellation
 }
 
 export async function createRecorder(options: CreateRecorderOptions): Promise<RecorderHandle> {
@@ -137,6 +138,8 @@ export async function createRecorder(options: CreateRecorderOptions): Promise<Re
       bufferSize: bufferSize, 
       calculateRmsVolume: true, // RMS might be useful for SEPIA internally or for debugging
     },
+    // Pass custom audio constraints if provided
+    ...(options.audioConstraints && { audioConstraints: options.audioConstraints }),
     // VAD settings might be needed here if SEPIA enables it by default
   });
 

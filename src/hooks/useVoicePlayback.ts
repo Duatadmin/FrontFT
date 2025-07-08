@@ -5,6 +5,7 @@ if (DEBUG_MODULE_LOADING) {
 }
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { supportsMediaSource, getManagedMediaSource, canUseStreamingAudio } from '../lib/supportsMediaSource';
+import { useTTSPlaybackState } from './useTTSPlaybackState';
 
 const TTS_BASE_URL = 'https://ftvoiceservice-production-6960.up.railway.app/tts/v1/tts';
 const VOICE_ENABLED_KEY = 'voiceEnabled';
@@ -238,6 +239,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         console.log('[TTS] Audio playback ended successfully (Progressive download)');
         cleanup();
         setIsPlaying(false);
+        useTTSPlaybackState.getState().setTTSPlaying(false);
         setCurrentRequestId(null);
         setQueue(prev => prev.slice(1));
       };
@@ -246,11 +248,14 @@ export const useVoicePlayback = (): UseVoicePlayback => {
         console.error('[TTS] Audio playback error (Progressive download):', e);
         cleanup();
         setIsPlaying(false);
+        useTTSPlaybackState.getState().setTTSPlaying(false);
         setCurrentRequestId(null);
         setQueue(prev => prev.slice(1));
       };
 
       await audio.play();
+      setIsPlaying(true);
+      useTTSPlaybackState.getState().setTTSPlaying(true);
     } catch (error) {
       console.error('[TTS] Progressive download error:', error);
       setIsPlaying(false);
@@ -409,7 +414,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           audio.oncanplay = () => {
             if (!playbackStartedRef.current) {
               console.log('[TTS] Audio canplay event - starting playback immediately');
-              audio.play().catch(e => console.error('[TTS] Play on canplay error:', e));
+              audio.play()
+                .then(() => {
+                  console.log('[TTS] Playback started successfully');
+                  setIsPlaying(true);
+                  useTTSPlaybackState.getState().setTTSPlaying(true);
+                })
+                .catch(e => console.error('[TTS] Play on canplay error:', e));
               playbackStartedRef.current = true;
             }
           };
@@ -419,7 +430,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
             console.log('[TTS] Audio loadedmetadata event');
             if (!playbackStartedRef.current && audio.buffered.length > 0) {
               console.log('[TTS] Attempting play on loadedmetadata');
-              audio.play().catch(e => console.error('[TTS] Play on loadedmetadata error:', e));
+              audio.play()
+                .then(() => {
+                  console.log('[TTS] Playback started successfully on loadedmetadata');
+                  setIsPlaying(true);
+                  useTTSPlaybackState.getState().setTTSPlaying(true);
+                })
+                .catch(e => console.error('[TTS] Play on loadedmetadata error:', e));
               playbackStartedRef.current = true;
             }
           };
@@ -427,6 +444,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           audio.onended = () => {
             console.log('[TTS] Audio playback ended successfully (MediaSource path)');
             setIsPlaying(false); 
+            useTTSPlaybackState.getState().setTTSPlaying(false);
             setCurrentRequestId(null);
             setQueue(prev => prev.slice(1));
           };
@@ -434,6 +452,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           audio.onerror = (e) => {
             console.error('[TTS] Audio playback error (MediaSource path):', e);
             setIsPlaying(false); 
+            useTTSPlaybackState.getState().setTTSPlaying(false);
             setCurrentRequestId(null);
             setQueue(prev => prev.slice(1));
           };
@@ -494,7 +513,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
             
             // Ensure audio plays when streaming starts
             if (!playbackStartedRef.current && audio.paused) {
-              audio.play().catch(e => console.error('[TTS] Play on startstreaming error:', e));
+              audio.play()
+                .then(() => {
+                  console.log('[TTS] Playback started on streaming event');
+                  setIsPlaying(true);
+                  useTTSPlaybackState.getState().setTTSPlaying(true);
+                })
+                .catch(e => console.error('[TTS] Play on startstreaming error:', e));
               playbackStartedRef.current = true;
             }
           });
@@ -543,7 +568,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
                     const bufferedEnd = audio.buffered.end(0);
                     if (bufferedEnd >= MIN_BUFFER_DURATION) {
                       console.log('[TTS] Starting playback - buffered:', bufferedEnd, 'seconds');
-                      audio.play().catch(e => console.error('[TTS] Early play() error:', e));
+                      audio.play()
+                        .then(() => {
+                          console.log('[TTS] Early playback started successfully');
+                          setIsPlaying(true);
+                          useTTSPlaybackState.getState().setTTSPlaying(true);
+                        })
+                        .catch(e => console.error('[TTS] Early play() error:', e));
                       playbackStartedRef.current = true;
                     }
                   }
@@ -715,6 +746,9 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       audioPlayerRef.current.onloadeddata = null;
       audioPlayerRef.current.src = ''; // Detach MediaSource or Blob URL
     }
+    
+    // Clear TTS playing state
+    useTTSPlaybackState.getState().setTTSPlaying(false);
     if (mediaSourceRef.current && mediaSourceRef.current.readyState === 'open') {
         try {
             if (sourceBufferRef.current && sourceBufferRef.current.updating) {

@@ -56,6 +56,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       targetSampleRate: 16000,
       mono: true,
       sepiaModulesPath: '/sepia/modules/'
+      // Audio constraints with echo cancellation are set in useWalkieV3
     },
     onTranscription: (transcript: { text: string; final: boolean }) => {
       console.log('VoiceWidget received transcript:', transcript);

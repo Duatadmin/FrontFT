@@ -2,6 +2,8 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ASRServiceV3, ASRTranscriptMessage } from '../services/ASRServiceV3';
 import { createRecorder, RecorderHandle, CreateRecorderOptions } from '../lib/sepiaRecorder';
+import { useIsTTSPlaying } from './useTTSPlaybackState';
+import { getASRAudioConstraints } from '../lib/audioConstraints';
 
 const METER_EVERY_N_FRAMES = 4;
 
@@ -153,11 +155,19 @@ export function useWalkieV3(options: UseWalkieV3Options): {
       // Connect to ASR service
       await asrService.connect();
 
-      // Create audio recorder
+      // Create audio recorder with echo cancellation
+      const audioConstraints = getASRAudioConstraints({
+        echoCancellation: true,
+        noiseSuppression: true,
+        autoGainControl: true,
+        sampleRate: 16000
+      });
+      
       const recConfig: CreateRecorderOptions = {
         targetSampleRate: 16000,
         mono: true,
         ...(recorderConfig || {}),
+        audioConstraints: audioConstraints.audio as MediaTrackConstraints,
         onError: (err: any) => {
           handleInternalError(
             err instanceof Error ? err : new Error(String(err || 'Unknown recorder error')), 
@@ -173,14 +183,20 @@ export function useWalkieV3(options: UseWalkieV3Options): {
       const onChunk = (pcm: Int16Array) => {
         if (!isActiveRef.current || !asrServiceRef.current) return;
 
-        // Send audio to ASR service
-        if (asrServiceRef.current.isConnected()) {
+        // Check if TTS is playing - if so, don't send audio to ASR
+        const isTTSPlaying = useIsTTSPlaying.getState();
+        
+        // Send audio to ASR service only if TTS is not playing
+        if (asrServiceRef.current.isConnected() && !isTTSPlaying) {
           // Ensure we're sending the correct buffer slice
           const bufferToSend = pcm.buffer.slice(pcm.byteOffset, pcm.byteOffset + pcm.byteLength);
           asrServiceRef.current.sendAudio(bufferToSend);
+        } else if (isTTSPlaying && frameCount.current % (METER_EVERY_N_FRAMES * 10) === 0) {
+          // Log occasionally when audio is blocked due to TTS
+          console.log('[useWalkieV3] Audio not sent - TTS is playing');
         }
 
-        // Update level meter
+        // Update level meter (always update to show mic is working)
         if (frameCount.current % METER_EVERY_N_FRAMES === 0) {
           const newLevel = calculateRMS(pcm);
           setState(prevState => ({ ...prevState, level: newLevel }));
