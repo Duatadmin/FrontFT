@@ -40,6 +40,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const oggPageBufferRef = useRef<Uint8Array | null>(null); // Buffer for Ogg page aggregation
   const isStreamingRef = useRef<boolean>(false); // Track ManagedMediaSource streaming state
   const pendingBuffersRef = useRef<Uint8Array[]>([]); // Queue buffers when not streaming
+  const playbackStartedRef = useRef<boolean>(false); // Track if playback has started
 
   const OGG_PAGE_HEADER = new Uint8Array([0x4f, 0x67, 0x67, 0x53]); // "OggS"
 
@@ -329,6 +330,9 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       }
       const audio = audioPlayerRef.current;
       
+      // Reset playback state for new request
+      playbackStartedRef.current = false;
+      
       // For ManagedMediaSource on iOS Safari - must disable remote playback BEFORE setting src
       if (mediaSourceCapabilities.isManagedMediaSource && 'disableRemotePlayback' in audio) {
         try {
@@ -455,9 +459,9 @@ export const useVoicePlayback = (): UseVoicePlayback => {
             }
             
             // Ensure audio plays when streaming starts
-            if (!playbackStarted && audio.paused) {
+            if (!playbackStartedRef.current && audio.paused) {
               audio.play().catch(e => console.error('[TTS] Play on startstreaming error:', e));
-              playbackStarted = true;
+              playbackStartedRef.current = true;
             }
           });
           
@@ -467,7 +471,6 @@ export const useVoicePlayback = (): UseVoicePlayback => {
           });
         }
 
-        let playbackStarted = false; // Move this outside handleSourceOpen
         
         const handleSourceOpen = async () => {
           console.log('[TTS] MediaSource opened, readyState:', mediaSourceRef.current?.readyState);
@@ -502,12 +505,12 @@ export const useVoicePlayback = (): UseVoicePlayback => {
                   oggPageBufferRef.current = new Uint8Array(0); // Clear buffer after appending
                   
                   // Start playback as soon as we have enough buffered data
-                  if (!playbackStarted && audio.buffered.length > 0) {
+                  if (!playbackStartedRef.current && audio.buffered.length > 0) {
                     const bufferedEnd = audio.buffered.end(0);
                     if (bufferedEnd >= MIN_BUFFER_DURATION) {
                       console.log('[TTS] Starting playback - buffered:', bufferedEnd, 'seconds');
                       audio.play().catch(e => console.error('[TTS] Early play() error:', e));
-                      playbackStarted = true;
+                      playbackStartedRef.current = true;
                     }
                   }
                 } catch (appendError) {
@@ -633,20 +636,20 @@ export const useVoicePlayback = (): UseVoicePlayback => {
 
         // Start playback as soon as audio element has enough data
         audio.oncanplay = () => {
-          if (!playbackStarted) {
+          if (!playbackStartedRef.current) {
             console.log('[TTS] Audio canplay event - starting playback immediately');
             audio.play().catch(e => console.error('[TTS] Play on canplay error:', e));
-            playbackStarted = true;
+            playbackStartedRef.current = true;
           }
         };
         
         // For mobile Safari, also listen to loadedmetadata
         audio.onloadedmetadata = () => {
           console.log('[TTS] Audio loadedmetadata event');
-          if (!playbackStarted && audio.buffered.length > 0) {
+          if (!playbackStartedRef.current && audio.buffered.length > 0) {
             console.log('[TTS] Attempting play on loadedmetadata');
             audio.play().catch(e => console.error('[TTS] Play on loadedmetadata error:', e));
-            playbackStarted = true;
+            playbackStartedRef.current = true;
           }
         };
         
@@ -668,7 +671,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
       }
 
       // Only try to play if we haven't started playback early
-      if (!playbackStarted) {
+      if (!playbackStartedRef.current) {
         try {
           console.log('[TTS] Starting playback (late start - not optimal)');
           await audio.play();
