@@ -249,20 +249,25 @@ const Sidebar: React.FC = () => {
           </div>
         ) : user ? (
           <div className="flex items-center">
-            <div className="relative">
-              <img 
-                src={getAvatarUrl()} 
-                alt="User avatar" 
-                className="w-10 h-10 rounded-full border-2 border-accent-mint" 
-              />
-              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background-surface rounded-full"></span>
-            </div>
-            <div className="ml-3 flex-1 overflow-hidden">
-              <div className="text-sm font-medium text-text-primary truncate" title={user.user_metadata?.full_name || user.email}>
-                {user.user_metadata?.full_name || user.email?.split('@')[0]}
+            <button
+              onClick={() => navigate('/profile')}
+              className="flex items-center flex-1 hover:bg-white/10 rounded-lg p-2 -m-2 transition-colors focus-visible:ring-2 focus-visible:ring-accent-lime focus-visible:outline-none"
+            >
+              <div className="relative">
+                <img 
+                  src={getAvatarUrl()} 
+                  alt="User avatar" 
+                  className="w-10 h-10 rounded-full border-2 border-accent-mint" 
+                />
+                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-background-surface rounded-full"></span>
               </div>
-              <div className="text-xs text-text-secondary truncate" title={user.email}>{user.email}</div>
-            </div>
+              <div className="ml-3 flex-1 overflow-hidden text-left">
+                <div className="text-sm font-medium text-text-primary truncate" title={user.user_metadata?.full_name || user.email}>
+                  {user.user_metadata?.full_name || user.email?.split('@')[0]}
+                </div>
+                <div className="text-xs text-text-secondary truncate" title={user.email}>{user.email}</div>
+              </div>
+            </button>
             <button 
               onClick={handleLogout}
               className="ml-2 p-2 text-text-secondary hover:text-accent-red rounded-md focus-visible:ring-2 focus-visible:ring-accent-red focus-visible:outline-none transition-colors"
