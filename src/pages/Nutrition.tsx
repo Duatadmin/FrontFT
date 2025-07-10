@@ -287,7 +287,8 @@ const Nutrition: React.FC = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-8">
+    <>
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-8">
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Nutrition Tracker</h1>
@@ -653,49 +654,59 @@ const Nutrition: React.FC = () => {
             </Card>
           </div>
         )}
+      </div>
 
-        {/* Camera Capture Modal */}
-        <CameraCapture
-          isOpen={showCamera}
-          onClose={() => setShowCamera(false)}
-          onCapture={handleCameraCapture}
-        />
+      {/* Modals - Outside of main container to avoid layout issues */}
+      
+      {/* Camera Capture Modal */}
+      <CameraCapture
+        isOpen={showCamera}
+        onClose={() => setShowCamera(false)}
+        onCapture={handleCameraCapture}
+      />
 
-        {/* Upload Progress Overlay */}
-        {isUploading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
-              <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
-              <p className="text-white font-medium">Uploading photo...</p>
-              <p className="text-sm text-white/60">Please wait</p>
-            </div>
+      {/* Upload Progress Overlay */}
+      {isUploading && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
+            <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
+            <p className="text-white font-medium">Uploading photo...</p>
+            <p className="text-sm text-white/60">Please wait</p>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Analysis Progress Overlay */}
-        {isAnalyzing && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-            <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
-              <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
-              <p className="text-white font-medium">Analyzing your meal...</p>
-              <p className="text-sm text-white/60">This may take up to 10 seconds</p>
-            </div>
+      {/* Analysis Progress Overlay */}
+      {isAnalyzing && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
+            <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
+            <p className="text-white font-medium">Analyzing your meal...</p>
+            <p className="text-sm text-white/60">This may take up to 10 seconds</p>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Meal Analysis Card Modal */}
-        {showMealCard && analysisResult && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
-            <div className="w-full max-w-2xl my-8">
+      {/* Meal Analysis Card Modal */}
+      {showMealCard && analysisResult && (
+        <div 
+          className="fixed inset-0 z-[100] bg-black/70 backdrop-blur-sm overflow-y-auto"
+          onClick={handleCloseMealCard}
+        >
+          <div 
+            className="min-h-screen flex items-start justify-center py-4 sm:py-8 px-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="w-full max-w-2xl">
               <MealAnalysisCard 
                 data={analysisResult} 
                 onClose={handleCloseMealCard}
               />
             </div>
           </div>
-        )}
-
-    </div>
+        </div>
+      )}
+    </>
   );
 };
 

@@ -63,19 +63,15 @@ class NutritionAnalysisService {
 
   async analyzePhoto(imageUrl: string): Promise<NutritionAnalysisResponse> {
     try {
-      const requestBody = {
-        image_url: imageUrl,
-        prompt_version: 'v1',
-      };
-      
-      console.log('Sending to nutrition API:', requestBody);
-      
       const response = await fetch(`${this.baseUrl}/photo/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(requestBody),
+        body: JSON.stringify({
+          image_url: imageUrl,
+          prompt_version: 'v1',
+        }),
       });
 
       if (!response.ok) {
@@ -84,11 +80,6 @@ class NutritionAnalysisService {
           message: 'Failed to analyze photo',
         }));
         
-        console.error('Nutrition API error:', {
-          status: response.status,
-          error,
-          imageUrl
-        });
         
         // Handle specific error cases
         switch (response.status) {
