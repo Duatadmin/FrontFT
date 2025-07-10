@@ -47,6 +47,12 @@ module.exports = {
         'card-hover': '0 4px 20px rgba(0 0 0 / 0.35)',
       },
       spacing: defaultTheme.spacing,
+      padding: {
+        'safe-top': 'env(safe-area-inset-top)',
+        'safe-bottom': 'env(safe-area-inset-bottom)',
+        'safe-left': 'env(safe-area-inset-left)',
+        'safe-right': 'env(safe-area-inset-right)',
+      },
       fontFamily: {
         sans: ['Rubik', 'Inter', ...defaultTheme.fontFamily.sans],
         display: ['Rubik', ...defaultTheme.fontFamily.sans],
