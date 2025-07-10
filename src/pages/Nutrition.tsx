@@ -23,11 +23,14 @@ import {
   Clock,
   Star,
   X,
-  Loader2
+  Loader2,
+  History
 } from 'lucide-react';
 import { toast } from '@/lib/utils/toast';
 import { CameraCapture } from '@/components/nutrition/CameraCapture';
 import { cloudflareUpload } from '@/services/cloudflareUpload';
+import { nutritionAnalysisService, mealHistoryStorage, type NutritionAnalysisResponse } from '@/services/nutritionAnalysis';
+import { MealAnalysisCard } from '@/components/nutrition/MealAnalysisCard';
 
 interface NutrientGoals {
   calories: number;
@@ -74,6 +77,10 @@ const Nutrition: React.FC = () => {
   const [isSearching, setIsSearching] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<NutritionAnalysisResponse | null>(null);
+  const [showMealCard, setShowMealCard] = useState(false);
+  const [mealHistory, setMealHistory] = useState(mealHistoryStorage.getAll());
   
   // Mock data - in real app, this would come from API/database
   const [goals] = useState<NutrientGoals>({
@@ -224,19 +231,40 @@ const Nutrition: React.FC = () => {
     setIsUploading(true);
     
     try {
-      // Upload to Cloudflare
-      const result = await cloudflareUpload.uploadImage(file);
+      // Upload via server endpoint to avoid CORS issues
+      const result = await cloudflareUpload.uploadViaServer(file);
       
       if (result.success && result.imageUrl) {
-        // For now, just show success and log the URL
-        toast.success('Photo uploaded successfully!');
-        console.log('Uploaded image URL:', result.imageUrl);
-        
-        // TODO: In the next milestone, this will trigger meal recognition
-        // and display the meal card with nutrition info
-        
         // Close camera modal
         setShowCamera(false);
+        
+        // Start analyzing the image
+        setIsAnalyzing(true);
+        
+        try {
+          const analysisData = await nutritionAnalysisService.analyzePhoto(result.imageUrl);
+          
+          // Save to history
+          mealHistoryStorage.save(analysisData);
+          
+          // Update local state
+          setMealHistory(mealHistoryStorage.getAll());
+          
+          // Show the meal card
+          setAnalysisResult(analysisData);
+          setShowMealCard(true);
+          
+          toast.success('Meal analyzed successfully!');
+        } catch (analysisError) {
+          console.error('Analysis error:', analysisError);
+          toast.error(
+            analysisError instanceof Error 
+              ? analysisError.message 
+              : 'Couldn\'t analyze the photo. Please try again.'
+          );
+        } finally {
+          setIsAnalyzing(false);
+        }
       } else {
         toast.error(result.error || 'Failed to upload image');
       }
@@ -246,6 +274,16 @@ const Nutrition: React.FC = () => {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleCloseMealCard = () => {
+    setShowMealCard(false);
+    setAnalysisResult(null);
+  };
+
+  const handleOpenFromHistory = (historyItem: any) => {
+    setAnalysisResult(historyItem);
+    setShowMealCard(true);
   };
 
   return (
@@ -531,6 +569,38 @@ const Nutrition: React.FC = () => {
                 </div>
               </div>
             </Card>
+
+            {/* Meal History */}
+            {mealHistory.length > 0 && (
+              <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-md border-white/10">
+                <div className="flex items-center gap-2 mb-4">
+                  <History size={18} className="text-gray-400" />
+                  <h3 className="text-lg font-medium text-white">Recent Analyses</h3>
+                </div>
+                <div className="space-y-2">
+                  {mealHistory.slice(0, 3).map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => handleOpenFromHistory(item)}
+                      className="w-full flex items-center gap-3 p-3 bg-white/5 hover:bg-white/10 rounded-lg transition-colors group"
+                    >
+                      <img
+                        src={item.photo_url}
+                        alt={item.name}
+                        className="w-12 h-12 rounded-lg object-cover"
+                      />
+                      <div className="flex-1 text-left">
+                        <p className="text-sm font-medium text-white">{item.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {item.energy_kcal} cal • {new Date(item.analyzed_at).toLocaleTimeString()}
+                        </p>
+                      </div>
+                      <ChevronRight size={16} className="text-gray-600 group-hover:text-gray-400" />
+                    </button>
+                  ))}
+                </div>
+              </Card>
+            )}
           </div>
         </div>
 
@@ -596,8 +666,31 @@ const Nutrition: React.FC = () => {
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
             <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
               <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
+              <p className="text-white font-medium">Uploading photo...</p>
+              <p className="text-sm text-white/60">Please wait</p>
+            </div>
+          </div>
+        )}
+
+        {/* Analysis Progress Overlay */}
+        {isAnalyzing && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
+              <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
               <p className="text-white font-medium">Analyzing your meal...</p>
-              <p className="text-sm text-white/60">This may take a moment</p>
+              <p className="text-sm text-white/60">This may take up to 10 seconds</p>
+            </div>
+          </div>
+        )}
+
+        {/* Meal Analysis Card Modal */}
+        {showMealCard && analysisResult && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm overflow-y-auto">
+            <div className="w-full max-w-2xl my-8">
+              <MealAnalysisCard 
+                data={analysisResult} 
+                onClose={handleCloseMealCard}
+              />
             </div>
           </div>
         )}

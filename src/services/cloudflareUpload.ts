@@ -54,6 +54,8 @@ export class CloudflareUploadService {
 
   /**
    * Upload image directly to Cloudflare Images
+   * NOTE: This method will fail in browser due to CORS restrictions.
+   * Use uploadViaServer() instead for browser environments.
    */
   async uploadImage(file: File): Promise<UploadResponse> {
     try {
@@ -116,25 +118,66 @@ export class CloudflareUploadService {
   }
 
   /**
-   * Upload image via server endpoint (recommended for production)
+   * Upload image via Supabase Edge Function
    */
   async uploadViaServer(file: File): Promise<UploadResponse> {
     try {
+      // Import Supabase client
+      const { supabase } = await import('@/lib/supabase');
+      
+      // Get current session
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        return {
+          success: false,
+          error: 'Please sign in to upload images',
+        };
+      }
+
+      // Validate file
+      if (!file.type.startsWith('image/')) {
+        return {
+          success: false,
+          error: 'Please select a valid image file',
+        };
+      }
+
+      // Check file size (max 10MB)
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        return {
+          success: false,
+          error: 'Image size must be less than 10MB',
+        };
+      }
+
       const formData = new FormData();
       formData.append('image', file);
       formData.append('type', 'meal');
 
-      // Upload via your backend server
-      const response = await fetch('/api/upload/meal', {
-        method: 'POST',
-        body: formData,
-      });
+      // Get Supabase URL and anon key
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      // Call Supabase Edge Function
+      const response = await fetch(
+        `${supabaseUrl}/functions/v1/upload-meal-image`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${session.access_token}`,
+            'apikey': supabaseAnonKey,
+          },
+          body: formData,
+        }
+      );
 
       if (!response.ok) {
-        const error = await response.text();
+        const errorData = await response.json().catch(() => ({ error: 'Upload failed' }));
         return {
           success: false,
-          error: error || 'Failed to upload image',
+          error: errorData.error || 'Failed to upload image',
         };
       }
 
@@ -155,6 +198,7 @@ export class CloudflareUploadService {
 
   /**
    * Get image URL with variant
+   * Format: https://imagedelivery.net/{account_hash}/{image_id}/{variant_name}
    */
   getImageUrl(publicId: string, variant: 'thumbnail' | 'public' | 'blur' = 'public'): string {
     return `${this.baseUrl}/${publicId}/${variant}`;

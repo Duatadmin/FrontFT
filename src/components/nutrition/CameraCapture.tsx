@@ -23,17 +23,90 @@ export function CameraCapture({ isOpen, onClose, onCapture }: CameraCaptureProps
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+  const processImage = useCallback((file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        img.src = e.target?.result as string;
+      };
+      
+      img.onload = () => {
+        // Create canvas for cropping
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          reject(new Error('Failed to get canvas context'));
+          return;
+        }
+        
+        // Set output size
+        const outputSize = 512;
+        canvas.width = outputSize;
+        canvas.height = outputSize;
+        
+        // Calculate crop dimensions (center square crop)
+        const sourceSize = Math.min(img.width, img.height);
+        const sourceX = (img.width - sourceSize) / 2;
+        const sourceY = (img.height - sourceSize) / 2;
+        
+        // Draw cropped and resized image
+        ctx.drawImage(
+          img,
+          sourceX, sourceY, sourceSize, sourceSize, // Source rectangle
+          0, 0, outputSize, outputSize // Destination rectangle
+        );
+        
+        // Convert canvas to blob
+        canvas.toBlob((blob) => {
+          if (blob) {
+            // Create new file with same name
+            const processedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(processedFile);
+          } else {
+            reject(new Error('Failed to process image'));
+          }
+        }, 'image/jpeg', 0.9); // 90% quality
+      };
+      
+      img.onerror = () => {
+        reject(new Error('Failed to load image'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
+  }, []);
+
+  const handleFileSelect = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      setCapturedFile(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setCapturedImage(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      try {
+        // Process image to 512x512
+        const processedFile = await processImage(file);
+        setCapturedFile(processedFile);
+        
+        // Show preview
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setCapturedImage(e.target?.result as string);
+        };
+        reader.readAsDataURL(processedFile);
+      } catch (error) {
+        console.error('Error processing image:', error);
+        // Fallback to original file
+        setCapturedFile(file);
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setCapturedImage(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
     }
-  }, []);
+  }, [processImage]);
 
   const handleConfirm = () => {
     if (capturedFile) {
@@ -128,26 +201,11 @@ export function CameraCapture({ isOpen, onClose, onCapture }: CameraCaptureProps
                       alt="Captured meal"
                       className="w-full h-full object-cover"
                     />
-                    {/* Overlay Grid */}
-                    <div className="absolute inset-0 pointer-events-none">
-                      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        <rect
-                          x="20"
-                          y="20"
-                          width="60"
-                          height="60"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="0.5"
-                          strokeDasharray="2 2"
-                          opacity="0.5"
-                        />
-                        {/* Corner brackets */}
-                        <path d="M 20 25 L 20 20 L 25 20" stroke="white" strokeWidth="1" fill="none" />
-                        <path d="M 75 20 L 80 20 L 80 25" stroke="white" strokeWidth="1" fill="none" />
-                        <path d="M 80 75 L 80 80 L 75 80" stroke="white" strokeWidth="1" fill="none" />
-                        <path d="M 25 80 L 20 80 L 20 75" stroke="white" strokeWidth="1" fill="none" />
-                      </svg>
+                    {/* Info text */}
+                    <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
+                      <p className="text-white text-sm font-medium bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full inline-block">
+                        512×512px • Center crop
+                      </p>
                     </div>
                   </>
                 ) : (
