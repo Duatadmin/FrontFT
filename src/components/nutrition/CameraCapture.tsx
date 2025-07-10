@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Camera, 
@@ -22,6 +22,7 @@ export function CameraCapture({ isOpen, onClose, onCapture }: CameraCaptureProps
   const [capturedFile, setCapturedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
+  const hasOpenedCamera = useRef(false);
 
   const processImage = useCallback((file: File): Promise<File> => {
     return new Promise((resolve, reject) => {
@@ -124,6 +125,7 @@ export function CameraCapture({ isOpen, onClose, onCapture }: CameraCaptureProps
   const handleClose = () => {
     setCapturedImage(null);
     setCapturedFile(null);
+    hasOpenedCamera.current = false;
     onClose();
   };
 
@@ -134,6 +136,17 @@ export function CameraCapture({ isOpen, onClose, onCapture }: CameraCaptureProps
   const openGallery = () => {
     fileInputRef.current?.click();
   };
+
+  // Automatically open camera when component opens
+  useEffect(() => {
+    if (isOpen && !hasOpenedCamera.current && !capturedImage) {
+      hasOpenedCamera.current = true;
+      // Small delay to ensure the modal is fully rendered
+      setTimeout(() => {
+        openCamera();
+      }, 100);
+    }
+  }, [isOpen, capturedImage]);
 
   return (
     <AnimatePresence>
@@ -172,84 +185,48 @@ export function CameraCapture({ isOpen, onClose, onCapture }: CameraCaptureProps
 
             {/* Main Content */}
             <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 overflow-hidden">
-              {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-accent-lime/20 flex items-center justify-center">
-                    <Sparkles className="w-5 h-5 text-accent-lime" />
+              {/* Only show header when image is captured */}
+              {capturedImage && (
+                <div className="flex items-center justify-between p-4 border-b border-white/10">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent-lime/20 flex items-center justify-center">
+                      <Sparkles className="w-5 h-5 text-accent-lime" />
+                    </div>
+                    <div>
+                      <h3 className="text-white font-semibold">Review Your Photo</h3>
+                      <p className="text-xs text-white/60">AI will analyze your food</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-white font-semibold">Snap Your Meal</h3>
-                    <p className="text-xs text-white/60">AI will analyze your food</p>
-                  </div>
+                  <button
+                    onClick={handleClose}
+                    className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
                 </div>
-                <button
-                  onClick={handleClose}
-                  className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-                >
-                  <X className="w-4 h-4 text-white" />
-                </button>
-              </div>
+              )}
 
               {/* Camera/Preview Area */}
-              <div className="relative aspect-square bg-black">
-                {capturedImage ? (
-                  <>
-                    {/* Image Preview */}
-                    <img
-                      src={capturedImage}
-                      alt="Captured meal"
-                      className="w-full h-full object-cover"
-                    />
-                    {/* Info text */}
-                    <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
-                      <p className="text-white text-sm font-medium bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full inline-block">
-                        512×512px • Center crop
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    {/* Camera View Placeholder */}
-                    <div className="w-full h-full bg-gradient-to-br from-dark-bg to-black flex items-center justify-center">
-                      <div className="text-center">
-                        <div className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-sm mx-auto mb-4 flex items-center justify-center">
-                          <Camera className="w-12 h-12 text-white/50" />
-                        </div>
-                        <p className="text-white/60 text-sm">Position your meal in the frame</p>
-                      </div>
-                    </div>
-                    {/* Square Frame Overlay */}
-                    <div className="absolute inset-0 pointer-events-none">
-                      <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                        {/* Main square */}
-                        <rect
-                          x="20"
-                          y="20"
-                          width="60"
-                          height="60"
-                          fill="none"
-                          stroke="white"
-                          strokeWidth="0.5"
-                          strokeDasharray="4 4"
-                          opacity="0.8"
-                        />
-                        {/* Corner brackets */}
-                        <path d="M 20 30 L 20 20 L 30 20" stroke="#DFF250" strokeWidth="2" fill="none" />
-                        <path d="M 70 20 L 80 20 L 80 30" stroke="#DFF250" strokeWidth="2" fill="none" />
-                        <path d="M 80 70 L 80 80 L 70 80" stroke="#DFF250" strokeWidth="2" fill="none" />
-                        <path d="M 30 80 L 20 80 L 20 70" stroke="#DFF250" strokeWidth="2" fill="none" />
-                        {/* Center dot */}
-                        <circle cx="50" cy="50" r="2" fill="#DFF250" opacity="0.5" />
-                      </svg>
-                    </div>
-                  </>
-                )}
-              </div>
+              {capturedImage && (
+                <div className="relative aspect-square bg-black">
+                  {/* Image Preview */}
+                  <img
+                    src={capturedImage}
+                    alt="Captured meal"
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Info text */}
+                  <div className="absolute bottom-4 left-0 right-0 text-center pointer-events-none">
+                    <p className="text-white text-sm font-medium bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full inline-block">
+                      512×512px • Center crop
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Action Buttons */}
-              <div className="p-6">
-                {capturedImage ? (
+              {capturedImage ? (
+                <div className="p-6">
                   <div className="flex gap-3">
                     <button
                       onClick={handleRetake}
@@ -266,25 +243,32 @@ export function CameraCapture({ isOpen, onClose, onCapture }: CameraCaptureProps
                       Use This Photo
                     </button>
                   </div>
-                ) : (
-                  <div className="space-y-3">
-                    <button
-                      onClick={openCamera}
-                      className="w-full h-12 rounded-xl bg-gradient-to-r from-accent-lime to-accent-orange hover:shadow-lg hover:shadow-accent-lime/25 text-dark-bg font-semibold flex items-center justify-center gap-2 transition-all"
-                    >
-                      <Camera className="w-5 h-5" />
-                      Take Photo
-                    </button>
-                    <button
-                      onClick={openGallery}
-                      className="w-full h-12 rounded-xl bg-white/10 hover:bg-white/15 border border-white/20 text-white font-medium flex items-center justify-center gap-2 transition-all"
-                    >
-                      <ImageIcon className="w-5 h-5" />
-                      Choose from Gallery
-                    </button>
+                </div>
+              ) : (
+                <div className="relative p-8 text-center">
+                  {/* Close button */}
+                  <button
+                    onClick={handleClose}
+                    className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-4 h-4 text-white" />
+                  </button>
+                  
+                  <div className="w-16 h-16 rounded-full bg-accent-lime/20 mx-auto mb-4 flex items-center justify-center">
+                    <Camera className="w-8 h-8 text-accent-lime" />
                   </div>
-                )}
-              </div>
+                  <p className="text-white font-medium mb-2">Opening camera...</p>
+                  <p className="text-sm text-white/60 mb-6">Take a photo of your meal</p>
+                  
+                  {/* Gallery option as a subtle link */}
+                  <button
+                    onClick={openGallery}
+                    className="text-accent-lime text-sm hover:underline"
+                  >
+                    or choose from gallery
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         </motion.div>
