@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import MainLayout from '@/components/layout/MainLayout';
 import { Card } from '@/components/ui/Card';
 import { 
   Plus, 
@@ -23,9 +22,12 @@ import {
   ChevronRight,
   Clock,
   Star,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
 import { toast } from '@/lib/utils/toast';
+import { CameraCapture } from '@/components/nutrition/CameraCapture';
+import { cloudflareUpload } from '@/services/cloudflareUpload';
 
 interface NutrientGoals {
   calories: number;
@@ -70,6 +72,8 @@ const Nutrition: React.FC = () => {
   const [selectedMealType, setSelectedMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearching, setIsSearching] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   
   // Mock data - in real app, this would come from API/database
   const [goals] = useState<NutrientGoals>({
@@ -216,31 +220,79 @@ const Nutrition: React.FC = () => {
     toast.success('Meal removed');
   };
 
+  const handleCameraCapture = async (file: File) => {
+    setIsUploading(true);
+    
+    try {
+      // Upload to Cloudflare
+      const result = await cloudflareUpload.uploadImage(file);
+      
+      if (result.success && result.imageUrl) {
+        // For now, just show success and log the URL
+        toast.success('Photo uploaded successfully!');
+        console.log('Uploaded image URL:', result.imageUrl);
+        
+        // TODO: In the next milestone, this will trigger meal recognition
+        // and display the meal card with nutrition info
+        
+        // Close camera modal
+        setShowCamera(false);
+      } else {
+        toast.error(result.error || 'Failed to upload image');
+      }
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error('Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
-    <MainLayout>
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 pb-20 sm:pb-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <h1 className="text-3xl font-bold text-white">Nutrition Tracker</h1>
-          <div className="flex items-center gap-3">
-            <button className="flex items-center gap-2 px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors">
-              <Calendar size={18} />
-              <span className="text-sm">{selectedDate.toLocaleDateString()}</span>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
+          <h1 className="text-2xl sm:text-3xl font-bold text-white">Nutrition Tracker</h1>
+          <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors flex-1 sm:flex-initial">
+              <Calendar size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span className="text-xs sm:text-sm">{selectedDate.toLocaleDateString()}</span>
             </button>
             <button
               onClick={() => navigate('/nutrition/goals')}
-              className="flex items-center gap-2 px-4 py-2 bg-accent-lime/20 hover:bg-accent-lime/30 text-accent-lime rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-accent-lime/20 hover:bg-accent-lime/30 text-accent-lime rounded-lg transition-colors flex-1 sm:flex-initial"
             >
-              <Target size={18} />
-              <span className="text-sm">Goals</span>
+              <Target size={16} className="sm:w-[18px] sm:h-[18px]" />
+              <span className="text-xs sm:text-sm">Goals</span>
             </button>
           </div>
         </div>
 
+        {/* Camera Feature Highlight */}
+        <Card className="p-4 sm:p-6 bg-gradient-to-r from-accent-lime/20 to-accent-orange/20 backdrop-blur-md border-accent-lime/30">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 text-center sm:text-left">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-accent-lime/30 flex items-center justify-center flex-shrink-0">
+                <Camera className="w-5 h-5 sm:w-6 sm:h-6 text-accent-lime" />
+              </div>
+              <div>
+                <h3 className="text-base sm:text-lg font-semibold text-white">Snap & Know Your Meal</h3>
+                <p className="text-xs sm:text-sm text-white/70">Take a photo for instant nutrition analysis</p>
+              </div>
+            </div>
+            <button
+              onClick={() => setShowCamera(true)}
+              className="w-full sm:w-auto px-6 py-2.5 sm:py-3 bg-gradient-to-r from-accent-lime to-accent-orange rounded-lg text-dark-bg font-medium hover:shadow-lg hover:shadow-accent-lime/25 transition-all"
+            >
+              Try Now
+            </button>
+          </div>
+        </Card>
+
         {/* Daily Summary Cards */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Calorie Summary */}
-          <Card className="p-6 bg-white/5 backdrop-blur-md border-white/10 lg:col-span-2">
+          <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-md border-white/10 lg:col-span-2">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-white">Today's Progress</h2>
@@ -250,9 +302,9 @@ const Nutrition: React.FC = () => {
               </div>
               
               {/* Calorie Ring */}
-              <div className="flex items-center justify-center py-4">
-                <div className="relative w-48 h-48">
-                  <svg className="w-full h-full transform -rotate-90">
+              <div className="flex items-center justify-center py-2 sm:py-4">
+                <div className="relative w-40 h-40 sm:w-48 sm:h-48">
+                  <svg className="w-full h-full transform -rotate-90" viewBox="0 0 192 192">
                     <circle
                       cx="96"
                       cy="96"
@@ -275,8 +327,8 @@ const Nutrition: React.FC = () => {
                     />
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-3xl font-bold text-white">{progress.calories}</p>
-                    <p className="text-sm text-gray-400">of {goals.calories} cal</p>
+                    <p className="text-2xl sm:text-3xl font-bold text-white">{progress.calories}</p>
+                    <p className="text-xs sm:text-sm text-gray-400">of {goals.calories} cal</p>
                   </div>
                 </div>
               </div>
@@ -284,8 +336,8 @@ const Nutrition: React.FC = () => {
               {/* Macros */}
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-sm text-gray-400">Protein</p>
-                  <p className="text-lg font-semibold text-white">{progress.protein}g</p>
+                  <p className="text-xs sm:text-sm text-gray-400">Protein</p>
+                  <p className="text-base sm:text-lg font-semibold text-white">{progress.protein}g</p>
                   <div className="mt-1 h-1 bg-gray-700 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-blue-500 transition-all duration-500"
@@ -294,8 +346,8 @@ const Nutrition: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-400">Carbs</p>
-                  <p className="text-lg font-semibold text-white">{progress.carbs}g</p>
+                  <p className="text-xs sm:text-sm text-gray-400">Carbs</p>
+                  <p className="text-base sm:text-lg font-semibold text-white">{progress.carbs}g</p>
                   <div className="mt-1 h-1 bg-gray-700 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-orange-500 transition-all duration-500"
@@ -304,8 +356,8 @@ const Nutrition: React.FC = () => {
                   </div>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm text-gray-400">Fat</p>
-                  <p className="text-lg font-semibold text-white">{progress.fat}g</p>
+                  <p className="text-xs sm:text-sm text-gray-400">Fat</p>
+                  <p className="text-base sm:text-lg font-semibold text-white">{progress.fat}g</p>
                   <div className="mt-1 h-1 bg-gray-700 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-yellow-500 transition-all duration-500"
@@ -318,44 +370,44 @@ const Nutrition: React.FC = () => {
           </Card>
 
           {/* Quick Stats */}
-          <div className="space-y-4">
-            <Card className="p-4 bg-white/5 backdrop-blur-md border-white/10">
+          <div className="space-y-3 sm:space-y-4">
+            <Card className="p-3 sm:p-4 bg-white/5 backdrop-blur-md border-white/10">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500/20 rounded-lg">
-                    <Droplet className="text-blue-400" size={20} />
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg">
+                    <Droplet className="text-blue-400 w-4 h-4 sm:w-5 sm:h-5" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-400">Water</p>
-                    <p className="text-lg font-semibold text-white">{progress.water} / {goals.water} glasses</p>
+                    <p className="text-xs sm:text-sm text-gray-400">Water</p>
+                    <p className="text-sm sm:text-lg font-semibold text-white">{progress.water} / {goals.water} glasses</p>
                   </div>
                 </div>
                 <button className="text-accent-lime hover:text-accent-lime/80">
-                  <Plus size={20} />
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
               </div>
             </Card>
 
-            <Card className="p-4 bg-white/5 backdrop-blur-md border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-orange-500/20 rounded-lg">
-                  <Activity className="text-orange-400" size={20} />
+            <Card className="p-3 sm:p-4 bg-white/5 backdrop-blur-md border-white/10">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-orange-500/20 rounded-lg">
+                  <Activity className="text-orange-400 w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Exercise</p>
-                  <p className="text-lg font-semibold text-white">320 cal burned</p>
+                  <p className="text-xs sm:text-sm text-gray-400">Exercise</p>
+                  <p className="text-sm sm:text-lg font-semibold text-white">320 cal burned</p>
                 </div>
               </div>
             </Card>
 
-            <Card className="p-4 bg-white/5 backdrop-blur-md border-white/10">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-green-500/20 rounded-lg">
-                  <TrendingUp className="text-green-400" size={20} />
+            <Card className="p-3 sm:p-4 bg-white/5 backdrop-blur-md border-white/10">
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="p-1.5 sm:p-2 bg-green-500/20 rounded-lg">
+                  <TrendingUp className="text-green-400 w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <p className="text-sm text-gray-400">Weekly Avg</p>
-                  <p className="text-lg font-semibold text-white">1,850 cal</p>
+                  <p className="text-xs sm:text-sm text-gray-400">Weekly Avg</p>
+                  <p className="text-sm sm:text-lg font-semibold text-white">1,850 cal</p>
                 </div>
               </div>
             </Card>
@@ -363,9 +415,9 @@ const Nutrition: React.FC = () => {
         </div>
 
         {/* Meals Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Today's Meals */}
-          <Card className="p-6 bg-white/5 backdrop-blur-md border-white/10">
+          <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-md border-white/10">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-white">Today's Meals</h2>
               <button
@@ -431,20 +483,16 @@ const Nutrition: React.FC = () => {
 
           {/* Quick Add */}
           <div className="space-y-4">
-            <Card className="p-6 bg-white/5 backdrop-blur-md border-white/10">
-              <h2 className="text-xl font-semibold text-white mb-4">Quick Add</h2>
+            <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-md border-white/10">
+              <h2 className="text-lg sm:text-xl font-semibold text-white mb-3 sm:mb-4">Quick Add</h2>
               
-              <div className="grid grid-cols-2 gap-3 mb-4">
+              <div className="mb-4">
                 <button
                   onClick={() => setShowAddFood(true)}
-                  className="flex items-center justify-center gap-2 p-3 bg-accent-lime/20 hover:bg-accent-lime/30 text-accent-lime rounded-lg transition-colors"
+                  className="w-full flex items-center justify-center gap-2 p-3 bg-accent-lime/20 hover:bg-accent-lime/30 text-accent-lime rounded-lg transition-colors"
                 >
                   <Search size={18} />
                   <span className="text-sm">Search Food</span>
-                </button>
-                <button className="flex items-center justify-center gap-2 p-3 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors">
-                  <Barcode size={18} />
-                  <span className="text-sm">Scan Barcode</span>
                 </button>
               </div>
 
@@ -535,8 +583,26 @@ const Nutrition: React.FC = () => {
             </Card>
           </div>
         )}
-      </div>
-    </MainLayout>
+
+        {/* Camera Capture Modal */}
+        <CameraCapture
+          isOpen={showCamera}
+          onClose={() => setShowCamera(false)}
+          onCapture={handleCameraCapture}
+        />
+
+        {/* Upload Progress Overlay */}
+        {isUploading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+            <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
+              <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
+              <p className="text-white font-medium">Analyzing your meal...</p>
+              <p className="text-sm text-white/60">This may take a moment</p>
+            </div>
+          </div>
+        )}
+
+    </div>
   );
 };
 

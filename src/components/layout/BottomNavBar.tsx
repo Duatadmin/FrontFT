@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutGrid, Dumbbell, BookOpen, MessageCircle, BarChart3, Library, LucideIcon } from 'lucide-react'; // Updated icons
+import { Utensils, Dumbbell, BookOpen, MessageCircle, BarChart3, Library, LucideIcon } from 'lucide-react'; // Updated icons
 
 interface NavItemType {
   href: string;
@@ -8,7 +8,7 @@ interface NavItemType {
 }
 
 const navItems: NavItemType[] = [
-  { href: '/dashboard', icon: LayoutGrid, label: 'Dashboard' },
+  { href: '/nutrition', icon: Utensils, label: 'Nutrition' },
   { href: '/programs', icon: Dumbbell, label: 'Programs' },
   { href: '/diary', icon: BookOpen, label: 'Diary' },
   { href: '/library', icon: Library, label: 'Library' },

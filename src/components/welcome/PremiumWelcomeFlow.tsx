@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronRight,

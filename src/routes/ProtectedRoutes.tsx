@@ -15,7 +15,7 @@ import ResponsiveProgramsPage from '../pages/ResponsiveProgramsPage';
 import useMediaQuery from '../hooks/useMediaQuery';
 import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
 import UserProfile from '../components/UserProfile';
-import Nutrition from '../pages/Nutrition';
+import ResponsiveNutritionPage from '../pages/ResponsiveNutritionPage';
 
 // Wrapper component to handle props for ExerciseDetailPage
 const ExerciseDetailWrapper = () => {
@@ -66,7 +66,7 @@ export default function ProtectedRoutes() {
       <Route path="/programs" element={<ResponsiveProgramsPage />} />
       <Route path="/analytics" element={<ResponsiveAnalyticsDashboardPage />} />
       <Route path="/profile" element={<UserProfile />} />
-      <Route path="/nutrition" element={<Nutrition />} />
+      <Route path="/nutrition" element={<ResponsiveNutritionPage />} />
       
       {/* This catch-all is important for when this component is rendered under a parent route */}
       <Route path="*" element={<Navigate to="/" replace />} />
