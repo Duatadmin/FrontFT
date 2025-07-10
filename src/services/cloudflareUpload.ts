@@ -182,6 +182,10 @@ export class CloudflareUploadService {
       }
 
       const data = await response.json();
+      
+      // Debug log to see what we're getting
+      console.log('Cloudflare upload response:', data);
+      
       return {
         success: true,
         imageUrl: data.url,

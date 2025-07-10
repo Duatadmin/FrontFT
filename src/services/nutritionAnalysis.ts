@@ -63,15 +63,19 @@ class NutritionAnalysisService {
 
   async analyzePhoto(imageUrl: string): Promise<NutritionAnalysisResponse> {
     try {
+      const requestBody = {
+        image_url: imageUrl,
+        prompt_version: 'v1',
+      };
+      
+      console.log('Sending to nutrition API:', requestBody);
+      
       const response = await fetch(`${this.baseUrl}/photo/analyze`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          image_url: imageUrl,
-          prompt_version: 'v1',
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -80,10 +84,16 @@ class NutritionAnalysisService {
           message: 'Failed to analyze photo',
         }));
         
+        console.error('Nutrition API error:', {
+          status: response.status,
+          error,
+          imageUrl
+        });
+        
         // Handle specific error cases
         switch (response.status) {
           case 400:
-            throw new Error('Invalid image URL. Please try again.');
+            throw new Error(error.message || 'Invalid image URL. Please try again.');
           case 404:
             throw new Error('Unable to access the image. Please try again.');
           case 408:
