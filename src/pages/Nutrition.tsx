@@ -31,6 +31,7 @@ import { CameraCapture } from '@/components/nutrition/CameraCapture';
 import { cloudflareUpload } from '@/services/cloudflareUpload';
 import { nutritionAnalysisService, mealHistoryStorage, type NutritionAnalysisResponse } from '@/services/nutritionAnalysis';
 import { MealAnalysisCard } from '@/components/nutrition/MealAnalysisCard';
+import { Confetti } from '@/components/ui/Confetti';
 
 interface NutrientGoals {
   calories: number;
@@ -81,6 +82,10 @@ const Nutrition: React.FC = () => {
   const [analysisResult, setAnalysisResult] = useState<NutritionAnalysisResponse | null>(null);
   const [showMealCard, setShowMealCard] = useState(false);
   const [mealHistory, setMealHistory] = useState(mealHistoryStorage.getAll());
+  const [analysisProgress, setAnalysisProgress] = useState(0);
+  const [currentCaption, setCurrentCaption] = useState('');
+  const [currentFunFact, setCurrentFunFact] = useState('');
+  const [showConfetti, setShowConfetti] = useState(false);
   
   // Mock data - in real app, this would come from API/database
   const [goals] = useState<NutrientGoals>({
@@ -90,6 +95,32 @@ const Nutrition: React.FC = () => {
     fat: 65,
     water: 8
   });
+
+  // Personalized captions for analysis
+  const analysisCaption = [
+    `Finding proteins for your +${goals.protein}g/day target...`,
+    'Calculating precise macro ratios...',
+    'Checking micronutrient density...',
+    'Analyzing portion sizes...',
+    'Identifying fresh ingredients...',
+    'Measuring calorie content...',
+    'Detecting cooking methods...',
+    'Evaluating nutritional balance...',
+    'Comparing to your daily goals...',
+    'Finalizing nutrition insights...'
+  ];
+
+  // Fun facts to show during analysis
+  const funFacts = [
+    '💡 Did you know? Taking photos of your meals can increase dietary awareness by up to 50%',
+    '🥗 Colorful plates often mean more diverse nutrients and antioxidants',
+    '🧠 Your brain uses about 20% of your daily calorie intake',
+    '💪 Protein helps preserve muscle mass during weight loss',
+    '🌊 Staying hydrated can boost your metabolism by up to 30%',
+    '🍎 Fiber-rich foods help you feel fuller for longer',
+    '⚡ Small, frequent meals can help maintain stable energy levels',
+    '🌙 Quality sleep is crucial for healthy metabolism'
+  ];
 
   const [progress, setProgress] = useState<NutrientProgress>({
     calories: 1245,
@@ -240,9 +271,34 @@ const Nutrition: React.FC = () => {
         
         // Start analyzing the image
         setIsAnalyzing(true);
+        setAnalysisProgress(0);
+        setCurrentCaption(analysisCaption[0]);
+        setCurrentFunFact(funFacts[0]);
+        
+        // Start progress simulation
+        const startTime = Date.now();
+        const expectedDuration = 25000; // 25 seconds
+        
+        const progressInterval = setInterval(() => {
+          const elapsed = Date.now() - startTime;
+          const progress = Math.min((elapsed / expectedDuration) * 100, 99);
+          setAnalysisProgress(progress);
+          
+          // Update caption every 2.5 seconds
+          const captionIndex = Math.floor((elapsed / 2500) % analysisCaption.length);
+          setCurrentCaption(analysisCaption[captionIndex]);
+          
+          // Update fun fact every 5 seconds
+          const funFactIndex = Math.floor((elapsed / 5000) % funFacts.length);
+          setCurrentFunFact(funFacts[funFactIndex]);
+        }, 100);
         
         try {
           const analysisData = await nutritionAnalysisService.analyzePhoto(result.imageUrl);
+          
+          // Ensure we show 100% completion
+          clearInterval(progressInterval);
+          setAnalysisProgress(100);
           
           // Save to history
           mealHistoryStorage.save(analysisData);
@@ -250,12 +306,22 @@ const Nutrition: React.FC = () => {
           // Update local state
           setMealHistory(mealHistoryStorage.getAll());
           
-          // Show the meal card
+          // Show the meal card with celebration
           setAnalysisResult(analysisData);
           setShowMealCard(true);
           
+          // Trigger confetti
+          setShowConfetti(true);
+          setTimeout(() => setShowConfetti(false), 3000);
+          
+          // Optional: Add haptic feedback if available
+          if ('vibrate' in navigator) {
+            navigator.vibrate(50);
+          }
+          
           toast.success('Meal analyzed successfully!');
         } catch (analysisError) {
+          clearInterval(progressInterval);
           console.error('Analysis error:', analysisError);
           toast.error(
             analysisError instanceof Error 
@@ -264,6 +330,9 @@ const Nutrition: React.FC = () => {
           );
         } finally {
           setIsAnalyzing(false);
+          setAnalysisProgress(0);
+          setCurrentCaption('');
+          setCurrentFunFact('');
         }
       } else {
         toast.error(result.error || 'Failed to upload image');
@@ -679,10 +748,95 @@ const Nutrition: React.FC = () => {
       {/* Analysis Progress Overlay */}
       {isAnalyzing && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
-            <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
-            <p className="text-white font-medium">Analyzing your meal...</p>
-            <p className="text-sm text-white/60">This may take up to 10 seconds</p>
+          <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 w-full max-w-md mx-4">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-accent-lime/20 to-accent-orange/20 backdrop-blur-sm border border-white/10 mx-auto mb-4 flex items-center justify-center">
+                <div className="relative">
+                  <Loader2 className="w-8 h-8 text-accent-lime animate-spin" />
+                  <div className="absolute inset-0 w-8 h-8 bg-accent-lime/20 blur-xl animate-pulse" />
+                </div>
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">Analyzing your meal</h3>
+              
+              {/* Rotating captions */}
+              <div className="h-6 flex items-center justify-center">
+                <p className="text-sm text-white/70 animate-fade-in">
+                  {currentCaption}
+                </p>
+              </div>
+            </div>
+
+            {/* Three-step progress */}
+            <div className="space-y-6">
+              {/* Progress bar background */}
+              <div className="relative">
+                <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-gradient-to-r from-accent-lime to-accent-orange rounded-full transition-all duration-500 ease-out"
+                    style={{ width: `${analysisProgress}%` }}
+                  />
+                </div>
+                
+                {/* Progress milestones */}
+                <div className="absolute inset-0 flex justify-between">
+                  <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                    analysisProgress >= 0 
+                      ? 'bg-accent-lime border-accent-lime scale-110' 
+                      : 'bg-white/10 border-white/20'
+                  }`} style={{ transform: 'translateY(-5px)' }} />
+                  <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                    analysisProgress >= 33 
+                      ? 'bg-gradient-to-r from-accent-lime to-accent-orange border-accent-orange scale-110' 
+                      : 'bg-white/10 border-white/20'
+                  }`} style={{ transform: 'translateY(-5px)' }} />
+                  <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                    analysisProgress >= 66 
+                      ? 'bg-accent-orange border-accent-orange scale-110' 
+                      : 'bg-white/10 border-white/20'
+                  }`} style={{ transform: 'translateY(-5px)' }} />
+                </div>
+              </div>
+
+              {/* Step labels */}
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className={`transition-all duration-300 ${
+                  analysisProgress >= 0 && analysisProgress < 33 
+                    ? 'text-white scale-105' 
+                    : analysisProgress >= 33 
+                      ? 'text-white/40' 
+                      : 'text-white/60'
+                }`}>
+                  <p className="text-xs font-medium">Identifying</p>
+                  <p className="text-xs text-white/60">ingredients</p>
+                </div>
+                <div className={`transition-all duration-300 ${
+                  analysisProgress >= 33 && analysisProgress < 66 
+                    ? 'text-white scale-105' 
+                    : analysisProgress >= 66 
+                      ? 'text-white/40' 
+                      : 'text-white/60'
+                }`}>
+                  <p className="text-xs font-medium">Counting</p>
+                  <p className="text-xs text-white/60">calories & macros</p>
+                </div>
+                <div className={`transition-all duration-300 ${
+                  analysisProgress >= 66 
+                    ? 'text-white scale-105' 
+                    : 'text-white/60'
+                }`}>
+                  <p className="text-xs font-medium">Building</p>
+                  <p className="text-xs text-white/60">your meal card</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Fun facts or tips (optional) */}
+            <div className="mt-8 p-4 bg-white/5 rounded-2xl border border-white/10">
+              <p className="text-xs text-white/60 text-center animate-fade-in">
+                {currentFunFact}
+              </p>
+            </div>
           </div>
         </div>
       )}
@@ -706,6 +860,9 @@ const Nutrition: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Confetti Celebration */}
+      <Confetti active={showConfetti} />
     </>
   );
 };
