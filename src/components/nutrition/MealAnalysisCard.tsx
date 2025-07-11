@@ -56,6 +56,16 @@ export const MealAnalysisCard: React.FC<MealAnalysisCardProps> = ({ data, onClos
     <div className="w-full max-w-2xl mx-auto">
       {/* Glassmorphic card container */}
       <div className="relative bg-white/5 backdrop-blur-2xl rounded-3xl border border-white/10 shadow-2xl shadow-black/20 overflow-hidden">
+        {/* Close button - moved to top level */}
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/20 hover:bg-black/50 flex items-center justify-center transition-all z-50"
+          >
+            <X className="w-5 h-5 text-white" />
+          </button>
+        )}
+        
         {/* Background decoration */}
         <div className="absolute inset-0 bg-gradient-to-br from-accent-lime/10 via-transparent to-accent-orange/10 pointer-events-none" />
         
@@ -110,16 +120,6 @@ export const MealAnalysisCard: React.FC<MealAnalysisCardProps> = ({ data, onClos
               </div>
             </div>
           </div>
-          
-          {/* Close button */}
-          {onClose && (
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 w-10 h-10 rounded-full bg-black/30 backdrop-blur-md border border-white/20 hover:bg-black/50 flex items-center justify-center transition-all"
-            >
-              <X className="w-5 h-5 text-white" />
-            </button>
-          )}
         </div>
 
         {/* Content Section */}

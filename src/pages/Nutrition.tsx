@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Card } from '@/components/ui/Card';
 import { 
   Plus, 
@@ -24,14 +25,17 @@ import {
   Star,
   X,
   Loader2,
-  History
+  History,
+  Trash2
 } from 'lucide-react';
 import { toast } from '@/lib/utils/toast';
 import { CameraCapture } from '@/components/nutrition/CameraCapture';
 import { cloudflareUpload } from '@/services/cloudflareUpload';
 import { nutritionAnalysisService, mealHistoryStorage, type NutritionAnalysisResponse } from '@/services/nutritionAnalysis';
 import { MealAnalysisCard } from '@/components/nutrition/MealAnalysisCard';
-import { Confetti } from '@/components/ui/Confetti';
+import { WaterTracker } from '@/components/nutrition/WaterTracker';
+import { mealService } from '@/services/mealService';
+import { supabase } from '@/lib/supabase';
 
 interface NutrientGoals {
   calories: number;
@@ -67,6 +71,7 @@ interface MealEntry {
   quantity: number;
   mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
   timestamp: Date;
+  analysisData?: NutritionAnalysisResponse; // Store full analysis data
 }
 
 const Nutrition: React.FC = () => {
@@ -85,7 +90,90 @@ const Nutrition: React.FC = () => {
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [currentCaption, setCurrentCaption] = useState('');
   const [currentFunFact, setCurrentFunFact] = useState('');
-  const [showConfetti, setShowConfetti] = useState(false);
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [processPhase, setProcessPhase] = useState<'upload' | 'analyze'>('upload');
+  const [showWaterTracker, setShowWaterTracker] = useState(false);
+  
+  // Load meals from Supabase on mount
+  useEffect(() => {
+    loadTodaysMealsFromSupabase();
+  }, []);
+  
+  // Function to load today's meals from Supabase
+  const loadTodaysMealsFromSupabase = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+      
+      const result = await mealService.getUserMeals(user.id, {
+        date: new Date()
+      });
+      
+      if (result.success && result.data) {
+        // Convert Supabase data to MealEntry format
+        const supabaseMeals: MealEntry[] = result.data
+          .filter(meal => meal.meal_type) // Only include meals with meal_type
+          .map(meal => ({
+            id: meal.id,
+            foodItem: {
+              id: meal.id,
+              name: meal.name || meal.meal_name || 'Unknown',
+              calories: meal.energy_kcal || meal.calories || 0,
+              protein: meal.protein_g || 0,
+              carbs: meal.carbs_g || 0,
+              fat: meal.fat_g || 0,
+              serving: '1 serving',
+              category: 'analyzed'
+            },
+            quantity: 1,
+            mealType: meal.meal_type as 'breakfast' | 'lunch' | 'dinner' | 'snack',
+            timestamp: new Date(meal.created_at),
+            analysisData: {
+              name: meal.name || meal.meal_name || 'Unknown',
+              tagline: meal.tagline || '',
+              photo_url: meal.photo_url || meal.image_url,
+              energy_kcal: meal.energy_kcal || meal.calories || 0,
+              macros: meal.macros || {
+                protein_g: meal.protein_g || 0,
+                carbs_g: meal.carbs_g || 0,
+                fat_g: meal.fat_g || 0,
+                fiber_g: meal.fiber_g || 0,
+                sugar_g: meal.sugar_g || 0,
+                sodium_mg: meal.sodium_mg || 0
+              },
+              micros: meal.micros || {},
+              ingredients: meal.ingredients || [],
+              recipe_steps: meal.recipe_steps || [],
+              daily_goal_pct: meal.daily_goal_pct || { kcal: 0, protein: 0, carbs: 0, fat: 0 },
+              confidence: meal.confidence || meal.confidence_score || 1,
+              meal_type: meal.meal_type,
+              prep_time_min: meal.prep_time_min || 0,
+              rating: meal.rating || 0
+            }
+          }));
+        
+        // Set meals and calculate totals
+        if (supabaseMeals.length > 0) {
+          setTodaysMeals(supabaseMeals);
+          
+          // Update progress based on loaded meals
+          const totals = supabaseMeals.reduce((acc, meal) => ({
+            calories: acc.calories + meal.foodItem.calories,
+            protein: acc.protein + meal.foodItem.protein,
+            carbs: acc.carbs + meal.foodItem.carbs,
+            fat: acc.fat + meal.foodItem.fat
+          }), { calories: 0, protein: 0, carbs: 0, fat: 0 });
+          
+          setProgress(prev => ({
+            ...totals,
+            water: prev.water
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error loading meals from Supabase:', error);
+    }
+  };
   
   // Mock data - in real app, this would come from API/database
   const [goals] = useState<NutrientGoals>({
@@ -130,39 +218,7 @@ const Nutrition: React.FC = () => {
     water: 5
   });
 
-  const [todaysMeals, setTodaysMeals] = useState<MealEntry[]>([
-    {
-      id: '1',
-      foodItem: {
-        id: 'f1',
-        name: 'Scrambled Eggs',
-        calories: 180,
-        protein: 13,
-        carbs: 2,
-        fat: 14,
-        serving: '2 large eggs',
-        isFavorite: true
-      },
-      quantity: 1,
-      mealType: 'breakfast',
-      timestamp: new Date()
-    },
-    {
-      id: '2',
-      foodItem: {
-        id: 'f2',
-        name: 'Whole Wheat Toast',
-        calories: 80,
-        protein: 3,
-        carbs: 15,
-        fat: 1,
-        serving: '1 slice'
-      },
-      quantity: 2,
-      mealType: 'breakfast',
-      timestamp: new Date()
-    }
-  ]);
+  const [todaysMeals, setTodaysMeals] = useState<MealEntry[]>([]);
 
   const [recentFoods] = useState<FoodItem[]>([
     {
@@ -240,10 +296,11 @@ const Nutrition: React.FC = () => {
     toast.success(`Added ${food.name} to ${selectedMealType}`);
   };
 
-  const handleDeleteMeal = (mealId: string) => {
+  const handleDeleteMeal = async (mealId: string) => {
     const meal = todaysMeals.find(m => m.id === mealId);
     if (!meal) return;
     
+    // Remove from UI immediately for better UX
     setTodaysMeals(todaysMeals.filter(m => m.id !== mealId));
     
     // Update progress
@@ -255,42 +312,93 @@ const Nutrition: React.FC = () => {
       water: progress.water
     });
     
-    toast.success('Meal removed');
+    // Delete from Supabase if it's a saved meal
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user && meal.id) {
+        const result = await mealService.deleteMeal(meal.id, user.id);
+        if (result.success) {
+          toast.success('Meal removed from diary');
+        } else {
+          // If delete failed, add the meal back
+          setTodaysMeals(prev => [...prev, meal]);
+          setProgress(prev => ({
+            calories: prev.calories + (meal.foodItem.calories * meal.quantity),
+            protein: prev.protein + (meal.foodItem.protein * meal.quantity),
+            carbs: prev.carbs + (meal.foodItem.carbs * meal.quantity),
+            fat: prev.fat + (meal.foodItem.fat * meal.quantity),
+            water: prev.water
+          }));
+          toast.error('Failed to remove meal: ' + result.error);
+        }
+      } else {
+        toast.success('Meal removed');
+      }
+    } catch (error) {
+      console.error('Error deleting meal:', error);
+      // If error, add the meal back
+      setTodaysMeals(prev => [...prev, meal]);
+      setProgress(prev => ({
+        calories: prev.calories + (meal.foodItem.calories * meal.quantity),
+        protein: prev.protein + (meal.foodItem.protein * meal.quantity),
+        carbs: prev.carbs + (meal.foodItem.carbs * meal.quantity),
+        fat: prev.fat + (meal.foodItem.fat * meal.quantity),
+        water: prev.water
+      }));
+      toast.error('Failed to remove meal');
+    }
   };
 
   const handleCameraCapture = async (file: File) => {
+    // Show process modal and start with upload phase
+    setShowCamera(false);
+    setShowProcessModal(true);
+    setProcessPhase('upload');
     setIsUploading(true);
+    setAnalysisProgress(0);
     
     try {
+      // Start upload progress animation (0-25%) over ~3 seconds
+      let uploadProgress = 0;
+      const uploadInterval = setInterval(() => {
+        uploadProgress += 0.83; // ~25% over 3 seconds (0.83% per 100ms)
+        setAnalysisProgress(Math.min(uploadProgress, 20)); // Cap at 20% during upload
+      }, 100);
+      
       // Upload via server endpoint to avoid CORS issues
       const result = await cloudflareUpload.uploadViaServer(file);
       
+      clearInterval(uploadInterval);
+      
       if (result.success && result.imageUrl) {
-        // Close camera modal
-        setShowCamera(false);
+        // Complete upload phase (reach 25%)
+        setAnalysisProgress(25);
+        await new Promise(resolve => setTimeout(resolve, 300));
         
-        // Start analyzing the image
+        // Transition to analyze phase
+        setProcessPhase('analyze');
+        setIsUploading(false);
         setIsAnalyzing(true);
-        setAnalysisProgress(0);
         setCurrentCaption(analysisCaption[0]);
         setCurrentFunFact(funFacts[0]);
         
-        // Start progress simulation
-        const startTime = Date.now();
-        const expectedDuration = 25000; // 25 seconds
-        
+        // Continue progress from 25% to 95% over ~25 seconds (3% per second)
+        let progress = 25;
         const progressInterval = setInterval(() => {
-          const elapsed = Date.now() - startTime;
-          const progress = Math.min((elapsed / expectedDuration) * 100, 99);
-          setAnalysisProgress(progress);
+          progress += 0.3; // 3% per second (0.3% per 100ms)
+          setAnalysisProgress(Math.min(progress, 95)); // Cap at 95% until we get results
           
-          // Update caption every 2.5 seconds
-          const captionIndex = Math.floor((elapsed / 2500) % analysisCaption.length);
-          setCurrentCaption(analysisCaption[captionIndex]);
-          
-          // Update fun fact every 5 seconds
-          const funFactIndex = Math.floor((elapsed / 5000) % funFacts.length);
-          setCurrentFunFact(funFacts[funFactIndex]);
+          // Update captions based on progress
+          if (progress >= 40 && progress < 42) {
+            setCurrentCaption(analysisCaption[1]);
+            setCurrentFunFact(funFacts[1]);
+          } else if (progress >= 60 && progress < 62) {
+            setCurrentCaption(analysisCaption[2]);
+            setCurrentFunFact(funFacts[2]);
+          } else if (progress >= 80 && progress < 82) {
+            setCurrentCaption(analysisCaption[3]);
+            setCurrentFunFact(funFacts[3]);
+          }
         }, 100);
         
         try {
@@ -300,19 +408,26 @@ const Nutrition: React.FC = () => {
           clearInterval(progressInterval);
           setAnalysisProgress(100);
           
+          // Show completion state for a moment
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
           // Save to history
           mealHistoryStorage.save(analysisData);
           
           // Update local state
           setMealHistory(mealHistoryStorage.getAll());
           
-          // Show the meal card with celebration
+          // Close process modal and show meal card
+          setShowProcessModal(false);
           setAnalysisResult(analysisData);
-          setShowMealCard(true);
+          setShowMealCard(true); // Always show the meal card first
           
-          // Trigger confetti
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 3000);
+          // If we have a selected meal type, prepare the meal entry for later
+          if (selectedMealType) {
+            // We'll add to meals when the user closes the meal card
+            // Store the meal type temporarily
+          }
+          
           
           // Optional: Add haptic feedback if available
           if ('vibrate' in navigator) {
@@ -328,6 +443,7 @@ const Nutrition: React.FC = () => {
               ? analysisError.message 
               : 'Couldn\'t analyze the photo. Please try again.'
           );
+          setShowProcessModal(false);
         } finally {
           setIsAnalyzing(false);
           setAnalysisProgress(0);
@@ -336,22 +452,117 @@ const Nutrition: React.FC = () => {
         }
       } else {
         toast.error(result.error || 'Failed to upload image');
+        setShowProcessModal(false);
+        setAnalysisProgress(0);
       }
     } catch (error) {
       console.error('Upload error:', error);
       toast.error('Failed to upload image. Please try again.');
+      setShowProcessModal(false);
+      setAnalysisProgress(0);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleCloseMealCard = () => {
+  const handleCloseMealCard = async () => {
+    // If we have a selected meal type and analysis result, add to today's meals
+    if (selectedMealType && analysisResult) {
+      // First save to Supabase to get the proper ID
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const result = await mealService.saveMeal(analysisResult, selectedMealType, user.id);
+          if (result.success && result.data) {
+            // Use the Supabase-generated ID
+            const newMealEntry: MealEntry = {
+              id: result.data.id, // Use the actual UUID from Supabase
+              foodItem: {
+                id: result.data.id, // Use the same ID
+                name: analysisResult.name,
+                calories: analysisResult.energy_kcal,
+                protein: analysisResult.macros.protein_g,
+                carbs: analysisResult.macros.carbs_g,
+                fat: analysisResult.macros.fat_g,
+                serving: '1 serving',
+                category: 'analyzed'
+              },
+              quantity: 1,
+              mealType: selectedMealType,
+              timestamp: new Date(),
+              analysisData: analysisResult // Store the full analysis data
+            };
+            
+            // Check if meal already exists to prevent duplicates
+            setTodaysMeals(prev => {
+              const exists = prev.some(meal => meal.id === result.data.id);
+              if (exists) {
+                return prev; // Don't add duplicate
+              }
+              return [...prev, newMealEntry];
+            });
+            
+            // Update daily totals
+            setProgress(prev => ({
+              calories: prev.calories + analysisResult.energy_kcal,
+              protein: prev.protein + analysisResult.macros.protein_g,
+              carbs: prev.carbs + analysisResult.macros.carbs_g,
+              fat: prev.fat + analysisResult.macros.fat_g,
+              water: prev.water // Keep existing water value
+            }));
+            
+            toast.success(`Added ${analysisResult.name} to ${selectedMealType} and saved to your diary!`);
+          } else {
+            toast.error(`Couldn't save meal: ${result.error}`);
+          }
+        } else {
+          // If not logged in, use a temporary ID
+          const tempId = `temp_${Date.now()}`;
+          const newMealEntry: MealEntry = {
+            id: tempId,
+            foodItem: {
+              id: tempId,
+              name: analysisResult.name,
+              calories: analysisResult.energy_kcal,
+              protein: analysisResult.macros.protein_g,
+              carbs: analysisResult.macros.carbs_g,
+              fat: analysisResult.macros.fat_g,
+              serving: '1 serving',
+              category: 'analyzed'
+            },
+            quantity: 1,
+            mealType: selectedMealType,
+            timestamp: new Date(),
+            analysisData: analysisResult
+          };
+          
+          setTodaysMeals(prev => [...prev, newMealEntry]);
+          setProgress(prev => ({
+            calories: prev.calories + analysisResult.energy_kcal,
+            protein: prev.protein + analysisResult.macros.protein_g,
+            carbs: prev.carbs + analysisResult.macros.carbs_g,
+            fat: prev.fat + analysisResult.macros.fat_g,
+            water: prev.water
+          }));
+          
+          toast.warning(`Added ${analysisResult.name} to ${selectedMealType} (not logged in - won't be saved)`);
+        }
+      } catch (error) {
+        console.error('Error saving meal:', error);
+        toast.error('Failed to save meal');
+      }
+      
+      // Clear selected meal type
+      setSelectedMealType(null as any);
+    }
+    
     setShowMealCard(false);
     setAnalysisResult(null);
   };
 
   const handleOpenFromHistory = (historyItem: any) => {
     setAnalysisResult(historyItem);
+    setSelectedMealType(null as any); // Clear selected meal type to prevent adding
     setShowMealCard(true);
   };
 
@@ -479,7 +690,10 @@ const Nutrition: React.FC = () => {
 
           {/* Quick Stats */}
           <div className="space-y-3 sm:space-y-4">
-            <Card className="p-3 sm:p-4 bg-white/5 backdrop-blur-md border-white/10">
+            <Card 
+              className="p-3 sm:p-4 bg-white/5 backdrop-blur-md border-white/10 cursor-pointer hover:bg-white/10 transition-colors"
+              onClick={() => setShowWaterTracker(true)}
+            >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg">
@@ -490,9 +704,17 @@ const Nutrition: React.FC = () => {
                     <p className="text-sm sm:text-lg font-semibold text-white">{progress.water} / {goals.water} glasses</p>
                   </div>
                 </div>
-                <button className="text-accent-lime hover:text-accent-lime/80">
+                <motion.button 
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowWaterTracker(true);
+                  }}
+                  className="text-accent-lime hover:text-accent-lime/80 transition-all"
+                >
                   <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
+                </motion.button>
               </div>
             </Card>
 
@@ -549,9 +771,10 @@ const Nutrition: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedMealType(mealType as any);
-                          setShowAddFood(true);
+                          setShowCamera(true);
                         }}
-                        className="text-accent-lime hover:text-accent-lime/80"
+                        className="text-accent-lime hover:text-accent-lime/80 transition-transform hover:scale-110"
+                        title={`Add food to ${mealType}`}
                       >
                         <Plus size={16} />
                       </button>
@@ -559,29 +782,78 @@ const Nutrition: React.FC = () => {
                   </div>
                   
                   <div className="space-y-1">
-                    {todaysMeals
-                      .filter(meal => meal.mealType === mealType)
-                      .map(meal => (
-                        <div
-                          key={meal.id}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 group"
-                        >
-                          <div className="flex-1">
-                            <p className="text-sm text-white">{meal.foodItem.name}</p>
-                            <p className="text-xs text-gray-500">
-                              {meal.quantity > 1 ? `${meal.quantity} × ` : ''}{meal.foodItem.serving} • {meal.foodItem.calories * meal.quantity} cal
-                            </p>
-                          </div>
-                          <button
-                            onClick={() => handleDeleteMeal(meal.id)}
-                            className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity"
+                    <AnimatePresence mode="popLayout">
+                      {todaysMeals
+                        .filter(meal => meal.mealType === mealType)
+                        .map((meal, index) => (
+                          <motion.div
+                            key={meal.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.8, x: -20 }}
+                            animate={{ opacity: 1, scale: 1, x: 0 }}
+                            exit={{ opacity: 0, scale: 0.8, x: 20 }}
+                            transition={{ 
+                              type: "spring", 
+                              stiffness: 500, 
+                              damping: 30,
+                              delay: index * 0.05
+                            }}
+                            className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 group relative overflow-hidden cursor-pointer"
+                            onClick={(e) => {
+                              // Don't trigger if clicking the delete button
+                              if (!(e.target as HTMLElement).closest('button')) {
+                                if (meal.analysisData) {
+                                  setAnalysisResult(meal.analysisData);
+                                  setSelectedMealType(null as any); // Clear selected meal type to prevent re-adding
+                                  setShowMealCard(true);
+                                } else {
+                                  toast.info('No detailed analysis available for this item');
+                                }
+                              }
+                            }}
                           >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      ))}
+                            {/* Shimmer effect for new items */}
+                            <motion.div
+                              initial={{ x: "-100%" }}
+                              animate={{ x: "200%" }}
+                              transition={{ duration: 0.8, ease: "easeOut" }}
+                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent"
+                              style={{ display: meal.timestamp && new Date().getTime() - new Date(meal.timestamp).getTime() < 1000 ? 'block' : 'none' }}
+                            />
+                            
+                            <motion.div 
+                              className="flex-1 relative z-10"
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: 0.1 }}
+                            >
+                              <p className="text-sm text-white font-medium">{meal.foodItem.name}</p>
+                              <p className="text-xs text-gray-500">
+                                {meal.quantity > 1 ? `${meal.quantity} × ` : ''}{meal.foodItem.serving} • {meal.foodItem.calories * meal.quantity} cal
+                              </p>
+                            </motion.div>
+                            <motion.button
+                              initial={{ opacity: 0, scale: 0 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.2 }}
+                              onClick={() => handleDeleteMeal(meal.id)}
+                              className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-300 transition-opacity relative z-10 ml-2"
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                            >
+                              <X size={16} />
+                            </motion.button>
+                          </motion.div>
+                        ))}
+                    </AnimatePresence>
                     {todaysMeals.filter(meal => meal.mealType === mealType).length === 0 && (
-                      <p className="text-sm text-gray-600 italic">No items added</p>
+                      <motion.p 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        className="text-sm text-gray-600 italic"
+                      >
+                        No items added
+                      </motion.p>
                     )}
                   </div>
                 </div>
@@ -734,19 +1006,8 @@ const Nutrition: React.FC = () => {
         onCapture={handleCameraCapture}
       />
 
-      {/* Upload Progress Overlay */}
-      {isUploading && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
-          <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 flex flex-col items-center gap-4">
-            <Loader2 className="w-12 h-12 text-accent-lime animate-spin" />
-            <p className="text-white font-medium">Uploading photo...</p>
-            <p className="text-sm text-white/60">Please wait</p>
-          </div>
-        </div>
-      )}
-
-      {/* Analysis Progress Overlay */}
-      {isAnalyzing && (
+      {/* Combined Process Modal - Upload & Analysis */}
+      {showProcessModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
           <div className="bg-dark-bg/90 backdrop-blur-xl rounded-3xl border border-white/10 p-8 w-full max-w-md mx-4">
             {/* Header */}
@@ -757,17 +1018,28 @@ const Nutrition: React.FC = () => {
                   <div className="absolute inset-0 w-8 h-8 bg-accent-lime/20 blur-xl animate-pulse" />
                 </div>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Analyzing your meal</h3>
+              <h3 className="text-xl font-semibold text-white mb-2">
+                {processPhase === 'upload' ? 'Uploading photo' : 'Analyzing your meal'}
+              </h3>
+              {selectedMealType && (
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-sm text-white/60">Adding to</span>
+                  <span className="text-sm font-medium text-accent-lime capitalize flex items-center gap-1">
+                    {getMealIcon(selectedMealType)}
+                    {selectedMealType}
+                  </span>
+                </div>
+              )}
               
               {/* Rotating captions */}
               <div className="h-6 flex items-center justify-center">
                 <p className="text-sm text-white/70 animate-fade-in">
-                  {currentCaption}
+                  {processPhase === 'upload' ? 'Preparing your meal for analysis...' : currentCaption}
                 </p>
               </div>
             </div>
 
-            {/* Three-step progress */}
+            {/* Four-step progress */}
             <div className="space-y-6">
               {/* Progress bar background */}
               <div className="relative">
@@ -778,32 +1050,59 @@ const Nutrition: React.FC = () => {
                   />
                 </div>
                 
-                {/* Progress milestones */}
-                <div className="absolute inset-0 flex justify-between">
-                  <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
-                    analysisProgress >= 0 
-                      ? 'bg-accent-lime border-accent-lime scale-110' 
-                      : 'bg-white/10 border-white/20'
-                  }`} style={{ transform: 'translateY(-5px)' }} />
-                  <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
-                    analysisProgress >= 33 
-                      ? 'bg-gradient-to-r from-accent-lime to-accent-orange border-accent-orange scale-110' 
-                      : 'bg-white/10 border-white/20'
-                  }`} style={{ transform: 'translateY(-5px)' }} />
-                  <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
-                    analysisProgress >= 66 
-                      ? 'bg-accent-orange border-accent-orange scale-110' 
-                      : 'bg-white/10 border-white/20'
-                  }`} style={{ transform: 'translateY(-5px)' }} />
+                {/* Progress milestones - 5 steps, centered at 0%, 25%, 50%, 75%, 100% */}
+                <div className="absolute inset-0 flex items-center">
+                  <div className="relative w-full flex justify-between items-center">
+                    {/* 0% - Upload Start */}
+                    <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                      analysisProgress >= 0 
+                        ? 'bg-accent-lime border-accent-lime scale-110' 
+                        : 'bg-white/10 border-white/20'
+                    }`} style={{ position: 'absolute', left: '0%', transform: 'translateX(-50%)' }} />
+                    {/* 25% - Identify */}
+                    <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                      analysisProgress >= 25 
+                        ? 'bg-gradient-to-r from-accent-lime to-accent-orange border-accent-orange scale-110' 
+                        : 'bg-white/10 border-white/20'
+                    }`} style={{ position: 'absolute', left: '25%', transform: 'translateX(-50%)' }} />
+                    {/* 50% - Count */}
+                    <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                      analysisProgress >= 50 
+                        ? 'bg-accent-orange border-accent-orange scale-110' 
+                        : 'bg-white/10 border-white/20'
+                    }`} style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)' }} />
+                    {/* 75% - Build */}
+                    <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                      analysisProgress >= 75 
+                        ? 'bg-accent-orange border-accent-orange scale-110' 
+                        : 'bg-white/10 border-white/20'
+                    }`} style={{ position: 'absolute', left: '75%', transform: 'translateX(-50%)' }} />
+                    {/* 100% - Complete */}
+                    <div className={`w-3 h-3 rounded-full border-2 transition-all duration-300 ${
+                      analysisProgress >= 100 
+                        ? 'bg-gradient-to-r from-accent-orange to-accent-lime border-accent-lime scale-110' 
+                        : 'bg-white/10 border-white/20'
+                    }`} style={{ position: 'absolute', left: '100%', transform: 'translateX(-50%)' }} />
+                  </div>
                 </div>
               </div>
 
-              {/* Step labels */}
-              <div className="grid grid-cols-3 gap-2 text-center">
+              {/* Step labels - now 4 steps */}
+              <div className="grid grid-cols-4 gap-2 text-center">
                 <div className={`transition-all duration-300 ${
-                  analysisProgress >= 0 && analysisProgress < 33 
+                  analysisProgress >= 0 && analysisProgress < 25 
                     ? 'text-white scale-105' 
-                    : analysisProgress >= 33 
+                    : analysisProgress >= 25 
+                      ? 'text-white/40' 
+                      : 'text-white/60'
+                }`}>
+                  <p className="text-xs font-medium">Uploading</p>
+                  <p className="text-xs text-white/60">photo</p>
+                </div>
+                <div className={`transition-all duration-300 ${
+                  analysisProgress >= 25 && analysisProgress < 50 
+                    ? 'text-white scale-105' 
+                    : analysisProgress >= 50 
                       ? 'text-white/40' 
                       : 'text-white/60'
                 }`}>
@@ -811,32 +1110,34 @@ const Nutrition: React.FC = () => {
                   <p className="text-xs text-white/60">ingredients</p>
                 </div>
                 <div className={`transition-all duration-300 ${
-                  analysisProgress >= 33 && analysisProgress < 66 
+                  analysisProgress >= 50 && analysisProgress < 75 
                     ? 'text-white scale-105' 
-                    : analysisProgress >= 66 
+                    : analysisProgress >= 75 
                       ? 'text-white/40' 
                       : 'text-white/60'
                 }`}>
                   <p className="text-xs font-medium">Counting</p>
-                  <p className="text-xs text-white/60">calories & macros</p>
+                  <p className="text-xs text-white/60">calories</p>
                 </div>
                 <div className={`transition-all duration-300 ${
-                  analysisProgress >= 66 
+                  analysisProgress >= 75 
                     ? 'text-white scale-105' 
                     : 'text-white/60'
                 }`}>
                   <p className="text-xs font-medium">Building</p>
-                  <p className="text-xs text-white/60">your meal card</p>
+                  <p className="text-xs text-white/60">meal card</p>
                 </div>
               </div>
             </div>
 
-            {/* Fun facts or tips (optional) */}
-            <div className="mt-8 p-4 bg-white/5 rounded-2xl border border-white/10">
-              <p className="text-xs text-white/60 text-center animate-fade-in">
-                {currentFunFact}
-              </p>
-            </div>
+            {/* Fun facts or tips */}
+            {processPhase === 'analyze' && (
+              <div className="mt-8 p-4 bg-white/5 rounded-2xl border border-white/10">
+                <p className="text-xs text-white/60 text-center animate-fade-in">
+                  {currentFunFact}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -861,8 +1162,21 @@ const Nutrition: React.FC = () => {
         </div>
       )}
 
-      {/* Confetti Celebration */}
-      <Confetti active={showConfetti} />
+      {/* Water Tracker Modal */}
+      <WaterTracker
+        isOpen={showWaterTracker}
+        onClose={() => setShowWaterTracker(false)}
+        currentIntake={progress.water}
+        goal={goals.water}
+        onUpdateIntake={(glasses) => {
+          setProgress(prev => ({
+            ...prev,
+            water: glasses
+          }));
+          toast.success('Water intake updated!');
+        }}
+      />
+
     </>
   );
 };
