@@ -236,6 +236,15 @@ const Nutrition: React.FC = () => {
   const getProgressPercentage = (consumed: number, goal: number) => {
     return Math.min((consumed / goal) * 100, 100);
   };
+  
+  const getCalorieProgressPercentage = (consumed: number, goal: number) => {
+    // Don't cap at 100% for calories to show overage
+    return (consumed / goal) * 100;
+  };
+  
+  const isCalorieExceeded = () => {
+    return progress.calories > goals.calories;
+  };
 
   const getMealIcon = (mealType: string) => {
     switch (mealType) {
@@ -639,12 +648,23 @@ const Nutrition: React.FC = () => {
         {/* Daily Summary Cards */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Calorie Summary */}
-          <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-md border-white/10 lg:col-span-2">
+          <Card className={`p-4 sm:p-6 backdrop-blur-md lg:col-span-2 transition-all duration-500 ${
+            isCalorieExceeded() 
+              ? 'bg-gradient-to-br from-red-500/10 to-orange-500/10 border-red-500/20' 
+              : 'bg-white/5 border-white/10'
+          }`}>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <h2 className="text-xl font-semibold text-white">Calorie Progress</h2>
-                <span className="text-sm text-gray-400">
-                  {goals.calories - progress.calories} cal remaining
+                <span className={`text-sm font-medium ${
+                  isCalorieExceeded() 
+                    ? 'text-red-400' 
+                    : 'text-gray-400'
+                }`}>
+                  {isCalorieExceeded() 
+                    ? `${progress.calories - goals.calories} cal over` 
+                    : `${goals.calories - progress.calories} cal remaining`
+                  }
                 </span>
               </div>
               
@@ -652,6 +672,7 @@ const Nutrition: React.FC = () => {
               <div className="flex items-center justify-center py-2 sm:py-4">
                 <div className="relative w-40 h-40 sm:w-48 sm:h-48">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 192 192">
+                    {/* Background ring */}
                     <circle
                       cx="96"
                       cy="96"
@@ -661,6 +682,7 @@ const Nutrition: React.FC = () => {
                       fill="none"
                       className="text-gray-700"
                     />
+                    {/* Progress ring up to 100% */}
                     <circle
                       cx="96"
                       cy="96"
@@ -669,13 +691,67 @@ const Nutrition: React.FC = () => {
                       strokeWidth="12"
                       fill="none"
                       strokeDasharray={`${2 * Math.PI * 80}`}
-                      strokeDashoffset={`${2 * Math.PI * 80 * (1 - getProgressPercentage(progress.calories, goals.calories) / 100)}`}
-                      className="text-accent-lime transition-all duration-500"
+                      strokeDashoffset={`${2 * Math.PI * 80 * (1 - Math.min(getCalorieProgressPercentage(progress.calories, goals.calories), 100) / 100)}`}
+                      className={`transition-all duration-500 ${
+                        isCalorieExceeded() ? 'text-amber-500' : 'text-accent-lime'
+                      }`}
+                      strokeLinecap="round"
                     />
+                    {/* Overage ring layer */}
+                    {isCalorieExceeded() && (
+                      <>
+                        {/* Pulsing glow effect */}
+                        <circle
+                          cx="96"
+                          cy="96"
+                          r="80"
+                          stroke="currentColor"
+                          strokeWidth="16"
+                          fill="none"
+                          strokeDasharray={`${2 * Math.PI * 80}`}
+                          strokeDashoffset={`${2 * Math.PI * 80 * (1 - Math.min((getCalorieProgressPercentage(progress.calories, goals.calories) - 100) / 100, 1))}`}
+                          className="text-red-500/30 animate-pulse"
+                          strokeLinecap="round"
+                        />
+                        {/* Actual overage */}
+                        <circle
+                          cx="96"
+                          cy="96"
+                          r="80"
+                          stroke="currentColor"
+                          strokeWidth="12"
+                          fill="none"
+                          strokeDasharray={`${2 * Math.PI * 80}`}
+                          strokeDashoffset={`${2 * Math.PI * 80 * (1 - Math.min((getCalorieProgressPercentage(progress.calories, goals.calories) - 100) / 100, 1))}`}
+                          className="text-red-500 transition-all duration-500"
+                          strokeLinecap="round"
+                        />
+                      </>
+                    )}
                   </svg>
+                  
+                  {/* Center content */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <p className="text-2xl sm:text-3xl font-bold text-white">{progress.calories}</p>
-                    <p className="text-xs sm:text-sm text-gray-400">of {goals.calories} cal</p>
+                    <motion.div
+                      key={progress.calories}
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ type: "spring", stiffness: 200, damping: 10 }}
+                      className="text-center"
+                    >
+                      <p className={`text-2xl sm:text-3xl font-bold transition-colors duration-300 ${
+                        isCalorieExceeded() ? 'text-red-400' : 'text-white'
+                      }`}>
+                        {progress.calories}
+                      </p>
+                    </motion.div>
+                    <p className="text-xs sm:text-sm text-gray-400">
+                      {isCalorieExceeded() 
+                        ? `${Math.round(getCalorieProgressPercentage(progress.calories, goals.calories))}% of goal`
+                        : `of ${goals.calories} cal`
+                      }
+                    </p>
+                    
                   </div>
                 </div>
               </div>

@@ -50,7 +50,7 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle
   const finalDisplayGroups = displayableMuscleGroups.slice(0, 5);
 
   return (
-    <div className="bg-white/5 backdrop-blur-md border border-white/10 rounded-xl shadow-lg mb-3 transition-all duration-300 ease-in-out">
+    <div className="bg-[#2A2A2A]/40 backdrop-blur-md border border-white/10 rounded-xl shadow-lg mb-3 transition-all duration-300 ease-in-out">
       {/* Header Section */}
       <div 
         className={`p-4 flex items-center justify-between cursor-pointer hover:bg-white/10 ${isOpen ? 'rounded-t-xl' : 'rounded-xl'} transition-colors duration-150`}
@@ -106,8 +106,8 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle
           id={`session-content-${session.sessionId}`}
           className="relative"
         >
-          {/* Gradient Background */}
-          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
+          {/* Gradient Background using welcome page greys */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#1C1D24]/20 to-transparent pointer-events-none" />
           
           {/* Content Container with Modern Styling */}
           <div className="px-6 pb-6 pt-4">
@@ -155,8 +155,8 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle
                       d="M12 6v6m0 0v6m0-6h6m-6 0H6"
                     />
                   </svg>
-                  <p className="text-neutral-400 text-sm">No exercises defined yet</p>
-                  <p className="text-neutral-500 text-xs mt-1">Add exercises to start building your workout</p>
+                  <p className="text-[#BFBFBF] text-sm">No exercises defined yet</p>
+                  <p className="text-[#6B6B7B] text-xs mt-1">Add exercises to start building your workout</p>
                 </div>
               </div>
             )}

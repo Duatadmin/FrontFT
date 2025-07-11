@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '../../../assets/Logo.svg?react';
+import { useUserStore } from '@/lib/stores/useUserStore';
 
 interface Feature {
   icon: React.ReactNode;
@@ -42,9 +43,9 @@ const screens: WelcomeScreen[] = [
     description: 'AI-powered coaching meets personalized training for unprecedented results.',
     visual: (
       <div className="relative w-full h-full flex items-center justify-center">
-        {/* 3D Floating Phone Mockup */}
+        {/* 3D Floating Phone Mockup - Responsive sizing */}
         <motion.div
-          className="relative"
+          className="relative w-full max-w-[200px] aspect-[9/19]"
           animate={{
             y: [0, -10, 0],
           }}
@@ -54,26 +55,89 @@ const screens: WelcomeScreen[] = [
             ease: "easeInOut",
           }}
         >
-          <div className="w-40 h-80 bg-gradient-to-br from-white/10 to-white/5 rounded-[2.5rem] border border-white/20 backdrop-blur-xl p-2">
+          <div className="w-full h-full bg-gradient-to-br from-white/10 to-white/5 rounded-[2.5rem] border border-white/20 backdrop-blur-xl p-2">
             <div className="w-full h-full bg-dark-bg rounded-[2rem] overflow-hidden">
-              {/* Mini Dashboard Preview */}
-              <div className="p-3 space-y-2">
-                <div className="h-12 bg-gradient-to-r from-accent-lime/20 to-accent-orange/20 rounded-lg animate-pulse" />
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="h-10 bg-white/5 rounded animate-pulse" />
-                  <div className="h-10 bg-white/5 rounded animate-pulse" />
-                </div>
-                <div className="space-y-1.5">
-                  <div className="h-2 bg-white/10 rounded-full w-3/4 animate-pulse" />
-                  <div className="h-2 bg-white/10 rounded-full w-1/2 animate-pulse" />
-                </div>
+              {/* Minimalist Chat Bubbles */}
+              <div className="p-4 space-y-3 h-full flex flex-col justify-center">
+                {/* User Message 1 */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
+                  className="flex justify-end"
+                >
+                  <div className="h-9 bg-gradient-to-r from-accent-lime/20 to-accent-orange/20 rounded-2xl rounded-tr-sm w-[55%]" />
+                </motion.div>
+
+                {/* AI Message 1 */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1, type: "spring", stiffness: 200 }}
+                >
+                  <div className="h-12 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl rounded-tl-sm w-[75%]" />
+                </motion.div>
+
+                {/* User Message 2 */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 1.5, type: "spring", stiffness: 200 }}
+                  className="flex justify-end"
+                >
+                  <div className="h-8 bg-gradient-to-r from-accent-lime/20 to-accent-orange/20 rounded-2xl rounded-tr-sm w-[45%]" />
+                </motion.div>
+
+                {/* AI Message 2 */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 2, type: "spring", stiffness: 200 }}
+                >
+                  <div className="h-14 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl rounded-tl-sm w-[80%]" />
+                </motion.div>
+
+                {/* User Message 3 */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 2.5, type: "spring", stiffness: 200 }}
+                  className="flex justify-end"
+                >
+                  <div className="h-8 bg-gradient-to-r from-accent-lime/20 to-accent-orange/20 rounded-2xl rounded-tr-sm w-[40%]" />
+                </motion.div>
+
+                {/* AI Message with typing indicator */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 3, type: "spring", stiffness: 200 }}
+                >
+                  <div className="h-9 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl rounded-tl-sm w-[50%] flex items-center justify-center gap-1.5">
+                    <motion.div
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
+                      className="w-2 h-2 rounded-full bg-white/40"
+                    />
+                    <motion.div
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
+                      className="w-2 h-2 rounded-full bg-white/40"
+                    />
+                    <motion.div
+                      animate={{ opacity: [0.3, 1, 0.3] }}
+                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
+                      className="w-2 h-2 rounded-full bg-white/40"
+                    />
+                  </div>
+                </motion.div>
               </div>
             </div>
           </div>
           
-          {/* Floating Elements */}
+          {/* Floating Elements - Adjusted for responsive sizing */}
           <motion.div
-            className="absolute -top-8 -right-8 w-16 h-16 bg-accent-lime/20 rounded-full blur-xl"
+            className="absolute -top-[15%] -right-[15%] w-[40%] h-[40%] bg-accent-lime/20 rounded-full blur-xl"
             animate={{
               scale: [1, 1.5, 1],
               opacity: [0.5, 0.8, 0.5],
@@ -85,7 +149,7 @@ const screens: WelcomeScreen[] = [
             }}
           />
           <motion.div
-            className="absolute -bottom-8 -left-8 w-20 h-20 bg-accent-orange/20 rounded-full blur-xl"
+            className="absolute -bottom-[15%] -left-[15%] w-[50%] h-[50%] bg-accent-orange/20 rounded-full blur-xl"
             animate={{
               scale: [1, 1.3, 1],
               opacity: [0.5, 0.7, 0.5],

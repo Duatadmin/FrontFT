@@ -74,7 +74,8 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   console.log('[ProtectedRoute] Rendering...');
   const isLoading = useUserStore((state: UserState) => state.isLoading);
   const isAuthenticated = useUserStore((state: UserState) => state.isAuthenticated);
-  console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+  const onboardingComplete = useUserStore((state: UserState) => state.onboardingComplete);
+  console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'onboardingComplete:', onboardingComplete);
 
   if (isLoading) {
     console.log('[ProtectedRoute] Auth state is loading. Rendering loading spinner.');
@@ -93,6 +94,14 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
     return <Navigate to="/login" replace />;
   }
 
-  console.log('[ProtectedRoute] User authenticated. Rendering children.');
+  // Check if user needs onboarding (authenticated but not onboarded)
+  // Allow access to welcome route to complete onboarding
+  const currentPath = window.location.pathname;
+  if (!onboardingComplete && currentPath !== '/welcome') {
+    console.log('[ProtectedRoute] User not onboarded. Redirecting to /welcome.');
+    return <Navigate to="/welcome" replace />;
+  }
+
+  console.log('[ProtectedRoute] User authenticated and onboarded. Rendering children.');
   return children;
 };

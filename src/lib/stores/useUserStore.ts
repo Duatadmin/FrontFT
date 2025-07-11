@@ -8,11 +8,13 @@ export interface UserState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
+  onboardingComplete: boolean;
   /** one-time initializer; safe to call many times */
   boot: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   getCurrentUser: () => User | null;
+  updateOnboardingStatus: (complete: boolean) => Promise<void>;
 }
 
 let booted = false; // avoid double-init on hot reloads
@@ -24,6 +26,7 @@ export const useUserStore = create<UserState>()(
       isAuthenticated: false,
       isLoading: true,
       error: null,
+      onboardingComplete: false,
 
       /* ① one-time boot ************************************************** */
       boot: async () => {
@@ -36,18 +39,47 @@ export const useUserStore = create<UserState>()(
           console.error('[useUserStore] boot() error', error);
           set({ error: error.message, isLoading: false });
         } else {
+          const user = data.session?.user ?? null;
+          let onboardingComplete = false;
+          
+          // If we have a user, fetch their onboarding status
+          if (user) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('onboarding_complete')
+              .eq('id', user.id)
+              .single();
+            
+            onboardingComplete = userData?.onboarding_complete ?? false;
+          }
+          
           set({
-            user: data.session?.user ?? null,
+            user,
             isAuthenticated: !!data.session,
             isLoading: false,
+            onboardingComplete,
           });
         }
 
         // subscribe to further changes
-        supabase.auth.onAuthStateChange((_ev, session) => {
+        supabase.auth.onAuthStateChange(async (_ev, session) => {
+          const user = session?.user ?? null;
+          let onboardingComplete = false;
+          
+          if (user) {
+            const { data: userData } = await supabase
+              .from('users')
+              .select('onboarding_complete')
+              .eq('id', user.id)
+              .single();
+            
+            onboardingComplete = userData?.onboarding_complete ?? false;
+          }
+          
           set({
-            user: session?.user ?? null,
+            user,
             isAuthenticated: !!session,
+            onboardingComplete,
           });
         });
       },
@@ -81,8 +113,22 @@ export const useUserStore = create<UserState>()(
         }
 
         console.log('[useUserStore] Login successful! User:', session?.user?.email);
-        // onAuthStateChange will update user/isAuthenticated automatically
-        set({ isLoading: false });
+        
+        // Fetch onboarding status after successful login
+        if (session?.user) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('onboarding_complete')
+            .eq('id', session.user.id)
+            .single();
+          
+          set({
+            onboardingComplete: userData?.onboarding_complete ?? false,
+            isLoading: false,
+          });
+        } else {
+          set({ isLoading: false });
+        }
       },
 
       /* ③ logout ********************************************************* */
@@ -98,6 +144,29 @@ export const useUserStore = create<UserState>()(
 
       /* ④ helpers ******************************************************** */
       getCurrentUser: () => get().user,
+      
+      /* ⑤ update onboarding status ************************************** */
+      updateOnboardingStatus: async (complete: boolean) => {
+        const user = get().user;
+        if (!user) {
+          console.error('[useUserStore] No user to update onboarding status');
+          return;
+        }
+        
+        set({ isLoading: true, error: null });
+        
+        const { error } = await supabase
+          .from('users')
+          .update({ onboarding_complete: complete })
+          .eq('id', user.id);
+        
+        if (error) {
+          console.error('[useUserStore] Failed to update onboarding status:', error);
+          set({ error: error.message, isLoading: false });
+        } else {
+          set({ onboardingComplete: complete, isLoading: false });
+        }
+      },
     }),
     { name: 'user-store' },
   ),
