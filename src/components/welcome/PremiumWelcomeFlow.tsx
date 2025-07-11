@@ -369,8 +369,8 @@ const screens: WelcomeScreen[] = [
     features: [
       {
         icon: <Smartphone className="w-5 h-5" />,
-        title: 'Works Offline',
-        description: 'Train anywhere, anytime'
+        title: 'Hands-free workouts',
+        description: 'Fully voice-controled system'
       },
       {
         icon: <Shield className="w-5 h-5" />,
