@@ -1,7 +1,6 @@
 import React from 'react';
-import { VariableSizeList, type ListChildComponentProps } from 'react-window';
 import type { WorkoutExercise } from '@/utils/rowsToPlanTree';
-import { SetTable } from './SetTable'; // Assuming SetTable will be created next
+import { Dumbbell } from 'lucide-react';
 
 interface ExerciseListProps {
   exercises: WorkoutExercise[];
@@ -19,7 +18,24 @@ interface ExerciseRowData {
   sessionId: string;
 }
 
-const ExerciseRow: React.FC<ListChildComponentProps<ExerciseRowData>> = ({ index, style, data }) => {
+interface ExerciseRowProps {
+  index: number;
+  style: React.CSSProperties;
+  data: ExerciseRowData;
+}
+
+const getTierIconCount = (tier?: string): number => {
+  if (!tier) return 1;
+  switch (tier.toUpperCase()) {
+    case 'S': return 5;
+    case 'A': return 4;
+    case 'B': return 3;
+    case 'C': return 2;
+    default: return 1;
+  }
+};
+
+const ExerciseRow: React.FC<ExerciseRowProps> = ({ index, style, data }) => {
   const { exercises, weekId, sessionId } = data; // planId removed
   const exercise = exercises[index];
 
@@ -28,31 +44,86 @@ const ExerciseRow: React.FC<ListChildComponentProps<ExerciseRowData>> = ({ index
   }
 
   return (
-    <div style={style} className="pr-2"> {/* py-3 removed, spacing handled by card's margin */}
-      <div className="p-4 bg-neutral-700/40 rounded-lg shadow border border-neutral-600 mb-2"> {/* mb-2 added for spacing */}
-        <h4 className="text-xl font-semibold text-green-300 mb-2 capitalize">
-          {exercise.name || 'Unnamed Exercise'}
-        </h4>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1 text-xs sm:text-sm mb-3 text-neutral-300">
-          <p><strong>Muscle:</strong> {exercise.muscleGroup || 'N/A'}</p>
-          <p><strong>Tier:</strong> {exercise.tier || 'N/A'}</p>
-          <p><strong>Equip:</strong> {exercise.equipment || 'N/A'}</p>
-          <p><strong>Scheme:</strong> {exercise.repScheme || 'N/A'}</p>
-          <p><strong>RIR:</strong> {exercise.rir ?? 'N/A'}</p>
-          <p><strong>Planned Sets:</strong> {exercise.setsPlanned ?? 'N/A'}</p>
+    <div style={style} className="pr-2">
+      {/* Modern Exercise Card with Glassmorphism and Micro-interactions */}
+      <div className="group relative overflow-hidden rounded-2xl mb-3 transition-all duration-300 hover:transform hover:scale-[1.02]">
+        {/* Background with gradient */}
+        <div className="absolute inset-0 bg-gradient-to-br from-neutral-800/50 via-neutral-800/30 to-transparent" />
+        
+        {/* Glow effect on hover */}
+        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+          <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 via-transparent to-green-400/10" />
         </div>
         
-        {exercise.sets && exercise.sets.length > 0 ? (
-          <SetTable 
-            sets={exercise.sets} 
-            // planId={planId} // Removed
-            weekId={weekId}
-            sessionId={sessionId}
-            exerciseId={exercise.exerciseRowId} // Pass exerciseRowId as exerciseId for the store
-          />
-        ) : (
-          <p className="text-sm text-neutral-500 italic">No sets recorded for this exercise yet.</p>
-        )}
+        {/* Main content */}
+        <div className="relative backdrop-blur-md bg-white/[0.02] border border-white/10 rounded-2xl p-5">
+          {/* Header with exercise name and visual indicator */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h4 className="text-lg font-semibold text-white capitalize group-hover:text-green-300 transition-colors duration-300">
+                {exercise.name || 'Unnamed Exercise'}
+              </h4>
+            </div>
+            
+            {/* Exercise number indicator */}
+            <div className="w-8 h-8 bg-gradient-to-br from-green-500/20 to-green-400/10 rounded-lg flex items-center justify-center">
+              <span className="text-green-400 font-bold text-sm">{index + 1}</span>
+            </div>
+          </div>
+          
+          {/* Tags matching exercise library style */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex flex-wrap gap-2">
+              {exercise.muscleGroup && exercise.muscleGroup !== 'N/A' && (
+                <span className="text-[0.7rem] bg-green-500/20 text-green-300 px-2 py-1 rounded-md border border-green-500/40 backdrop-blur-sm">
+                  {exercise.muscleGroup}
+                </span>
+              )}
+              {exercise.equipment && exercise.equipment !== 'N/A' && (
+                <span className="text-[0.7rem] bg-blue-500/20 text-blue-300 px-2 py-1 rounded-md border border-blue-500/40 backdrop-blur-sm">
+                  {exercise.equipment}
+                </span>
+              )}
+              {exercise.rir !== null && exercise.rir !== undefined && (
+                <span className="text-[0.7rem] bg-purple-500/20 text-purple-300 px-2 py-1 rounded-md border border-purple-500/40 backdrop-blur-sm">
+                  RIR {exercise.rir}
+                </span>
+              )}
+            </div>
+            
+            {/* Tier Icons - same as exercise library */}
+            {exercise.tier && exercise.tier !== 'N/A' && (
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: getTierIconCount(exercise.tier) }).map((_, index) => (
+                  <Dumbbell key={index} className="w-4 h-4 text-lime-400" />
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {/* Sets and Reps Plan Display */}
+          <div className="grid grid-cols-2 gap-3">
+            {/* Sets Display */}
+            {exercise.setsPlanned && exercise.setsPlanned > 0 && (
+              <div className="p-3 rounded-lg bg-gradient-to-br from-green-500/10 to-green-400/5 border border-green-500/20">
+                <div className="flex flex-col items-center justify-center h-full">
+                  <span className="text-2xl font-bold text-green-400">{exercise.setsPlanned}</span>
+                  <p className="text-xs text-neutral-400 mt-1">Sets</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Rep Scheme Display */}
+            {exercise.repScheme && (
+              <div className="p-3 rounded-lg bg-gradient-to-br from-orange-500/10 to-orange-400/5 border border-orange-500/20">
+                <div className="flex flex-col items-center justify-center h-full">
+                  <span className="text-2xl font-bold text-orange-400">{exercise.repScheme}</span>
+                  <p className="text-xs text-neutral-400 mt-1">Reps</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -63,59 +134,18 @@ export const ExerciseList: React.FC<ExerciseListProps> = ({ exercises, sessionId
     return <p className="text-neutral-400 italic">No exercises in this session.</p>;
   }
 
-  // react-window needs a fixed height for the list container.
-  // This can be a challenge in responsive designs. For simplicity, using a fixed height here.
-  // Consider using react-virtualized-auto-sizer for more dynamic height handling.
-  // Height calculation for VariableSizeList needs a different approach.
-  // For now, let's use a fixed height for the list viewport or make it more dynamic later.
-  const listHeight = 600; // Default list viewport height, can be adjusted
-
-  const getItemHeight = (index: number): number => {
-    const exercise = exercises[index];
-    if (!exercise) return 80; // Fallback small height
-
-    let height = 0;
-    // Card structure: p-4 (16px*2=32) + border (1px*2=2) + mb-2 (8px)
-    height += 32 + 2 + 8; // 42px
-
-    // Exercise Name (text-xl, mb-2)
-    height += 28; // Approx height for text-xl (e.g., 1.25rem * 1.5 line height)
-    height += 8;  // mb-2 (0.5rem)
-
-    // Metadata (6 items, text-xs, grid, mb-3)
-    // On mobile (single column), each item text-xs (0.75rem * 1.5 line height = ~18px)
-    // Assuming up to 6 lines if all wrap, or fewer if grid applies effectively.
-    // Let's estimate based on 3 rows of 2 items on sm, or 6 rows on xs.
-    // Max 6 lines * ~18px/line = 108px. Plus mb-3 (12px)
-    height += (6 * 18); // Max height for metadata text
-    height += 12; // mb-3 (0.75rem)
-
-    // SetTable (mt-2)
-    height += 8; // mt-2 (0.5rem)
-    if (exercise.sets && exercise.sets.length > 0) {
-      height += 24; // Table header (approx text-xs + padding)
-      height += exercise.sets.length * 30; // Each set row (approx text-xs + padding)
-    } else {
-      height += 20; // "No sets" message (text-sm)
-    }
-    
-    // Add a small general buffer for any unaccounted spacing/rounding
-    height += 16;
-
-    return Math.max(height, 150); // Ensure a minimum height
-  };
-
+  // Remove virtualization to allow natural expansion of content
   return (
-    <VariableSizeList
-      height={listHeight} 
-      itemCount={exercises.length}
-      itemSize={getItemHeight}
-      width="100%" // Takes full width of its parent
-      itemData={{ exercises, weekId, sessionId }} // planId removed
-      className="scrollbar-thin scrollbar-thumb-neutral-600 scrollbar-track-neutral-800"
-    >
-      {ExerciseRow}
-    </VariableSizeList>
+    <div className="space-y-3">
+      {exercises.map((exercise, index) => (
+        <ExerciseRow
+          key={exercise.exerciseRowId}
+          index={index}
+          style={{}} // No need for positioning style
+          data={{ exercises, weekId, sessionId }}
+        />
+      ))}
+    </div>
   );
 };
 

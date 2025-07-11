@@ -96,22 +96,73 @@ const AccordionItem: React.FC<AccordionItemProps> = ({ session, isOpen, onToggle
           </svg>
         </div>
       </div>
-      {isOpen && (
+      {/* Modern Expandable Content with Smooth Transitions */}
+      <div
+        className={`overflow-hidden transition-all duration-500 ease-out ${
+          isOpen ? 'max-h-[9999px] opacity-100' : 'max-h-0 opacity-0'
+        }`}
+      >
         <div
           id={`session-content-${session.sessionId}`}
-          className="px-4 pb-4 pt-2 border-t border-white/10 bg-transparent rounded-b-xl"
+          className="relative"
         >
-          {session.exercises && session.exercises.length > 0 ? (
-            <ExerciseList 
-              exercises={session.exercises} 
-              sessionId={session.sessionId} 
-              weekId={weekId} 
-            />
-          ) : (
-            <p className="text-neutral-500">No exercises defined for this session.</p>
-          )}
+          {/* Gradient Background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent pointer-events-none" />
+          
+          {/* Content Container with Modern Styling */}
+          <div className="px-6 pb-6 pt-4">
+            {/* Session Overview */}
+            <div className="mb-6 p-4 bg-gradient-to-r from-green-500/10 to-green-400/5 rounded-lg border border-green-500/20">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-medium text-neutral-400">Total Exercises</span>
+                  <p className="text-2xl font-bold text-green-400">
+                    {session.exercises ? session.exercises.length : 0}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <span className="text-xs font-medium text-neutral-400">Total Sets</span>
+                  <p className="text-2xl font-bold text-orange-400">
+                    {session.exercises ? 
+                      session.exercises.reduce((total, ex) => total + (ex.setsPlanned || 0), 0) : 
+                      0
+                    }
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Exercise Container */}
+            {session.exercises && session.exercises.length > 0 ? (
+              <ExerciseList 
+                exercises={session.exercises} 
+                sessionId={session.sessionId} 
+                weekId={weekId} 
+              />
+            ) : (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <svg
+                    className="w-12 h-12 mx-auto mb-3 text-neutral-600"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth="1.5"
+                      d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                    />
+                  </svg>
+                  <p className="text-neutral-400 text-sm">No exercises defined yet</p>
+                  <p className="text-neutral-500 text-xs mt-1">Add exercises to start building your workout</p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };

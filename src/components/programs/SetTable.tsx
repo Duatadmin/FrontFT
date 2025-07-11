@@ -139,74 +139,153 @@ export const SetTable: React.FC<SetTableProps> = ({ sets: initialSets, weekId, s
   }
 
   return (
-    <div className="overflow-x-auto mt-2">
-      <table className="min-w-full text-xs sm:text-sm text-left text-neutral-300 bg-neutral-700/30 rounded">
-        <thead className="text-[0.65rem] sm:text-xs text-neutral-400 uppercase bg-neutral-700/50">
-          <tr>
-            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5">Set</th>
-            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5">Reps</th>
-            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5 whitespace-nowrap">Wt (kg)</th>
-            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5">RPE</th>
-            <th scope="col" className="px-2 py-1 sm:px-3 sm:py-1.5">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {editableSets.map((set, index) => (
-            <tr key={set.id || `set-${index}`} className="border-b border-neutral-600 hover:bg-neutral-700/40 align-middle">
-              <td className="px-2 py-1 sm:px-3 sm:py-1.5 font-medium">{set.setNo ?? index + 1}</td>
-              <td className="px-2 py-1 sm:px-3 sm:py-1.5">
-                {set.isEditing ? (
-                  <input 
-                    type="number" 
-                    value={set.pendingRepsDone ?? ''} 
-                    onChange={(e) => handleInputChange(set.id, 'repsDone', e.target.value)} 
-                    className="bg-neutral-600 text-neutral-100 p-0.5 sm:p-1 rounded w-14 sm:w-16 text-center text-xs sm:text-sm"
-                  />
-                ) : (
-                  set.repsDone ?? '–'
-                )}
-              </td>
-              <td className="px-2 py-1 sm:px-3 sm:py-1.5">
-                {set.isEditing ? (
-                  <input 
-                    type="number" 
-                    step="0.25" 
-                    value={set.pendingWeightKg ?? ''} 
-                    onChange={(e) => handleInputChange(set.id, 'weightKg', e.target.value)} 
-                    className="bg-neutral-600 text-neutral-100 p-0.5 sm:p-1 rounded w-14 sm:w-16 text-center text-xs sm:text-sm"
-                  />
-                ) : (
-                  set.weightKg ?? '–'
-                )}
-              </td>
-              <td className="px-2 py-1 sm:px-3 sm:py-1.5">
-                {set.isEditing ? (
-                  <input 
-                    type="number" 
-                    step="0.5" 
-                    min="1" max="10" 
-                    value={set.pendingRpe ?? ''} 
-                    onChange={(e) => handleInputChange(set.id, 'rpe', e.target.value)} 
-                    className="bg-neutral-600 text-neutral-100 p-0.5 sm:p-1 rounded w-14 sm:w-16 text-center text-xs sm:text-sm"
-                  />
-                ) : (
-                  set.rpe ?? '–'
-                )}
-              </td>
-              <td className="px-2 py-1 sm:px-3 sm:py-1.5 whitespace-nowrap">
-                {set.isEditing ? (
-                  <button onClick={() => handleSave(set)} className="font-medium text-green-400 hover:text-green-300 mr-1 sm:mr-2 text-xs p-0.5 sm:p-1 bg-green-700/50 hover:bg-green-600/50 rounded">
-                    Save
-                  </button>
-                ) : null}
-                <button onClick={() => toggleEdit(set.id)} className={`font-medium text-xs p-0.5 sm:p-1 rounded ${set.isEditing ? 'text-yellow-400 hover:text-yellow-300 bg-yellow-700/50 hover:bg-yellow-600/50' : 'text-blue-400 hover:text-blue-300 bg-blue-700/50 hover:bg-blue-600/50'}`}>
-                  {set.isEditing ? 'Cancel' : 'Edit'}
-                </button>
-              </td>
+    <div className="overflow-hidden">
+      {/* Modern Table Design with Glassmorphism */}
+      <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-neutral-700 scrollbar-track-transparent">
+        <table className="min-w-full text-xs sm:text-sm">
+          <thead>
+            <tr className="border-b border-white/10">
+              <th className="px-3 py-2 text-left text-[0.65rem] sm:text-xs font-medium text-neutral-400 uppercase tracking-wider">Set</th>
+              <th className="px-3 py-2 text-center text-[0.65rem] sm:text-xs font-medium text-neutral-400 uppercase tracking-wider">Reps</th>
+              <th className="px-3 py-2 text-center text-[0.65rem] sm:text-xs font-medium text-neutral-400 uppercase tracking-wider whitespace-nowrap">Weight</th>
+              <th className="px-3 py-2 text-center text-[0.65rem] sm:text-xs font-medium text-neutral-400 uppercase tracking-wider">RPE</th>
+              <th className="px-3 py-2 text-right text-[0.65rem] sm:text-xs font-medium text-neutral-400 uppercase tracking-wider">Action</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {editableSets.map((set, index) => (
+              <tr 
+                key={set.id || `set-${index}`} 
+                className="group hover:bg-white/5 transition-colors duration-200"
+              >
+                {/* Set Number with visual indicator */}
+                <td className="px-3 py-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 bg-gradient-to-br from-green-500/20 to-green-400/10 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-green-400">{set.setNo ?? index + 1}</span>
+                    </div>
+                  </div>
+                </td>
+                
+                {/* Reps with modern input */}
+                <td className="px-3 py-3 text-center">
+                  {set.isEditing ? (
+                    <input 
+                      type="number" 
+                      value={set.pendingRepsDone ?? ''} 
+                      onChange={(e) => handleInputChange(set.id, 'repsDone', e.target.value)} 
+                      className="bg-white/10 backdrop-blur-sm text-white px-2 py-1 rounded-lg w-16 text-center text-sm border border-white/20 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400/50 transition-all duration-200"
+                      placeholder="-"
+                    />
+                  ) : (
+                    <span className="text-white font-medium">
+                      {set.repsDone ?? <span className="text-neutral-500">-</span>}
+                    </span>
+                  )}
+                </td>
+                
+                {/* Weight with modern input and unit */}
+                <td className="px-3 py-3 text-center">
+                  {set.isEditing ? (
+                    <div className="flex items-center justify-center gap-1">
+                      <input 
+                        type="number" 
+                        step="0.25" 
+                        value={set.pendingWeightKg ?? ''} 
+                        onChange={(e) => handleInputChange(set.id, 'weightKg', e.target.value)} 
+                        className="bg-white/10 backdrop-blur-sm text-white px-2 py-1 rounded-lg w-16 text-center text-sm border border-white/20 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400/50 transition-all duration-200"
+                        placeholder="-"
+                      />
+                      <span className="text-xs text-neutral-400">kg</span>
+                    </div>
+                  ) : (
+                    <span className="text-white font-medium">
+                      {set.weightKg ? (
+                        <>
+                          {set.weightKg}
+                          <span className="text-xs text-neutral-400 ml-1">kg</span>
+                        </>
+                      ) : (
+                        <span className="text-neutral-500">-</span>
+                      )}
+                    </span>
+                  )}
+                </td>
+                
+                {/* RPE with visual scale indicator */}
+                <td className="px-3 py-3 text-center">
+                  {set.isEditing ? (
+                    <input 
+                      type="number" 
+                      step="0.5" 
+                      min="1" 
+                      max="10" 
+                      value={set.pendingRpe ?? ''} 
+                      onChange={(e) => handleInputChange(set.id, 'rpe', e.target.value)} 
+                      className="bg-white/10 backdrop-blur-sm text-white px-2 py-1 rounded-lg w-16 text-center text-sm border border-white/20 focus:border-green-400 focus:outline-none focus:ring-1 focus:ring-green-400/50 transition-all duration-200"
+                      placeholder="-"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center">
+                      {set.rpe ? (
+                        <div className="flex items-center gap-1">
+                          <span className="text-white font-medium">{set.rpe}</span>
+                          <div className="w-12 h-1.5 bg-neutral-700 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-green-500 to-yellow-500 rounded-full transition-all duration-300"
+                              style={{ width: `${(set.rpe / 10) * 100}%` }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-neutral-500">-</span>
+                      )}
+                    </div>
+                  )}
+                </td>
+                
+                {/* Modern Action Buttons */}
+                <td className="px-3 py-3 text-right">
+                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {set.isEditing ? (
+                      <>
+                        <button 
+                          onClick={() => handleSave(set)} 
+                          className="p-1.5 bg-green-500/20 hover:bg-green-500/30 text-green-400 rounded-lg transition-all duration-200 hover:scale-105"
+                          title="Save"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => toggleEdit(set.id)} 
+                          className="p-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-all duration-200 hover:scale-105"
+                          title="Cancel"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                          </svg>
+                        </button>
+                      </>
+                    ) : (
+                      <button 
+                        onClick={() => toggleEdit(set.id)} 
+                        className="p-1.5 bg-orange-500/20 hover:bg-orange-500/30 text-orange-400 rounded-lg transition-all duration-200 hover:scale-105"
+                        title="Edit"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };

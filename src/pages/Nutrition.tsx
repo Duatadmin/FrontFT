@@ -21,6 +21,7 @@ import {
   Camera,
   Barcode,
   ChevronRight,
+  ChevronLeft,
   Clock,
   Star,
   X,
@@ -94,19 +95,29 @@ const Nutrition: React.FC = () => {
   const [processPhase, setProcessPhase] = useState<'upload' | 'analyze'>('upload');
   const [showWaterTracker, setShowWaterTracker] = useState(false);
   
-  // Load meals from Supabase on mount
+  // Load meals from Supabase when date changes
   useEffect(() => {
     loadTodaysMealsFromSupabase();
-  }, []);
+  }, [selectedDate]);
   
   // Function to load today's meals from Supabase
   const loadTodaysMealsFromSupabase = async () => {
     try {
+      // Clear existing meals first
+      setTodaysMeals([]);
+      setProgress(prev => ({
+        calories: 0,
+        protein: 0,
+        carbs: 0,
+        fat: 0,
+        water: prev.water // Keep water progress
+      }));
+      
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
       
       const result = await mealService.getUserMeals(user.id, {
-        date: new Date()
+        date: selectedDate
       });
       
       if (result.success && result.data) {
@@ -175,7 +186,7 @@ const Nutrition: React.FC = () => {
     }
   };
   
-  // Mock data - in real app, this would come from API/database
+  // User's daily nutrition goals
   const [goals] = useState<NutrientGoals>({
     calories: 2000,
     protein: 150,
@@ -211,46 +222,16 @@ const Nutrition: React.FC = () => {
   ];
 
   const [progress, setProgress] = useState<NutrientProgress>({
-    calories: 1245,
-    protein: 78,
-    carbs: 142,
-    fat: 35,
-    water: 5
+    calories: 0,
+    protein: 0,
+    carbs: 0,
+    fat: 0,
+    water: 0
   });
 
   const [todaysMeals, setTodaysMeals] = useState<MealEntry[]>([]);
 
-  const [recentFoods] = useState<FoodItem[]>([
-    {
-      id: 'r1',
-      name: 'Chicken Breast',
-      calories: 165,
-      protein: 31,
-      carbs: 0,
-      fat: 3.6,
-      serving: '100g',
-      isFavorite: true
-    },
-    {
-      id: 'r2',
-      name: 'Brown Rice',
-      calories: 216,
-      protein: 5,
-      carbs: 45,
-      fat: 1.8,
-      serving: '1 cup cooked'
-    },
-    {
-      id: 'r3',
-      name: 'Greek Yogurt',
-      brand: 'Chobani',
-      calories: 100,
-      protein: 18,
-      carbs: 7,
-      fat: 0,
-      serving: '170g container'
-    }
-  ]);
+  const [recentFoods] = useState<FoodItem[]>([]);
 
   const getProgressPercentage = (consumed: number, goal: number) => {
     return Math.min((consumed / goal) * 100, 100);
@@ -573,10 +554,57 @@ const Nutrition: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 sm:gap-4">
           <h1 className="text-2xl sm:text-3xl font-bold text-white">Nutrition Tracker</h1>
           <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
-            <button className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-white/5 hover:bg-white/10 rounded-lg transition-colors flex-1 sm:flex-initial">
-              <Calendar size={16} className="sm:w-[18px] sm:h-[18px]" />
-              <span className="text-xs sm:text-sm">{selectedDate.toLocaleDateString()}</span>
-            </button>
+            {/* Date Navigation */}
+            <div className="flex items-center gap-1 bg-white/5 rounded-lg p-1">
+              <button 
+                onClick={() => {
+                  const newDate = new Date(selectedDate);
+                  newDate.setDate(newDate.getDate() - 1);
+                  setSelectedDate(newDate);
+                }}
+                className="p-2 hover:bg-white/10 rounded transition-colors"
+                aria-label="Previous day"
+              >
+                <ChevronLeft size={16} className="text-gray-400" />
+              </button>
+              
+              <button 
+                onClick={() => setSelectedDate(new Date())}
+                className={`px-3 py-1.5 rounded transition-colors ${
+                  selectedDate.toDateString() === new Date().toDateString()
+                    ? 'bg-primary-500/20 text-primary-400 font-medium'
+                    : 'hover:bg-white/10 text-gray-300'
+                }`}
+              >
+                <span className="text-sm">
+                  {selectedDate.toDateString() === new Date().toDateString() 
+                    ? 'Today' 
+                    : selectedDate.toLocaleDateString('en-US', { 
+                        weekday: 'short', 
+                        month: 'short', 
+                        day: 'numeric' 
+                      })
+                  }
+                </span>
+              </button>
+              
+              <button 
+                onClick={() => {
+                  const newDate = new Date(selectedDate);
+                  newDate.setDate(newDate.getDate() + 1);
+                  setSelectedDate(newDate);
+                }}
+                className="p-2 hover:bg-white/10 rounded transition-colors"
+                disabled={selectedDate.toDateString() === new Date().toDateString()}
+                aria-label="Next day"
+              >
+                <ChevronRight size={16} className={
+                  selectedDate.toDateString() === new Date().toDateString() 
+                    ? 'text-gray-600' 
+                    : 'text-gray-400'
+                } />
+              </button>
+            </div>
             <button
               onClick={() => navigate('/nutrition/goals')}
               className="flex items-center gap-2 px-3 sm:px-4 py-2 bg-accent-lime/20 hover:bg-accent-lime/30 text-accent-lime rounded-lg transition-colors flex-1 sm:flex-initial"
@@ -614,7 +642,7 @@ const Nutrition: React.FC = () => {
           <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-md border-white/10 lg:col-span-2">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <h2 className="text-xl font-semibold text-white">Today's Progress</h2>
+                <h2 className="text-xl font-semibold text-white">Calorie Progress</h2>
                 <span className="text-sm text-gray-400">
                   {goals.calories - progress.calories} cal remaining
                 </span>
@@ -749,7 +777,15 @@ const Nutrition: React.FC = () => {
           {/* Today's Meals */}
           <Card className="p-4 sm:p-6 bg-white/5 backdrop-blur-md border-white/10">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold text-white">Today's Meals</h2>
+              <h2 className="text-xl font-semibold text-white">
+                {selectedDate.toDateString() === new Date().toDateString() 
+                  ? "Today's Meals" 
+                  : `Meals for ${selectedDate.toLocaleDateString('en-US', { 
+                      month: 'short', 
+                      day: 'numeric' 
+                    })}`
+                }
+              </h2>
               <button
                 onClick={() => navigate('/nutrition/history')}
                 className="text-accent-lime hover:text-accent-lime/80 text-sm"
