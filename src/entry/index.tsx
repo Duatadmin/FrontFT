@@ -95,9 +95,10 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   }
 
   // Check if user needs onboarding (authenticated but not onboarded)
-  // Allow access to welcome route to complete onboarding
+  // Allow access to welcome and onboarding routes
   const currentPath = window.location.pathname;
-  if (!onboardingComplete && currentPath !== '/welcome') {
+  const allowedPaths = ['/welcome', '/onboarding'];
+  if (!onboardingComplete && !allowedPaths.includes(currentPath)) {
     console.log('[ProtectedRoute] User not onboarded. Redirecting to /welcome.');
     return <Navigate to="/welcome" replace />;
   }

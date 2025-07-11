@@ -76,12 +76,18 @@ module.exports = {
          'bounce-dot': {
           '0%, 80%, 100%': { transform: 'scale(0.7)', opacity: '0.6' },
           '40%': { transform: 'scale(1.0)', opacity: '1' },
+        },
+        // Shine effect for ShinyText
+        'shine': {
+          '0%': { 'background-position': '100%' },
+          '100%': { 'background-position': '-100%' },
         }
       },
       animation: {
         'fade-in': 'fade-in 0.3s ease-out',
         'slide-in-up': 'slide-in-up 0.4s cubic-bezier(0.25, 0.8, 0.25, 1)', // Smoother ease
         'bounce-dot': 'bounce-dot 1.4s infinite ease-in-out both',
+        'shine': 'shine 5s linear infinite',
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(circle at center, var(--tw-gradient-stops))',

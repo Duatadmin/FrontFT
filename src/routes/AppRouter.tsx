@@ -8,6 +8,7 @@ import CheckoutCancelPage from '@/pages/CheckoutCancelPage';
 import SubscriptionRequiredPage from '@/pages/SubscriptionRequiredPage';
 import SubscriptionGate from '@/components/auth/SubscriptionGate';
 import { PremiumWelcomeFlow } from '@/components/welcome/PremiumWelcomeFlow';
+import { ConversationalOnboarding } from '@/components/onboarding/ConversationalOnboarding';
 
 // Define a type for our dynamically imported component
 type ProtectedRoutesType = React.ComponentType;
@@ -41,6 +42,16 @@ export default function AppRouter() {
     <Routes>
       {/* The welcome screen is available to all users */}
       <Route path="/welcome" element={<PremiumWelcomeFlow />} />
+      
+      {/* Onboarding flow for authenticated users */}
+      <Route 
+        path="/onboarding" 
+        element={
+          <ProtectedRoute>
+            <ConversationalOnboarding />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* The login page is always available */}
       <Route path="/login" element={<LoginPage />} />
