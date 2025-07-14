@@ -206,7 +206,8 @@ export function ModernWelcomeFlow() {
         </div>
 
         {/* Slide Content */}
-        <div className="flex-1 px-6">
+        <div className="flex-1 px-6 flex justify-center">
+          <div className="w-full lg:w-1/2 lg:max-w-2xl">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
               key={slide.id}
@@ -315,10 +316,12 @@ export function ModernWelcomeFlow() {
               </div>
             </motion.div>
           </AnimatePresence>
+          </div>
         </div>
 
         {/* Navigation */}
-        <div className="px-6 pb-safe-bottom">
+        <div className="px-6 pb-safe-bottom flex justify-center">
+          <div className="w-full lg:w-1/2 lg:max-w-2xl">
           {/* Dots Indicator */}
           <div className="flex items-center justify-center gap-2 mb-6">
             {welcomeSlides.map((_, index) => (
@@ -359,6 +362,7 @@ export function ModernWelcomeFlow() {
               {currentSlide === welcomeSlides.length - 1 ? 'Get Started' : 'Continue'}
               <ChevronRight className="w-5 h-5" />
             </button>
+          </div>
           </div>
         </div>
       </div>

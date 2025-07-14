@@ -337,9 +337,9 @@ export function ConversationalOnboarding() {
         </div>
       </div>
 
-      {/* Chat Container */}
-      <div className="flex-1 overflow-y-auto">
-        <div className="max-w-2xl mx-auto p-6 space-y-6">
+      {/* Chat Container - Centered and half width on desktop */}
+      <div className="flex-1 overflow-y-auto flex justify-center">
+        <div className="w-full lg:w-1/2 lg:max-w-2xl p-6 space-y-6">
           {/* Previous Messages */}
           <AnimatePresence mode="sync">
             {onboardingSteps.slice(0, currentStep + 1).map((prevStep, index) => {
@@ -444,10 +444,10 @@ export function ConversationalOnboarding() {
         </div>
       </div>
 
-      {/* Skip Button */}
+      {/* Skip Button - Centered and half width on desktop */}
       {currentStep < onboardingSteps.length - 1 && (
-        <div className="sticky bottom-0 p-4 bg-dark-bg/80 backdrop-blur-xl border-t border-white/5">
-          <div className="max-w-2xl mx-auto flex justify-end">
+        <div className="sticky bottom-0 p-4 bg-dark-bg/80 backdrop-blur-xl border-t border-white/5 flex justify-center">
+          <div className="w-full lg:w-1/2 lg:max-w-2xl flex justify-end">
             <button
               onClick={handleSkip}
               className="text-white/40 hover:text-white/60 text-sm transition-colors"

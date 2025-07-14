@@ -334,7 +334,6 @@ const screens: WelcomeScreen[] = [
   },
   {
     id: 'features',
-    badge: 'Premium Features',
     title: 'Everything You Need',
     subtitle: 'To Succeed',
     description: 'Professional tools designed for serious athletes and fitness enthusiasts.',
@@ -745,6 +744,8 @@ export function PremiumWelcomeFlow() {
 
         {/* Main Content Area */}
         <main className="flex-1 flex flex-col px-6 overflow-hidden">
+          <div className="flex-1 flex justify-center">
+            <div className="w-full lg:w-1/2 lg:max-w-2xl flex flex-col">
           <AnimatePresence mode="wait">
             <motion.div
               key={screen.id}
@@ -915,10 +916,14 @@ export function PremiumWelcomeFlow() {
               )}
             </motion.div>
           </AnimatePresence>
+            </div>
+          </div>
         </main>
 
         {/* Bottom Navigation */}
         <footer className="px-6 pb-8">
+          <div className="flex justify-center">
+            <div className="w-full lg:w-1/2 lg:max-w-2xl">
           <div className="pb-safe-bottom">
             {/* Progress Dots */}
             <div className="flex items-center justify-center gap-2 mb-8">
@@ -963,6 +968,8 @@ export function PremiumWelcomeFlow() {
                   <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
                 </motion.button>
               )}
+            </div>
+          </div>
             </div>
           </div>
         </footer>
