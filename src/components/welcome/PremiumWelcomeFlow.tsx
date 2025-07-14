@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
+import { useInViewport } from '@/hooks/useInViewport';
+import { AICoachVisual } from './AICoachVisual';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronRight,
@@ -568,6 +570,7 @@ export function PremiumWelcomeFlow() {
   const navigate = useNavigate();
   const dragX = useMotionValue(0);
   const { user, updateOnboardingStatus } = useUserStore();
+  const [backgroundRef, isBackgroundInView] = useInViewport<HTMLDivElement>();
   
   const screen = screens[currentScreen];
   const isOnboardingScreen = screen.isOnboarding;
@@ -648,7 +651,7 @@ export function PremiumWelcomeFlow() {
   return (
     <div className="min-h-screen bg-dark-bg relative overflow-hidden flex flex-col">
       {/* Dynamic Background */}
-      <div className="absolute inset-0">
+      <div ref={backgroundRef} className="absolute inset-0">
         {/* Animated Gradient Mesh */}
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           <defs>
@@ -666,10 +669,10 @@ export function PremiumWelcomeFlow() {
             r="300"
             fill="url(#gradient1)"
             filter="url(#glow)"
-            animate={{
+            animate={isBackgroundInView ? {
               cx: ["20%", "80%", "20%"],
               cy: ["20%", "80%", "20%"],
-            }}
+            } : {}}
             transition={{
               duration: 20,
               repeat: Infinity,
@@ -682,10 +685,10 @@ export function PremiumWelcomeFlow() {
             r="400"
             fill="url(#gradient2)"
             filter="url(#glow)"
-            animate={{
+            animate={isBackgroundInView ? {
               cx: ["80%", "20%", "80%"],
               cy: ["80%", "20%", "80%"],
-            }}
+            } : {}}
             transition={{
               duration: 25,
               repeat: Infinity,
