@@ -611,54 +611,44 @@ export function PremiumWelcomeFlow() {
       console.log('[PremiumWelcomeFlow] API response:', response);
       
       if (response && response.reply) {
-        console.log('[PremiumWelcomeFlow] Response validated, proceeding with save...');
+        console.log('[PremiumWelcomeFlow] Got plan, storing and navigating...');
         
-        try {
-          // Save to Supabase
-          const { error: profileError } = await supabase
-            .from('user_profiles')
-            .upsert({
-              user_id: user.id,
-              ...finalOnboardingData,
-              onboarding_completed_at: new Date().toISOString()
-            });
-          
-          if (profileError) {
-            console.error('[PremiumWelcomeFlow] Error saving profile:', profileError);
-            // Continue anyway - don't block the user
-          } else {
-            console.log('[PremiumWelcomeFlow] Profile saved successfully');
-          }
-
-          // Store the plan in sessionStorage to pass to chat page
-          sessionStorage.setItem('onboarding_plan', JSON.stringify({
-            role: 'assistant',
-            content: response.reply,
-            timestamp: Date.now()
-          }));
-          
-          console.log('[PremiumWelcomeFlow] Plan stored in sessionStorage, plan_id:', response.plan_id);
-          
-          // Update onboarding status FIRST before navigation
-          console.log('[PremiumWelcomeFlow] Updating onboarding status...');
-          await updateOnboardingStatus(true);
+        // FIRST: Store the plan in sessionStorage
+        sessionStorage.setItem('onboarding_plan', JSON.stringify({
+          role: 'assistant',
+          content: response.reply,
+          timestamp: Date.now()
+        }));
+        console.log('[PremiumWelcomeFlow] Plan stored in sessionStorage');
+        
+        // SECOND: Update onboarding status (but don't wait for it)
+        updateOnboardingStatus(true).then(() => {
           console.log('[PremiumWelcomeFlow] Onboarding status updated');
-          
-          // Set isSubmitting to false
-          setIsSubmitting(false);
-          
-          toast.success('Your personalized plan is ready!');
-          console.log('[PremiumWelcomeFlow] Navigating to chat...');
-          
-          // Navigate to chat page after ensuring onboarding status is updated
-          navigate('/', { replace: true });
-          console.log('[PremiumWelcomeFlow] Navigation called');
-        } catch (innerError) {
-          console.error('[PremiumWelcomeFlow] Error in post-response processing:', innerError);
-          // Still try to navigate even if something failed
-          setIsSubmitting(false);
-          navigate('/', { replace: true });
-        }
+        }).catch(err => {
+          console.error('[PremiumWelcomeFlow] Failed to update onboarding status:', err);
+        });
+        
+        // THIRD: Save profile data (but don't wait for it)
+        supabase
+          .from('user_profiles')
+          .upsert({
+            user_id: user.id,
+            ...finalOnboardingData,
+            onboarding_completed_at: new Date().toISOString()
+          })
+          .then(({ error }) => {
+            if (error) {
+              console.error('[PremiumWelcomeFlow] Error saving profile:', error);
+            } else {
+              console.log('[PremiumWelcomeFlow] Profile saved');
+            }
+          });
+        
+        // FOURTH: Navigate immediately
+        setIsSubmitting(false);
+        toast.success('Your personalized plan is ready!');
+        console.log('[PremiumWelcomeFlow] Navigating to chat NOW...');
+        navigate('/', { replace: true });
       } else {
         throw new Error('Failed to generate plan');
       }
