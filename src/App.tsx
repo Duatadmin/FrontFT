@@ -11,13 +11,38 @@ import { useAuthGuard } from './hooks/useAuthGuard';
 function App() {
   useAuthGuard(); // Enforce authentication for this component and its children
   const currentUser = useUserStore((state) => state.user);
-  const [messages, setMessages] = useState<Message[]>([
-    {
+  
+  // Initialize messages with onboarding plan if available
+  const [messages, setMessages] = useState<Message[]>(() => {
+    // Check if there's an onboarding plan in sessionStorage
+    const storedPlan = sessionStorage.getItem('onboarding_plan');
+    
+    if (storedPlan) {
+      try {
+        const planMessage = JSON.parse(storedPlan);
+        console.log('[App] Found onboarding plan, displaying it');
+        
+        // Clear the stored plan so it doesn't show again
+        sessionStorage.removeItem('onboarding_plan');
+        
+        // Return the plan as the first message
+        return [{
+          id: crypto.randomUUID(),
+          content: planMessage.content,
+          role: planMessage.role as 'assistant' | 'user' | 'system'
+        }];
+      } catch (error) {
+        console.error('[App] Failed to parse onboarding plan:', error);
+      }
+    }
+    
+    // Default welcome message if no plan found
+    return [{
       id: 'initial-1',
       content: "Hello! I'm Isinka, your fitness assistant. How can I help you today?",
       role: 'assistant'
-    }
-  ]);
+    }];
+  });
   
   const [isLoading, setIsLoading] = useState(false);
 
