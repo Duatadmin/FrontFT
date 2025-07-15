@@ -524,16 +524,20 @@ export function PremiumWelcomeFlow() {
   
   // Auto-navigate to chat after showing the generating screen
   useEffect(() => {
-    if (screen.id === 'complete' && isSubmitting === false && user && onboardingData.preferences) {
+    if (screen.id === 'complete') {
+      console.log('[PremiumWelcomeFlow] On complete screen, starting timer...');
       // Wait a bit to show the generating animation, then navigate to chat
       const timer = setTimeout(() => {
-        console.log('[PremiumWelcomeFlow] Navigating to chat...');
+        console.log('[PremiumWelcomeFlow] Timer expired, navigating to chat...');
         navigate('/', { replace: true });
-      }, 3000); // Show generating screen for 3 seconds
+      }, 5000); // Show generating screen for 5 seconds
       
-      return () => clearTimeout(timer);
+      return () => {
+        console.log('[PremiumWelcomeFlow] Cleaning up timer');
+        clearTimeout(timer);
+      };
     }
-  }, [screen.id, isSubmitting, navigate, user, onboardingData.preferences]);
+  }, [screen.id, navigate]);
 
   const handleNext = async () => {
     if (isOnboardingScreen && screen.fieldName) {
@@ -559,12 +563,15 @@ export function PremiumWelcomeFlow() {
   };
 
   const submitOnboardingData = async (finalOnboardingData: Record<string, any>) => {
+    console.log('[PremiumWelcomeFlow] Starting submitOnboardingData...');
     if (!user) {
+      console.log('[PremiumWelcomeFlow] No user, navigating to login');
       navigate('/login');
       return;
     }
     
     setIsSubmitting(true);
+    console.log('[PremiumWelcomeFlow] Set isSubmitting to true');
     
     try {
       // Transform data to match API requirements
@@ -614,9 +621,11 @@ export function PremiumWelcomeFlow() {
       };
 
       // Submit to API - this triggers plan generation
+      console.log('[PremiumWelcomeFlow] Submitting to API...');
       const response = await submitOnboarding(user.id, transformedData);
+      console.log('[PremiumWelcomeFlow] API response:', response);
       
-      if (response.success) {
+      if (response && response.reply) {
         // Save to Supabase
         await supabase
           .from('user_profiles')
@@ -629,17 +638,24 @@ export function PremiumWelcomeFlow() {
         // Update onboarding status
         await updateOnboardingStatus(true);
         
-        // The plan will come through the chat message pipeline
-        // Just show that we're generating it
-        toast.success('Creating your personalized plan...');
+        // Store the plan in sessionStorage to pass to chat page
+        sessionStorage.setItem('onboarding_plan', JSON.stringify({
+          role: 'assistant',
+          content: response.reply,
+          timestamp: Date.now()
+        }));
+        
+        console.log('[PremiumWelcomeFlow] Plan received and stored, plan_id:', response.plan_id);
+        toast.success('Your personalized plan is ready!');
         
         // Set isSubmitting to false to trigger auto-navigation
         setIsSubmitting(false);
+        console.log('[PremiumWelcomeFlow] Onboarding submission complete, isSubmitting set to false');
       } else {
-        throw new Error('Failed to submit onboarding');
+        throw new Error('Failed to generate plan');
       }
     } catch (error) {
-      console.error('Failed to submit onboarding data:', error);
+      console.error('[PremiumWelcomeFlow] Failed to submit onboarding data:', error);
       toast.error('Failed to complete onboarding. Please try again.');
       setIsSubmitting(false);
       // Don't navigate on error, let user retry
@@ -948,9 +964,11 @@ export function PremiumWelcomeFlow() {
                         
                         // If this is the preferences field, submit to backend
                         if (screen.fieldName === 'preferences') {
-                          await submitOnboardingData({ ...onboardingData, [screen.fieldName]: newValue });
+                          // First advance to the generating screen
                           setCurrentScreen(currentScreen + 1);
                           setInputValue('');
+                          // Then submit the data
+                          submitOnboardingData({ ...onboardingData, [screen.fieldName]: newValue });
                         } else {
                           handleNext();
                         }
@@ -1059,12 +1077,12 @@ export function PremiumWelcomeFlow() {
                             <div className="relative">
                               {/* Underlayer with 40% opacity */}
                               <h3 className="text-[1.4rem] font-bold bg-gradient-to-r from-accent-lime to-accent-orange bg-clip-text text-transparent opacity-40">
-                                {isSubmitting ? 'Submitting...' : 'Generating...'}
+                                Generating...
                               </h3>
                               {/* ShinyText overlay */}
                               <h3 className="absolute inset-0 text-[1.4rem] font-bold">
                                 <ShinyText 
-                                  text={isSubmitting ? 'Submitting...' : 'Generating...'} 
+                                  text="Generating..." 
                                   speed={3}
                                   className="bg-gradient-to-r from-accent-lime to-accent-orange bg-clip-text text-transparent"
                                 />

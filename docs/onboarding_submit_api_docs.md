@@ -148,8 +148,7 @@ The `/api/v1/onboarding/submit` endpoint allows frontend applications to submit 
 
 ```json
 {
-  "success": true,
-  "message": "Onboarding completed successfully! Your personalized training plan has been created.",
+  "reply": "[Full training plan with exercises and satisfaction question]",
   "plan_id": "uuid-of-generated-plan"
 }
 ```
@@ -218,8 +217,7 @@ curl -X POST http://localhost:8000/api/v1/onboarding/submit \
 
 ```json
 {
-  "success": true,
-  "message": "Onboarding completed successfully! Here's your personalized 12-week muscle-building plan focusing on arms and shoulders.",
+  "reply": "Here's your personalized 12-week muscle-building plan:\n\n[Full plan details with exercises]\n\nAre you happy with this plan?",
   "plan_id": "550e8400-e29b-41d4-a716-446655440000"
 }
 ```
@@ -237,6 +235,8 @@ curl -X POST http://localhost:8000/api/v1/onboarding/submit \
 5. **Plan Generation**: PlannerAgent generates initial training plan based on user profile
 
 6. **Agent Switching**: System switches to FeedbackAgent for plan refinement
+
+7. **Plan Response**: The generated plan is returned in the response with the same format as regular messages
 
 ## Integration Notes
 
@@ -276,3 +276,5 @@ This script demonstrates proper request formatting and handles responses appropr
 - If normalization fails, sensible defaults are applied to ensure plan generation succeeds
 - The generated plan ID can be used to retrieve plan details via other endpoints
 - After successful onboarding, the user is automatically switched to the FeedbackAgent for plan refinement
+- The response format matches the regular message endpoints for consistency
+- The plan includes the satisfaction question, ready for the user's response

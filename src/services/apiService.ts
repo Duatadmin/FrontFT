@@ -118,9 +118,8 @@ interface OnboardingSubmitRequest {
 }
 
 interface OnboardingSubmitResponse {
-  success: boolean;
-  message: string;
-  plan_id?: string;
+  reply: string; // The full training plan with exercises
+  plan_id: string; // UUID of the generated plan
 }
 
 // Submit onboarding data

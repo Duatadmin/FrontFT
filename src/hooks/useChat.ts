@@ -57,16 +57,51 @@ export const useChat = (): UseChatReturn => {
     }
   }, []);
 
-  // Add an initial system message if desired
+  // Check for onboarding plan or add initial message
   useEffect(() => {
-    setMessages([
-      {
-        id: crypto.randomUUID(),
-        role: 'system',
-        content: 'Welcome to the chat! Type a message to begin.',
-        timestamp: Date.now()
+    // Check if there's an onboarding plan in sessionStorage
+    const storedPlan = sessionStorage.getItem('onboarding_plan');
+    
+    if (storedPlan) {
+      try {
+        const planMessage = JSON.parse(storedPlan);
+        console.log('[useChat] Found onboarding plan, displaying it');
+        
+        // Add the plan as the first message
+        setMessages([
+          {
+            id: crypto.randomUUID(),
+            role: planMessage.role as 'assistant',
+            content: planMessage.content,
+            timestamp: planMessage.timestamp
+          }
+        ]);
+        
+        // Clear the stored plan so it doesn't show again
+        sessionStorage.removeItem('onboarding_plan');
+      } catch (error) {
+        console.error('[useChat] Failed to parse onboarding plan:', error);
+        // Fall back to welcome message
+        setMessages([
+          {
+            id: crypto.randomUUID(),
+            role: 'system',
+            content: 'Welcome to the chat! Type a message to begin.',
+            timestamp: Date.now()
+          }
+        ]);
       }
-    ]);
+    } else {
+      // No onboarding plan, show welcome message
+      setMessages([
+        {
+          id: crypto.randomUUID(),
+          role: 'system',
+          content: 'Welcome to the chat! Type a message to begin.',
+          timestamp: Date.now()
+        }
+      ]);
+    }
   }, []);
 
 
