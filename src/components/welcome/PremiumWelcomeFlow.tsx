@@ -522,22 +522,7 @@ export function PremiumWelcomeFlow() {
   const screen = screens[currentScreen];
   const isOnboardingScreen = screen.isOnboarding;
   
-  // Auto-navigate to chat after showing the generating screen
-  useEffect(() => {
-    if (screen.id === 'complete') {
-      console.log('[PremiumWelcomeFlow] On complete screen, starting timer...');
-      // Wait a bit to show the generating animation, then navigate to chat
-      const timer = setTimeout(() => {
-        console.log('[PremiumWelcomeFlow] Timer expired, navigating to chat...');
-        navigate('/', { replace: true });
-      }, 5000); // Show generating screen for 5 seconds
-      
-      return () => {
-        console.log('[PremiumWelcomeFlow] Cleaning up timer');
-        clearTimeout(timer);
-      };
-    }
-  }, [screen.id, navigate]);
+  // Remove auto-navigation - we'll navigate after API response instead
 
   const handleNext = async () => {
     if (isOnboardingScreen && screen.fieldName) {
@@ -635,9 +620,6 @@ export function PremiumWelcomeFlow() {
             onboarding_completed_at: new Date().toISOString()
           });
 
-        // Update onboarding status
-        await updateOnboardingStatus(true);
-        
         // Store the plan in sessionStorage to pass to chat page
         sessionStorage.setItem('onboarding_plan', JSON.stringify({
           role: 'assistant',
@@ -646,11 +628,20 @@ export function PremiumWelcomeFlow() {
         }));
         
         console.log('[PremiumWelcomeFlow] Plan received and stored, plan_id:', response.plan_id);
-        toast.success('Your personalized plan is ready!');
         
-        // Set isSubmitting to false to trigger auto-navigation
+        // Update onboarding status FIRST before navigation
+        console.log('[PremiumWelcomeFlow] Updating onboarding status...');
+        await updateOnboardingStatus(true);
+        console.log('[PremiumWelcomeFlow] Onboarding status updated');
+        
+        // Set isSubmitting to false
         setIsSubmitting(false);
-        console.log('[PremiumWelcomeFlow] Onboarding submission complete, isSubmitting set to false');
+        
+        toast.success('Your personalized plan is ready!');
+        console.log('[PremiumWelcomeFlow] Navigating to chat...');
+        
+        // Navigate to chat page after ensuring onboarding status is updated
+        navigate('/', { replace: true });
       } else {
         throw new Error('Failed to generate plan');
       }
