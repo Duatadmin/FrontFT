@@ -611,7 +611,7 @@ export function PremiumWelcomeFlow() {
       console.log('[PremiumWelcomeFlow] API response:', response);
       
       if (response && response.reply) {
-        console.log('[PremiumWelcomeFlow] Got plan, storing and navigating...');
+        console.log('[PremiumWelcomeFlow] Got plan, storing and updating status...');
         
         // FIRST: Store the plan in sessionStorage
         sessionStorage.setItem('onboarding_plan', JSON.stringify({
@@ -621,33 +621,20 @@ export function PremiumWelcomeFlow() {
         }));
         console.log('[PremiumWelcomeFlow] Plan stored in sessionStorage');
         
-        // SECOND: Update onboarding status (but don't wait for it)
-        updateOnboardingStatus(true).then(() => {
-          console.log('[PremiumWelcomeFlow] Onboarding status updated');
-        }).catch(err => {
+        // SECOND: Update onboarding status and WAIT for it
+        console.log('[PremiumWelcomeFlow] Updating onboarding status...');
+        try {
+          await updateOnboardingStatus(true);
+          console.log('[PremiumWelcomeFlow] Onboarding status updated successfully');
+        } catch (err) {
           console.error('[PremiumWelcomeFlow] Failed to update onboarding status:', err);
-        });
+          // Continue anyway - we have the plan
+        }
         
-        // THIRD: Save profile data (but don't wait for it)
-        supabase
-          .from('user_profiles')
-          .upsert({
-            user_id: user.id,
-            ...finalOnboardingData,
-            onboarding_completed_at: new Date().toISOString()
-          })
-          .then(({ error }) => {
-            if (error) {
-              console.error('[PremiumWelcomeFlow] Error saving profile:', error);
-            } else {
-              console.log('[PremiumWelcomeFlow] Profile saved');
-            }
-          });
-        
-        // FOURTH: Navigate immediately
+        // THIRD: Navigate after status is updated
         setIsSubmitting(false);
         toast.success('Your personalized plan is ready!');
-        console.log('[PremiumWelcomeFlow] Navigating to chat NOW...');
+        console.log('[PremiumWelcomeFlow] Navigating to chat...');
         navigate('/', { replace: true });
       } else {
         throw new Error('Failed to generate plan');
