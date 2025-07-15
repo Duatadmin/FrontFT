@@ -409,7 +409,7 @@ export function PremiumWelcomeFlow() {
   };
 
   return (
-    <div className="min-h-screen bg-dark-bg relative overflow-hidden flex flex-col">
+    <div className="h-lvh bg-dark-bg relative overflow-hidden flex flex-col">
       {/* Dynamic Background */}
       <div ref={backgroundRef} className="absolute inset-0">
         {/* Animated Gradient Mesh */}

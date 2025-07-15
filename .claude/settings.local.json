@@ -20,7 +20,8 @@
       "Bash(mv:*)",
       "Bash(sed:*)",
       "Bash(dos2unix:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(npx tailwindcss:*)"
     ],
     "deny": []
   }

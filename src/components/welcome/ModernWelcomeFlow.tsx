@@ -141,7 +141,7 @@ export function ModernWelcomeFlow() {
   const slide = welcomeSlides[currentSlide];
 
   return (
-    <div className="min-h-screen bg-dark-bg relative overflow-hidden">
+    <div className="h-lvh bg-dark-bg relative overflow-hidden flex flex-col">
       {/* Animated Background */}
       <div ref={backgroundRef} className="absolute inset-0">
         {/* Gradient Orbs */}
@@ -179,7 +179,7 @@ export function ModernWelcomeFlow() {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 flex flex-col h-screen">
+      <div className="relative z-10 flex flex-col h-full">
         {/* Header */}
         <motion.div 
           className="px-6 pt-safe-top pb-4"
