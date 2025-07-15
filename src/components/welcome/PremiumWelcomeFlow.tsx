@@ -506,7 +506,7 @@ export function PremiumWelcomeFlow() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col px-6 overflow-hidden">
+        <main className="flex-1 flex flex-col px-6 overflow-hidden min-h-0">
           <div className="flex-1 flex justify-center">
             <div className="w-full lg:w-1/2 lg:max-w-2xl flex flex-col">
           <AnimatePresence mode="wait">
@@ -684,10 +684,9 @@ export function PremiumWelcomeFlow() {
         </main>
 
         {/* Bottom Navigation */}
-        <footer className="px-6 pb-8">
+        <footer className="px-6" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
           <div className="flex justify-center">
             <div className="w-full lg:w-1/2 lg:max-w-2xl">
-          <div className="pb-safe-bottom">
             {/* Progress Dots */}
             <div className="flex items-center justify-center gap-2 mb-8">
               {screens.map((_, index) => (
@@ -732,7 +731,6 @@ export function PremiumWelcomeFlow() {
                 </motion.button>
               )}
             </div>
-          </div>
             </div>
           </div>
         </footer>

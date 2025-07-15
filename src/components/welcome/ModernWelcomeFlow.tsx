@@ -211,7 +211,7 @@ export function ModernWelcomeFlow() {
         </div>
 
         {/* Slide Content */}
-        <div className="flex-1 px-6 flex justify-center">
+        <div className="flex-1 px-6 flex justify-center min-h-0">
           <div className="w-full lg:w-1/2 lg:max-w-2xl">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
@@ -277,7 +277,7 @@ export function ModernWelcomeFlow() {
         </div>
 
         {/* Navigation */}
-        <div className="px-6 pb-safe-bottom flex justify-center">
+        <div className="px-6 pb-6 flex justify-center" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
           <div className="w-full lg:w-1/2 lg:max-w-2xl">
           {/* Dots Indicator */}
           <div className="flex items-center justify-center gap-2 mb-6">
