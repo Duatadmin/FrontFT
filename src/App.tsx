@@ -89,7 +89,7 @@ function App() {
 
   return (
     <VoiceProvider>
-      <div className="flex flex-col h-screen text-foreground">
+      <div className="flex flex-col h-lvh text-foreground overflow-hidden">
         <ChatLayout 
           messages={messages} 
           onSendMessage={handleSendMessage} 

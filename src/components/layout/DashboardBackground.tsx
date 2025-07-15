@@ -16,9 +16,9 @@ function DashboardBackground({ children }: DashboardBackgroundProps) {
   }
   
   // If used with children, wrap them with the background
+  // Using h-full to inherit parent's height rather than forcing min-h-screen
   return (
-    <div className="w-full h-full min-h-screen bg-dark-bg bg-gradient-radial-olive overflow-x-hidden">
-      {/* Applied background classes directly, added min-h-screen */}
+    <div className="w-full h-full bg-dark-bg bg-gradient-radial-olive">
       {children}
     </div>
   );

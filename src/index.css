@@ -17,6 +17,7 @@
   }
 
   html {
+    /* Use dvh for better mobile support */
     height: 100%;
     @apply font-sans antialiased tracking-tight;
     /* Smooth scroll behavior */
@@ -24,16 +25,17 @@
   }
 
   body {
+    /* Match html height */
     height: 100%;
+    /* Prevent overscroll bounce on mobile */
     overscroll-behavior-y: contain;
-  font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Inter', system-ui, sans-serif;
     /* Use new background color */
     @apply bg-background text-text;
-    /* Prevent text selection */
-    @apply select-none; 
-    /* Ensure body takes full viewport height, accounting for virtual keyboard */
-    
-    
+    /* Prevent text selection on mobile */
+    @apply select-none;
+    /* Remove any default margins */
+    margin: 0;
   }
 
   /* Updated scrollbar */
@@ -57,9 +59,8 @@
     /* Focus rings applied directly in components */
   }
   #root {
-    /* Ensure root also respects viewport height changes */
-    
-    
+    /* Root takes full height from body */
+    height: 100%;
     @apply flex flex-col;
   }
 }

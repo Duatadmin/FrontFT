@@ -29,11 +29,14 @@ if (rootElement) {
 
       ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>
-          <QueryClientProvider client={queryClient}> {/* Add QueryClientProvider */}
+          <QueryClientProvider client={queryClient}>
             <BrowserRouter>
-              <DashboardBackground>
-                <AppRouter /> {/* AppRouter now handles all routes */}
-              </DashboardBackground>
+              {/* DashboardBackground wraps entire app for consistent styling */}
+              <div className="h-lvh overflow-hidden">
+                <DashboardBackground>
+                  <AppRouter />
+                </DashboardBackground>
+              </div>
             </BrowserRouter>
           </QueryClientProvider>
         </React.StrictMode>
