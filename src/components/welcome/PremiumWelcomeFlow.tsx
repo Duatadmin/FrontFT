@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { useInViewport } from '@/hooks/useInViewport';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { AICoachVisual } from './AICoachVisual';
+import { HeroPhoneMockup } from './HeroPhoneMockup';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronRight,
@@ -65,257 +67,14 @@ const screens: WelcomeScreen[] = [
     title: 'Transform Your',
     subtitle: 'Fitness Journey',
     description: 'AI-powered coaching meets personalized training for unprecedented results.',
-    visual: (
-      <div className="relative w-full h-full flex items-center justify-center">
-        {/* 3D Floating Phone Mockup - Responsive sizing */}
-        <motion.div
-          className="relative w-full max-w-[200px] aspect-[9/19]"
-          animate={{
-            y: [0, -10, 0],
-          }}
-          transition={{
-            duration: 4,
-            repeat: Infinity,
-            ease: "easeInOut",
-          }}
-        >
-          <div className="w-full h-full bg-gradient-to-br from-white/10 to-white/5 rounded-[2.5rem] border border-white/20 backdrop-blur-xl p-2">
-            <div className="w-full h-full bg-dark-bg rounded-[2rem] overflow-hidden">
-              {/* Minimalist Chat Bubbles */}
-              <div className="p-4 space-y-3 h-full flex flex-col justify-center">
-                {/* User Message 1 */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 0.5, type: "spring", stiffness: 200 }}
-                  className="flex justify-end"
-                >
-                  <div className="h-9 bg-gradient-to-r from-accent-lime/20 to-accent-orange/20 rounded-2xl rounded-tr-sm w-[55%]" />
-                </motion.div>
-
-                {/* AI Message 1 */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 1, type: "spring", stiffness: 200 }}
-                >
-                  <div className="h-12 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl rounded-tl-sm w-[75%]" />
-                </motion.div>
-
-                {/* User Message 2 */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 1.5, type: "spring", stiffness: 200 }}
-                  className="flex justify-end"
-                >
-                  <div className="h-8 bg-gradient-to-r from-accent-lime/20 to-accent-orange/20 rounded-2xl rounded-tr-sm w-[45%]" />
-                </motion.div>
-
-                {/* AI Message 2 */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 2, type: "spring", stiffness: 200 }}
-                >
-                  <div className="h-14 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl rounded-tl-sm w-[80%]" />
-                </motion.div>
-
-                {/* User Message 3 */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 2.5, type: "spring", stiffness: 200 }}
-                  className="flex justify-end"
-                >
-                  <div className="h-8 bg-gradient-to-r from-accent-lime/20 to-accent-orange/20 rounded-2xl rounded-tr-sm w-[40%]" />
-                </motion.div>
-
-                {/* AI Message with typing indicator */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: 3, type: "spring", stiffness: 200 }}
-                >
-                  <div className="h-9 bg-gradient-to-r from-white/10 to-white/5 rounded-2xl rounded-tl-sm w-[50%] flex items-center justify-center gap-1.5">
-                    <motion.div
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
-                      className="w-2 h-2 rounded-full bg-white/40"
-                    />
-                    <motion.div
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
-                      className="w-2 h-2 rounded-full bg-white/40"
-                    />
-                    <motion.div
-                      animate={{ opacity: [0.3, 1, 0.3] }}
-                      transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
-                      className="w-2 h-2 rounded-full bg-white/40"
-                    />
-                  </div>
-                </motion.div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Floating Elements - Adjusted for responsive sizing */}
-          <motion.div
-            className="absolute -top-[15%] -right-[15%] w-[40%] h-[40%] bg-accent-lime/20 rounded-full blur-xl"
-            animate={{
-              scale: [1, 1.5, 1],
-              opacity: [0.5, 0.8, 0.5],
-            }}
-            transition={{
-              duration: 3,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          />
-          <motion.div
-            className="absolute -bottom-[15%] -left-[15%] w-[50%] h-[50%] bg-accent-orange/20 rounded-full blur-xl"
-            animate={{
-              scale: [1, 1.3, 1],
-              opacity: [0.5, 0.7, 0.5],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut",
-              delay: 0.5,
-            }}
-          />
-        </motion.div>
-      </div>
-    ),
+    visual: <HeroPhoneMockup />,
   },
   {
     id: 'ai-coach',
     title: 'Your Personal',
     subtitle: 'AI Coach',
     description: 'Get real-time form corrections, personalized workouts, and intelligent progress tracking.',
-    visual: (
-      <div className="relative w-full h-[280px] flex items-center justify-center">
-        <div className="relative w-64 h-64 flex items-center justify-center">
-          {/* Central AI Brain - No rotation, just pulse */}
-          <motion.div
-            className="absolute z-10 w-[102px] h-[102px] rounded-full bg-gradient-to-br from-accent-lime/30 to-accent-orange/30 flex items-center justify-center"
-            animate={{
-              scale: [1, 1.05, 1],
-            }}
-            transition={{
-              duration: 4,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-          >
-            <div className="w-[70px] h-[70px] rounded-full bg-dark-bg/80 backdrop-blur-xl border border-white/20 flex items-center justify-center">
-              <Brain className="w-9 h-9 text-accent-lime" />
-            </div>
-          </motion.div>
-          
-          {/* First Orbit - Clockwise with 2 elements */}
-          <motion.div
-            className="absolute inset-0"
-            animate={{
-              rotate: 360,
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          >
-            {[
-              { icon: <Activity className="w-5 h-5" />, angle: 0 },
-              { icon: <BarChart3 className="w-5 h-5" />, angle: 180 },
-            ].map((item, index) => {
-              const angleRad = (item.angle * Math.PI) / 180;
-              const radius = 80;
-              const x = Math.cos(angleRad) * radius;
-              const y = Math.sin(angleRad) * radius;
-              
-              return (
-                <div
-                  key={`orbit1-${index}`}
-                  className="absolute top-1/2 left-1/2"
-                  style={{
-                    transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                  }}
-                >
-                  <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg">
-                    <motion.div
-                      animate={{
-                        rotate: -360,
-                      }}
-                      transition={{
-                        duration: 20,
-                        repeat: Infinity,
-                        ease: "linear",
-                      }}
-                    >
-                      {item.icon}
-                    </motion.div>
-                  </div>
-                </div>
-              );
-            })}
-          </motion.div>
-          
-          {/* Second Orbit - Counter-clockwise with 2 elements */}
-          <motion.div
-            className="absolute inset-0"
-            animate={{
-              rotate: -360,
-            }}
-            transition={{
-              duration: 25,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          >
-            {[
-              { icon: <Shield className="w-5 h-5" />, angle: 90 },
-              { icon: <Zap className="w-5 h-5" />, angle: 270 },
-            ].map((item, index) => {
-              const angleRad = (item.angle * Math.PI) / 180;
-              const radius = 130;
-              const x = Math.cos(angleRad) * radius;
-              const y = Math.sin(angleRad) * radius;
-              
-              return (
-                <div
-                  key={`orbit2-${index}`}
-                  className="absolute top-1/2 left-1/2"
-                  style={{
-                    transform: `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`,
-                  }}
-                >
-                  <div className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-white shadow-lg">
-                    <motion.div
-                      animate={{
-                        rotate: 360,
-                      }}
-                      transition={{
-                        duration: 25,
-                        repeat: Infinity,
-                        ease: "linear",
-                      }}
-                    >
-                      {item.icon}
-                    </motion.div>
-                  </div>
-                </div>
-              );
-            })}
-          </motion.div>
-          
-          {/* Orbit Path Indicators */}
-          <div className="absolute top-1/2 left-1/2 w-[160px] h-[160px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5 pointer-events-none" />
-          <div className="absolute top-1/2 left-1/2 w-[260px] h-[260px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/5 pointer-events-none" />
-        </div>
-      </div>
-    ),
+    visual: <AICoachVisual />,
     features: [
       {
         icon: <Brain className="w-5 h-5" />,
@@ -571,6 +330,7 @@ export function PremiumWelcomeFlow() {
   const dragX = useMotionValue(0);
   const { user, updateOnboardingStatus } = useUserStore();
   const [backgroundRef, isBackgroundInView] = useInViewport<HTMLDivElement>();
+  const isMobile = useIsMobile();
   
   const screen = screens[currentScreen];
   const isOnboardingScreen = screen.isOnboarding;
@@ -669,7 +429,7 @@ export function PremiumWelcomeFlow() {
             r="300"
             fill="url(#gradient1)"
             filter="url(#glow)"
-            animate={isBackgroundInView ? {
+            animate={isBackgroundInView && !isMobile ? {
               cx: ["20%", "80%", "20%"],
               cy: ["20%", "80%", "20%"],
             } : {}}
@@ -685,7 +445,7 @@ export function PremiumWelcomeFlow() {
             r="400"
             fill="url(#gradient2)"
             filter="url(#glow)"
-            animate={isBackgroundInView ? {
+            animate={isBackgroundInView && !isMobile ? {
               cx: ["80%", "20%", "80%"],
               cy: ["80%", "20%", "80%"],
             } : {}}

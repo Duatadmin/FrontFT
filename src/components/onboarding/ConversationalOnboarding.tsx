@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useInViewport } from '@/hooks/useInViewport';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronRight,
@@ -177,6 +178,7 @@ export function ConversationalOnboarding() {
   const navigate = useNavigate();
   const { user, updateOnboardingStatus } = useUserStore();
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const [typingRef, isTypingInView] = useInViewport<HTMLDivElement>();
 
   const step = onboardingSteps[currentStep];
   const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
@@ -416,19 +418,19 @@ export function ConversationalOnboarding() {
                       <div className="w-10 h-10 rounded-full bg-accent-lime/20 flex-shrink-0 flex items-center justify-center">
                         <Sparkles className="w-5 h-5 text-accent-lime" />
                       </div>
-                      <div className="bg-white/5 backdrop-blur-sm rounded-2xl rounded-tl-sm p-4 border border-white/10 flex items-center gap-2">
+                      <div ref={typingRef} className="bg-white/5 backdrop-blur-sm rounded-2xl rounded-tl-sm p-4 border border-white/10 flex items-center gap-2">
                         <motion.div
-                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          animate={isTypingInView ? { opacity: [0.3, 1, 0.3] } : {}}
                           transition={{ duration: 1.5, repeat: Infinity, delay: 0 }}
                           className="w-2 h-2 rounded-full bg-white/60"
                         />
                         <motion.div
-                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          animate={isTypingInView ? { opacity: [0.3, 1, 0.3] } : {}}
                           transition={{ duration: 1.5, repeat: Infinity, delay: 0.3 }}
                           className="w-2 h-2 rounded-full bg-white/60"
                         />
                         <motion.div
-                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          animate={isTypingInView ? { opacity: [0.3, 1, 0.3] } : {}}
                           transition={{ duration: 1.5, repeat: Infinity, delay: 0.6 }}
                           className="w-2 h-2 rounded-full bg-white/60"
                         />

@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useInViewport } from '@/hooks/useInViewport';
+import { useIsMobile } from '@/hooks/useIsMobile';
+import { SlideVisual } from './SlideVisual';
 import { useNavigate } from 'react-router-dom';
 import { 
   ChevronRight, 
@@ -78,6 +81,8 @@ export function ModernWelcomeFlow() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [direction, setDirection] = useState(0);
   const navigate = useNavigate();
+  const [backgroundRef, isBackgroundInView] = useInViewport<HTMLDivElement>();
+  const isMobile = useIsMobile();
 
   // Auto-progress timer
   useEffect(() => {
@@ -138,14 +143,14 @@ export function ModernWelcomeFlow() {
   return (
     <div className="min-h-screen bg-dark-bg relative overflow-hidden">
       {/* Animated Background */}
-      <div className="absolute inset-0">
+      <div ref={backgroundRef} className="absolute inset-0">
         {/* Gradient Orbs */}
         <motion.div
           className="absolute -top-40 -right-40 w-80 h-80 rounded-full bg-accent-lime/20 blur-[120px]"
-          animate={{
+          animate={isBackgroundInView && !isMobile ? {
             x: [0, 50, 0],
             y: [0, -30, 0],
-          }}
+          } : {}}
           transition={{
             duration: 10,
             repeat: Infinity,
@@ -154,10 +159,10 @@ export function ModernWelcomeFlow() {
         />
         <motion.div
           className="absolute -bottom-40 -left-40 w-80 h-80 rounded-full bg-accent-orange/20 blur-[120px]"
-          animate={{
+          animate={isBackgroundInView && !isMobile ? {
             x: [0, -50, 0],
             y: [0, 30, 0],
-          }}
+          } : {}}
           transition={{
             duration: 15,
             repeat: Infinity,
@@ -224,55 +229,7 @@ export function ModernWelcomeFlow() {
               className="h-full flex flex-col"
             >
               {/* Icon & Visual */}
-              <div className="relative mb-8">
-                <div className={cn(
-                  "w-full h-64 rounded-3xl overflow-hidden relative",
-                  "bg-gradient-to-br", slide.gradient
-                )}>
-                  <div className="absolute inset-0 bg-white/5 backdrop-blur-sm" />
-                  <div className="absolute inset-0 border border-white/10 rounded-3xl" />
-                  
-                  {/* Animated Icon */}
-                  <motion.div
-                    className="absolute inset-0 flex items-center justify-center"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                  >
-                    <div className="w-24 h-24 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center">
-                      <div className="text-accent-lime">
-                        {slide.icon}
-                      </div>
-                    </div>
-                  </motion.div>
-
-                  {/* Decorative Elements */}
-                  <motion.div
-                    className="absolute top-8 right-8 w-20 h-20 rounded-full bg-white/5"
-                    animate={{
-                      scale: [1, 1.2, 1],
-                      opacity: [0.5, 0.3, 0.5],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  />
-                  <motion.div
-                    className="absolute bottom-8 left-8 w-16 h-16 rounded-full bg-white/5"
-                    animate={{
-                      scale: [1, 1.3, 1],
-                      opacity: [0.3, 0.5, 0.3],
-                    }}
-                    transition={{
-                      duration: 4,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                  />
-                </div>
-              </div>
+              <SlideVisual gradient={slide.gradient} icon={slide.icon} />
 
               {/* Text Content */}
               <div className="flex-1 flex flex-col">

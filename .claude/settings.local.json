@@ -19,7 +19,8 @@
       "Bash(iconv:*)",
       "Bash(mv:*)",
       "Bash(sed:*)",
-      "Bash(dos2unix:*)"
+      "Bash(dos2unix:*)",
+      "Bash(touch:*)"
     ],
     "deny": []
   }
