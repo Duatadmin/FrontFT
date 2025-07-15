@@ -409,7 +409,7 @@ export function PremiumWelcomeFlow() {
   };
 
   return (
-    <div className="h-lvh bg-dark-bg relative overflow-hidden flex flex-col">
+    <div className="min-h-lvh bg-dark-bg relative flex flex-col">
       {/* Dynamic Background */}
       <div ref={backgroundRef} className="absolute inset-0">
         {/* Animated Gradient Mesh */}
@@ -506,7 +506,7 @@ export function PremiumWelcomeFlow() {
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col px-6 overflow-hidden min-h-0">
+        <main className="flex-1 flex flex-col px-6">
           <div className="flex-1 flex justify-center">
             <div className="w-full lg:w-1/2 lg:max-w-2xl flex flex-col">
           <AnimatePresence mode="wait">
@@ -684,7 +684,7 @@ export function PremiumWelcomeFlow() {
         </main>
 
         {/* Bottom Navigation */}
-        <footer className="px-6" style={{ paddingBottom: 'calc(2rem + env(safe-area-inset-bottom))' }}>
+        <footer className="px-6" style={{ paddingBottom: 'calc(2rem + var(--safe-area-inset-bottom, 0px))' }}>
           <div className="flex justify-center">
             <div className="w-full lg:w-1/2 lg:max-w-2xl">
             {/* Progress Dots */}

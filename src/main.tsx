@@ -32,11 +32,9 @@ if (rootElement) {
           <QueryClientProvider client={queryClient}>
             <BrowserRouter>
               {/* DashboardBackground wraps entire app for consistent styling */}
-              <div className="h-lvh overflow-hidden">
-                <DashboardBackground>
-                  <AppRouter />
-                </DashboardBackground>
-              </div>
+              <DashboardBackground>
+                <AppRouter />
+              </DashboardBackground>
             </BrowserRouter>
           </QueryClientProvider>
         </React.StrictMode>

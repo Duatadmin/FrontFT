@@ -141,7 +141,7 @@ export function ModernWelcomeFlow() {
   const slide = welcomeSlides[currentSlide];
 
   return (
-    <div className="h-lvh bg-dark-bg relative overflow-hidden flex flex-col">
+    <div className="min-h-lvh bg-dark-bg relative flex flex-col">
       {/* Animated Background */}
       <div ref={backgroundRef} className="absolute inset-0">
         {/* Gradient Orbs */}
@@ -211,7 +211,7 @@ export function ModernWelcomeFlow() {
         </div>
 
         {/* Slide Content */}
-        <div className="flex-1 px-6 flex justify-center min-h-0">
+        <div className="flex-1 px-6 flex justify-center">
           <div className="w-full lg:w-1/2 lg:max-w-2xl">
           <AnimatePresence mode="wait" custom={direction}>
             <motion.div
@@ -277,7 +277,7 @@ export function ModernWelcomeFlow() {
         </div>
 
         {/* Navigation */}
-        <div className="px-6 pb-6 flex justify-center" style={{ paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))' }}>
+        <div className="px-6 pb-6 flex justify-center" style={{ paddingBottom: 'calc(1.5rem + var(--safe-area-inset-bottom, 0px))' }}>
           <div className="w-full lg:w-1/2 lg:max-w-2xl">
           {/* Dots Indicator */}
           <div className="flex items-center justify-center gap-2 mb-6">
