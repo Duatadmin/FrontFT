@@ -524,15 +524,16 @@ export function PremiumWelcomeFlow() {
   
   // Auto-navigate to chat after showing the generating screen
   useEffect(() => {
-    if (screen.id === 'complete' && isSubmitting === false) {
+    if (screen.id === 'complete' && isSubmitting === false && user && onboardingData.preferences) {
       // Wait a bit to show the generating animation, then navigate to chat
       const timer = setTimeout(() => {
-        navigate('/');
+        console.log('[PremiumWelcomeFlow] Navigating to chat...');
+        navigate('/', { replace: true });
       }, 3000); // Show generating screen for 3 seconds
       
       return () => clearTimeout(timer);
     }
-  }, [screen.id, isSubmitting, navigate]);
+  }, [screen.id, isSubmitting, navigate, user, onboardingData.preferences]);
 
   const handleNext = async () => {
     if (isOnboardingScreen && screen.fieldName) {
@@ -631,6 +632,9 @@ export function PremiumWelcomeFlow() {
         // The plan will come through the chat message pipeline
         // Just show that we're generating it
         toast.success('Creating your personalized plan...');
+        
+        // Set isSubmitting to false to trigger auto-navigation
+        setIsSubmitting(false);
       } else {
         throw new Error('Failed to submit onboarding');
       }

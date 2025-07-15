@@ -153,7 +153,8 @@ export const useUserStore = create<UserState>()(
           return;
         }
         
-        set({ isLoading: true, error: null });
+        // Don't set isLoading to true - just update the error state
+        set({ error: null });
         
         const { error } = await supabase
           .from('users')
@@ -162,9 +163,11 @@ export const useUserStore = create<UserState>()(
         
         if (error) {
           console.error('[useUserStore] Failed to update onboarding status:', error);
-          set({ error: error.message, isLoading: false });
+          set({ error: error.message });
         } else {
-          set({ onboardingComplete: complete, isLoading: false });
+          // Update only the onboarding status
+          set({ onboardingComplete: complete });
+          console.log('[useUserStore] Onboarding status updated to:', complete);
         }
       },
     }),

@@ -40,8 +40,15 @@ export default function AppRouter() {
 
   return (
     <Routes>
-      {/* The welcome screen is available to all users */}
-      <Route path="/welcome" element={<PremiumWelcomeFlow />} />
+      {/* The welcome screen is only for authenticated users who need onboarding */}
+      <Route 
+        path="/welcome" 
+        element={
+          <ProtectedRoute>
+            <PremiumWelcomeFlow />
+          </ProtectedRoute>
+        } 
+      />
       
       {/* Onboarding flow for authenticated users */}
       <Route 
