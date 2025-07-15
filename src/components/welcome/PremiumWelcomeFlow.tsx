@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { useInViewport } from '@/hooks/useInViewport';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -26,7 +26,9 @@ import {
   Moon,
   Clock,
   User,
-  ArrowLeft
+  ArrowLeft,
+  Ruler,
+  Weight
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Logo from '../../../assets/Logo.svg?react';
@@ -34,6 +36,8 @@ import { useUserStore } from '@/lib/stores/useUserStore';
 import { supabase } from '@/lib/supabase';
 import Orb from '@/components/Orb/Orb';
 import ShinyText from '@/components/ShinyText/ShinyText';
+import { submitOnboarding } from '@/services/apiService';
+import { toast } from '@/lib/utils/toast';
 
 interface Feature {
   icon: React.ReactNode;
@@ -51,7 +55,7 @@ interface WelcomeScreen {
   features?: Feature[];
   cta?: string;
   isOnboarding?: boolean;
-  inputType?: 'select' | 'slider' | 'text' | 'number';
+  inputType?: 'select' | 'multiselect' | 'slider' | 'text' | 'number' | 'strength';
   options?: { value: string; label: string; icon?: React.ReactNode }[];
   min?: number;
   max?: number;
@@ -59,6 +63,7 @@ interface WelcomeScreen {
   unit?: string;
   placeholder?: string;
   fieldName?: string;
+  strengthExercises?: { key: string; label: string; unit: string; min: number; max: number; icon?: React.ReactNode }[];
 }
 
 const screens: WelcomeScreen[] = [
@@ -197,7 +202,8 @@ const screens: WelcomeScreen[] = [
     ),
     cta: 'Start Your Journey',
   },
-  // Onboarding Questions
+  // Onboarding Questions - All 18 in backend order
+  // 1. goal
   {
     id: 'goal',
     badge: "Let's personalize",
@@ -215,6 +221,35 @@ const screens: WelcomeScreen[] = [
       { value: 'general', label: 'Stay Healthy', icon: <Sparkles className="w-5 h-5" /> },
     ]
   },
+  // 2. goal_detail
+  {
+    id: 'goal_detail',
+    title: "Any specific areas",
+    subtitle: "to focus on?",
+    description: "Tell me what matters most to you.",
+    isOnboarding: true,
+    inputType: 'text',
+    fieldName: 'goal_detail',
+    placeholder: 'E.g., bigger arms, stronger core, better stamina'
+  },
+  // 3. goal_timeline_weeks
+  {
+    id: 'goal_timeline',
+    title: "When do you want",
+    subtitle: "to see results?",
+    description: "Let's set realistic expectations.",
+    isOnboarding: true,
+    inputType: 'select',
+    fieldName: 'goal_timeline_weeks',
+    options: [
+      { value: '4', label: '4 weeks - Quick wins' },
+      { value: '8', label: '8 weeks - Solid progress' },
+      { value: '12', label: '12 weeks - Major transformation' },
+      { value: '24', label: '6 months - Complete overhaul' },
+      { value: '0', label: 'No rush - Sustainable lifestyle' },
+    ]
+  },
+  // 4. level
   {
     id: 'level',
     title: "How would you describe",
@@ -229,6 +264,62 @@ const screens: WelcomeScreen[] = [
       { value: 'advanced', label: "I'm very experienced", icon: <Award className="w-5 h-5" /> },
     ]
   },
+  // 5. age
+  {
+    id: 'age',
+    title: "What's your",
+    subtitle: "age?",
+    description: "This helps me tailor intensity and recovery.",
+    isOnboarding: true,
+    inputType: 'number',
+    fieldName: 'age',
+    placeholder: 'Enter your age',
+    min: 16,
+    max: 100
+  },
+  // 6. sex
+  {
+    id: 'sex',
+    title: "What's your",
+    subtitle: "biological sex?",
+    description: "For accurate calorie and recovery recommendations.",
+    isOnboarding: true,
+    inputType: 'select',
+    fieldName: 'sex',
+    options: [
+      { value: 'male', label: 'Male' },
+      { value: 'female', label: 'Female' },
+    ]
+  },
+  // 7. height_cm
+  {
+    id: 'height',
+    title: "What's your",
+    subtitle: "height?",
+    description: "Let's get your measurements.",
+    isOnboarding: true,
+    inputType: 'slider',
+    fieldName: 'height_cm',
+    min: 140,
+    max: 220,
+    step: 1,
+    unit: 'cm'
+  },
+  // 8. weight_kg
+  {
+    id: 'weight',
+    title: "What's your",
+    subtitle: "current weight?",
+    description: "We'll track your progress from here.",
+    isOnboarding: true,
+    inputType: 'slider',
+    fieldName: 'weight_kg',
+    min: 40,
+    max: 150,
+    step: 1,
+    unit: 'kg'
+  },
+  // 9. available_days_per_week
   {
     id: 'days',
     title: "How many days",
@@ -242,6 +333,26 @@ const screens: WelcomeScreen[] = [
     step: 1,
     unit: 'days per week'
   },
+  // 10. preferred_days
+  {
+    id: 'preferred_days',
+    title: "Which days work",
+    subtitle: "best for you?",
+    description: "I'll build your schedule around your life.",
+    isOnboarding: true,
+    inputType: 'multiselect',
+    fieldName: 'preferred_days',
+    options: [
+      { value: 'monday', label: 'Monday' },
+      { value: 'tuesday', label: 'Tuesday' },
+      { value: 'wednesday', label: 'Wednesday' },
+      { value: 'thursday', label: 'Thursday' },
+      { value: 'friday', label: 'Friday' },
+      { value: 'saturday', label: 'Saturday' },
+      { value: 'sunday', label: 'Sunday' },
+    ]
+  },
+  // 11. session_duration_minutes
   {
     id: 'duration',
     title: "How much time",
@@ -257,6 +368,24 @@ const screens: WelcomeScreen[] = [
       { value: '90', label: '90+ minutes', icon: <Clock className="w-5 h-5" /> },
     ]
   },
+  // 12. split_preference
+  {
+    id: 'split',
+    title: "What training style",
+    subtitle: "appeals to you?",
+    description: "Different splits work better for different goals.",
+    isOnboarding: true,
+    inputType: 'select',
+    fieldName: 'split_preference',
+    options: [
+      { value: 'full_body', label: 'Full Body - All muscles each session' },
+      { value: 'upper_lower', label: 'Upper/Lower - Split by body half' },
+      { value: 'push_pull_legs', label: 'Push/Pull/Legs - By movement pattern' },
+      { value: 'body_part', label: 'Body Part Split - Focus one area per day' },
+      { value: 'no_preference', label: 'No preference - You decide!' },
+    ]
+  },
+  // 13. location
   {
     id: 'location',
     title: "Where will you",
@@ -271,18 +400,97 @@ const screens: WelcomeScreen[] = [
       { value: 'both', label: 'Both gym & home', icon: <MapPin className="w-5 h-5" /> },
     ]
   },
+  // 14. equipment
   {
-    id: 'age',
-    badge: "Almost done",
-    title: "What's your",
-    subtitle: "age?",
-    description: "This helps me tailor intensity and recovery.",
+    id: 'equipment',
+    title: "What equipment",
+    subtitle: "do you have?",
+    description: "Select all that apply.",
     isOnboarding: true,
-    inputType: 'number',
-    fieldName: 'age',
-    placeholder: 'Enter your age',
-    min: 16,
-    max: 100
+    inputType: 'multiselect',
+    fieldName: 'equipment',
+    options: [
+      { value: 'dumbbells', label: 'Dumbbells' },
+      { value: 'barbell', label: 'Barbell & Plates' },
+      { value: 'pull_up_bar', label: 'Pull-up Bar' },
+      { value: 'resistance_bands', label: 'Resistance Bands' },
+      { value: 'kettlebells', label: 'Kettlebells' },
+      { value: 'machines', label: 'Gym Machines' },
+      { value: 'none', label: 'Just Bodyweight' },
+    ]
+  },
+  // 15. injuries
+  {
+    id: 'injuries',
+    title: "Any injuries or",
+    subtitle: "limitations?",
+    description: "Your safety is my priority.",
+    isOnboarding: true,
+    inputType: 'text',
+    fieldName: 'injuries',
+    placeholder: 'E.g., bad knee, lower back pain, or none'
+  },
+  // 16. sleep_hours_normalized
+  {
+    id: 'sleep',
+    title: "How many hours",
+    subtitle: "do you sleep?",
+    description: "Recovery is just as important as training!",
+    isOnboarding: true,
+    inputType: 'slider',
+    fieldName: 'sleep_hours_normalized',
+    min: 4,
+    max: 10,
+    step: 0.5,
+    unit: 'hours per night'
+  },
+  // 17. baseline_capacity
+  {
+    id: 'baseline',
+    badge: "Almost done",
+    title: "Your current",
+    subtitle: "strength levels?",
+    description: "Move the sliders to match your ability - be honest!",
+    isOnboarding: true,
+    inputType: 'strength',
+    fieldName: 'baseline_capacity',
+    strengthExercises: [
+      { 
+        key: 'pushups', 
+        label: 'Push-ups', 
+        unit: 'reps',
+        min: 0,
+        max: 50,
+        icon: <ChevronRight className="w-4 h-4" />
+      },
+      { 
+        key: 'squats', 
+        label: 'Bodyweight Squats', 
+        unit: 'reps',
+        min: 0,
+        max: 50,
+        icon: <ChevronRight className="w-4 h-4" />
+      },
+      { 
+        key: 'plank', 
+        label: 'Plank Hold', 
+        unit: 'seconds',
+        min: 0,
+        max: 180,
+        icon: <Clock className="w-4 h-4" />
+      }
+    ]
+  },
+  // 18. preferences
+  {
+    id: 'preferences',
+    title: "Exercise",
+    subtitle: "preferences?",
+    description: "What do you love or hate?",
+    isOnboarding: true,
+    inputType: 'text',
+    fieldName: 'preferences',
+    placeholder: 'E.g., Love deadlifts, hate burpees'
   },
   {
     id: 'complete',
@@ -290,34 +498,7 @@ const screens: WelcomeScreen[] = [
     title: "Preparing your",
     subtitle: "personalized plan",
     description: "Let's start your transformation journey together!",
-    visual: (
-      <div className="relative w-full h-full flex items-center justify-center">
-        <div className="relative w-[307px] h-[307px]">
-          <Orb 
-            hue={180} 
-            hoverIntensity={0.5} 
-            rotateOnHover={true} 
-            forceHoverState={true} 
-          />
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="relative">
-              {/* Underlayer with 40% opacity */}
-              <h3 className="text-[1.4rem] font-bold bg-gradient-to-r from-accent-lime to-accent-orange bg-clip-text text-transparent opacity-40">
-                Generating...
-              </h3>
-              {/* ShinyText overlay */}
-              <h3 className="absolute inset-0 text-[1.4rem] font-bold">
-                <ShinyText 
-                  text="Generating..." 
-                  speed={3}
-                  className="bg-gradient-to-r from-accent-lime to-accent-orange bg-clip-text text-transparent"
-                />
-              </h3>
-            </div>
-          </div>
-        </div>
-      </div>
-    ),
+    visual: 'COMPLETE_VISUAL', // Will be rendered dynamically
     cta: "Let's Go!"
   }
 ];
@@ -326,6 +507,12 @@ export function PremiumWelcomeFlow() {
   const [currentScreen, setCurrentScreen] = useState(0);
   const [onboardingData, setOnboardingData] = useState<Record<string, any>>({});
   const [inputValue, setInputValue] = useState('');
+  const [strengthValues, setStrengthValues] = useState<Record<string, number>>({
+    pushups: 0,
+    squats: 0,
+    plank: 0
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const dragX = useMotionValue(0);
   const { user, updateOnboardingStatus } = useUserStore();
@@ -334,6 +521,18 @@ export function PremiumWelcomeFlow() {
   
   const screen = screens[currentScreen];
   const isOnboardingScreen = screen.isOnboarding;
+  
+  // Auto-navigate to chat after showing the generating screen
+  useEffect(() => {
+    if (screen.id === 'complete' && isSubmitting === false) {
+      // Wait a bit to show the generating animation, then navigate to chat
+      const timer = setTimeout(() => {
+        navigate('/');
+      }, 3000); // Show generating screen for 3 seconds
+      
+      return () => clearTimeout(timer);
+    }
+  }, [screen.id, isSubmitting, navigate]);
 
   const handleNext = async () => {
     if (isOnboardingScreen && screen.fieldName) {
@@ -342,57 +541,127 @@ export function PremiumWelcomeFlow() {
         const value = onboardingData[screen.fieldName] || screen.min || 0;
         setOnboardingData(prev => ({ ...prev, [screen.fieldName!]: value }));
       }
+      // For strength inputs, format the values as a string
+      else if (screen.inputType === 'strength') {
+        const strengthString = `${strengthValues.pushups} pushups, ${strengthValues.squats} squats, ${strengthValues.plank} sec plank`;
+        setOnboardingData(prev => ({ ...prev, [screen.fieldName!]: strengthString }));
+      }
     }
 
     if (currentScreen < screens.length - 1) {
       setCurrentScreen(currentScreen + 1);
       setInputValue(''); // Reset input for next screen
     } else {
-      // Complete onboarding
-      await completeOnboarding();
+      // On the final "complete" screen, navigate to chat
+      navigate('/');
     }
   };
 
-  const completeOnboarding = async () => {
+  const submitOnboardingData = async (finalOnboardingData: Record<string, any>) => {
     if (!user) {
       navigate('/login');
       return;
     }
     
+    setIsSubmitting(true);
+    
     try {
-      // Save onboarding data to user profile
-      const { error } = await supabase
-        .from('user_profiles')
-        .upsert({
-          user_id: user.id,
-          ...onboardingData,
-          onboarding_completed_at: new Date().toISOString()
-        });
+      // Transform data to match API requirements
+      const transformedData = {
+        goal: finalOnboardingData.goal === 'muscle' ? 'Build Muscle' : 
+              finalOnboardingData.goal === 'strength' ? 'Get Stronger' :
+              finalOnboardingData.goal === 'weight_loss' ? 'Lose Weight' :
+              finalOnboardingData.goal === 'endurance' ? 'Improve Endurance' :
+              'Stay Healthy',
+        goal_detail: finalOnboardingData.goal_detail || '',
+        goal_timeline_weeks: finalOnboardingData.goal_timeline_weeks || 12,
+        level: finalOnboardingData.level || 'beginner',
+        age: finalOnboardingData.age || 25,
+        sex: finalOnboardingData.sex || 'male',
+        height_cm: finalOnboardingData.height_cm || 170,
+        weight_kg: finalOnboardingData.weight_kg || 70,
+        available_days_per_week: finalOnboardingData.available_days_per_week || 3,
+        preferred_days: finalOnboardingData.preferred_days?.map((day: string) => 
+          day.charAt(0).toUpperCase() + day.slice(1).substring(0, 2)
+        ) || ['Mon', 'Wed', 'Fri'],
+        session_duration_minutes: finalOnboardingData.session_duration_minutes || 60,
+        split_preference: finalOnboardingData.split_preference || 'no_preference',
+        location: finalOnboardingData.location || 'gym',
+        equipment: finalOnboardingData.equipment?.map((eq: string) => {
+          if (eq === 'machines') return 'gym machines';
+          if (eq === 'none') return 'bodyweight';
+          if (eq === 'pull_up_bar') return 'pull-up bar';
+          return eq;
+        }) || ['bodyweight'],
+        injuries: finalOnboardingData.injuries || 'none',
+        sleep_hours_normalized: finalOnboardingData.sleep_hours_normalized || 7,
+        baseline_capacity: (() => {
+          if (finalOnboardingData.baseline_capacity && typeof finalOnboardingData.baseline_capacity === 'string') {
+            // Parse the string format "X pushups, Y squats, Z sec plank"
+            const matches = finalOnboardingData.baseline_capacity.match(/(\d+) pushups, (\d+) squats, (\d+) sec plank/);
+            if (matches) {
+              return {
+                pushups: parseInt(matches[1], 10),
+                squats: parseInt(matches[2], 10),
+                plank_seconds: parseInt(matches[3], 10)
+              };
+            }
+          }
+          return { pushups: 0, squats: 0, plank_seconds: 0 };
+        })(),
+        preferences: finalOnboardingData.preferences || ''
+      };
 
-      if (error) throw error;
-
-      // Update onboarding status
-      await updateOnboardingStatus(true);
+      // Submit to API - this triggers plan generation
+      const response = await submitOnboarding(user.id, transformedData);
       
-      // Navigate to main app
-      navigate('/');
+      if (response.success) {
+        // Save to Supabase
+        await supabase
+          .from('user_profiles')
+          .upsert({
+            user_id: user.id,
+            ...finalOnboardingData,
+            onboarding_completed_at: new Date().toISOString()
+          });
+
+        // Update onboarding status
+        await updateOnboardingStatus(true);
+        
+        // The plan will come through the chat message pipeline
+        // Just show that we're generating it
+        toast.success('Creating your personalized plan...');
+      } else {
+        throw new Error('Failed to submit onboarding');
+      }
     } catch (error) {
-      console.error('Failed to save onboarding data:', error);
-      navigate('/');
+      console.error('Failed to submit onboarding data:', error);
+      toast.error('Failed to complete onboarding. Please try again.');
+      setIsSubmitting(false);
+      // Don't navigate on error, let user retry
     }
   };
 
   const handleOptionSelect = (value: string) => {
     if (screen.fieldName) {
-      setOnboardingData(prev => ({ ...prev, [screen.fieldName!]: value }));
+      // Convert string to number for goal_timeline_weeks
+      let processedValue: string | number = value;
+      if (screen.fieldName === 'goal_timeline_weeks') {
+        processedValue = parseInt(value, 10);
+      }
+      
+      setOnboardingData(prev => ({ ...prev, [screen.fieldName!]: processedValue }));
       setTimeout(() => handleNext(), 300); // Auto-advance after selection
     }
   };
 
   const handleSkip = () => {
-    if (currentScreen < 4) {
+    // Find the index of the first onboarding question
+    const firstOnboardingIndex = screens.findIndex(s => s.isOnboarding);
+    
+    if (currentScreen < firstOnboardingIndex) {
       // Skip to onboarding questions
-      setCurrentScreen(4);
+      setCurrentScreen(firstOnboardingIndex);
     } else {
       // Skip current question
       handleNext();
@@ -613,16 +882,74 @@ export function PremiumWelcomeFlow() {
                     </div>
                   )}
 
+                  {/* Multiselect Options */}
+                  {screen.inputType === 'multiselect' && screen.options && (
+                    <div className="space-y-3">
+                      {screen.options.map((option) => {
+                        const selectedValues = (onboardingData[screen.fieldName!] as string[]) || [];
+                        const isSelected = selectedValues.includes(option.value);
+                        return (
+                          <motion.button
+                            key={option.value}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => {
+                              const newValues = isSelected
+                                ? selectedValues.filter(v => v !== option.value)
+                                : [...selectedValues, option.value];
+                              setOnboardingData(prev => ({ 
+                                ...prev, 
+                                [screen.fieldName!]: newValues 
+                              }));
+                            }}
+                            className={cn(
+                              "w-full p-4 border rounded-2xl transition-all flex items-center gap-3",
+                              isSelected
+                                ? "bg-accent-lime/20 border-accent-lime/50"
+                                : "bg-white/5 hover:bg-white/10 border-white/10 hover:border-accent-lime/30"
+                            )}
+                          >
+                            {option.icon && (
+                              <span className="text-accent-lime">{option.icon}</span>
+                            )}
+                            <span className="text-white text-left flex-1">{option.label}</span>
+                            <div className={cn(
+                              "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                              isSelected ? "bg-accent-lime border-accent-lime" : "border-white/40"
+                            )}>
+                              {isSelected && (
+                                <svg className="w-3 h-3 text-dark-bg" fill="currentColor" viewBox="0 0 20 20">
+                                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                              )}
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {/* Number/Text Input */}
                   {(screen.inputType === 'number' || screen.inputType === 'text') && (
-                    <form onSubmit={(e) => { 
+                    <form onSubmit={async (e) => { 
                       e.preventDefault(); 
                       if (inputValue && screen.fieldName) {
+                        const newValue = screen.inputType === 'number' ? Number(inputValue) : inputValue;
                         setOnboardingData(prev => ({ 
                           ...prev, 
-                          [screen.fieldName!]: screen.inputType === 'number' ? Number(inputValue) : inputValue 
+                          [screen.fieldName!]: newValue 
                         }));
-                        handleNext();
+                        
+                        // If this is the preferences field, submit to backend
+                        if (screen.fieldName === 'preferences') {
+                          await submitOnboardingData({ ...onboardingData, [screen.fieldName]: newValue });
+                          setCurrentScreen(currentScreen + 1);
+                          setInputValue('');
+                        } else {
+                          handleNext();
+                        }
                       }
                     }}>
                       <input
@@ -637,11 +964,112 @@ export function PremiumWelcomeFlow() {
                       />
                     </form>
                   )}
+
+                  {/* Strength Input */}
+                  {screen.inputType === 'strength' && screen.strengthExercises && (
+                    <div className="space-y-6">
+                      {screen.strengthExercises.map((exercise) => (
+                        <motion.div
+                          key={exercise.key}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="bg-white/5 rounded-2xl p-6 border border-white/10"
+                        >
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center gap-3">
+                              {exercise.icon && (
+                                <div className="w-10 h-10 rounded-lg bg-accent-lime/20 flex items-center justify-center">
+                                  <span className="text-accent-lime">{exercise.icon}</span>
+                                </div>
+                              )}
+                              <div>
+                                <h4 className="text-white font-medium">{exercise.label}</h4>
+                                <p className="text-white/40 text-sm">How many can you do?</p>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <span className="text-3xl font-bold text-white">
+                                {strengthValues[exercise.key]}
+                              </span>
+                              <span className="text-white/60 text-sm ml-2">{exercise.unit}</span>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2">
+                            <input
+                              type="range"
+                              min={exercise.min}
+                              max={exercise.max}
+                              value={strengthValues[exercise.key]}
+                              onChange={(e) => setStrengthValues(prev => ({ 
+                                ...prev, 
+                                [exercise.key]: Number(e.target.value) 
+                              }))}
+                              className="w-full accent-accent-lime"
+                            />
+                            <div className="flex justify-between">
+                              <span className="text-xs text-white/40">{exercise.min}</span>
+                              <div className="flex gap-6">
+                                {[0, 25, 50, 75, 100].map(percent => {
+                                  const value = Math.round(exercise.min + (exercise.max - exercise.min) * percent / 100);
+                                  return (
+                                    <button
+                                      key={percent}
+                                      type="button"
+                                      onClick={() => setStrengthValues(prev => ({ 
+                                        ...prev, 
+                                        [exercise.key]: value 
+                                      }))}
+                                      className="text-xs text-white/40 hover:text-white/60 transition-colors"
+                                    >
+                                      {value}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <span className="text-xs text-white/40">{exercise.max}+</span>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))}
+                      
+                      <div className="text-center text-white/40 text-sm">
+                        <p>Can't do any yet? That's totally fine - we'll start where you are!</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div className="flex-1 min-h-0 flex items-center justify-center my-4">
                   <div className="w-full">
-                    {screen.visual}
+                    {screen.id === 'complete' ? (
+                      <div className="relative w-full h-full flex items-center justify-center">
+                        <div className="relative w-[307px] h-[307px]">
+                          <Orb 
+                            hue={180} 
+                            hoverIntensity={0.5} 
+                            rotateOnHover={true} 
+                            forceHoverState={true} 
+                          />
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <div className="relative">
+                              {/* Underlayer with 40% opacity */}
+                              <h3 className="text-[1.4rem] font-bold bg-gradient-to-r from-accent-lime to-accent-orange bg-clip-text text-transparent opacity-40">
+                                {isSubmitting ? 'Submitting...' : 'Generating...'}
+                              </h3>
+                              {/* ShinyText overlay */}
+                              <h3 className="absolute inset-0 text-[1.4rem] font-bold">
+                                <ShinyText 
+                                  text={isSubmitting ? 'Submitting...' : 'Generating...'} 
+                                  speed={3}
+                                  className="bg-gradient-to-r from-accent-lime to-accent-orange bg-clip-text text-transparent"
+                                />
+                              </h3>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : screen.visual}
                   </div>
                 </div>
               )}
@@ -711,12 +1139,16 @@ export function PremiumWelcomeFlow() {
               <div className="absolute inset-0 bg-gradient-to-r from-accent-lime to-accent-orange rounded-2xl blur-xl opacity-50" />
               
               {/* CTA Button */}
-              {(!isOnboardingScreen || (isOnboardingScreen && screen.inputType === 'slider') || screen.id === 'complete') && (
+              {(!isOnboardingScreen || (isOnboardingScreen && (screen.inputType === 'slider' || screen.inputType === 'multiselect' || screen.inputType === 'strength'))) && screen.id !== 'complete' && (
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleNext}
-                  disabled={isOnboardingScreen && screen.inputType === 'number' && !inputValue}
+                  disabled={
+                    isSubmitting ||
+                    (isOnboardingScreen && screen.inputType === 'number' && !inputValue) ||
+                    (isOnboardingScreen && screen.inputType === 'multiselect' && (!onboardingData[screen.fieldName!] || (onboardingData[screen.fieldName!] as string[]).length === 0))
+                  }
                   className={cn(
                     "relative w-full h-14 rounded-2xl font-semibold text-dark-bg",
                     "bg-gradient-to-r from-accent-lime to-accent-orange",
@@ -726,7 +1158,14 @@ export function PremiumWelcomeFlow() {
                     "disabled:opacity-50 disabled:cursor-not-allowed"
                   )}
                 >
-                  <span className="text-base font-bold">{screen.cta || (currentScreen === screens.length - 1 ? 'Get Started' : 'Continue')}</span>
+                  <span className="text-base font-bold">
+                    {isSubmitting ? 'Creating your plan...' : 
+                      screen.cta || (currentScreen === screens.length - 1 ? 'Get Started' : 
+                      screen.inputType === 'multiselect' && onboardingData[screen.fieldName!] && (onboardingData[screen.fieldName!] as string[]).length > 0
+                        ? `Continue (${(onboardingData[screen.fieldName!] as string[]).length} selected)`
+                        : 'Continue'
+                    )}
+                  </span>
                   <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
                 </motion.button>
               )}

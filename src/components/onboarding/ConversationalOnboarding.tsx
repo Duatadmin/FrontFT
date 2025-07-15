@@ -61,6 +61,7 @@ interface OnboardingData {
 }
 
 const onboardingSteps: OnboardingStep[] = [
+  // 1. goal
   {
     id: 'goal',
     question: "What brings you here today?",
@@ -76,6 +77,32 @@ const onboardingSteps: OnboardingStep[] = [
       { value: 'general', label: 'Stay Healthy', icon: <Sparkles className="w-4 h-4" /> },
     ]
   },
+  // 2. goal_detail
+  {
+    id: 'goal_detail',
+    question: "Any specific areas you'd like to focus on?",
+    aiMessage: "Let's make your plan even more targeted!",
+    type: 'text',
+    icon: <Target className="w-5 h-5" />,
+    category: 'goals',
+    placeholder: 'E.g., bigger arms, stronger core, better stamina'
+  },
+  // 3. goal_timeline_weeks
+  {
+    id: 'goal_timeline_weeks',
+    question: "When would you like to see results?",
+    type: 'select',
+    icon: <Calendar className="w-5 h-5" />,
+    category: 'goals',
+    options: [
+      { value: '4', label: '4 weeks - Quick wins' },
+      { value: '8', label: '8 weeks - Solid progress' },
+      { value: '12', label: '12 weeks - Major transformation' },
+      { value: '24', label: '6 months - Complete overhaul' },
+      { value: '0', label: 'No rush - Sustainable lifestyle' },
+    ]
+  },
+  // 4. level
   {
     id: 'level',
     question: "How would you describe your fitness journey so far?",
@@ -88,9 +115,59 @@ const onboardingSteps: OnboardingStep[] = [
       { value: 'advanced', label: "I'm very experienced" },
     ]
   },
+  // 5. age
+  {
+    id: 'age',
+    question: "What's your age?",
+    aiMessage: "This helps me tailor the intensity and recovery recommendations.",
+    type: 'number',
+    icon: <User className="w-5 h-5" />,
+    category: 'profile',
+    placeholder: 'Enter your age',
+    min: 16,
+    max: 100
+  },
+  // 6. sex
+  {
+    id: 'sex',
+    question: "What's your biological sex?",
+    type: 'select',
+    icon: <User className="w-5 h-5" />,
+    category: 'profile',
+    options: [
+      { value: 'male', label: 'Male' },
+      { value: 'female', label: 'Female' },
+    ]
+  },
+  // 7. height_cm
+  {
+    id: 'height_cm',
+    question: "What's your height?",
+    aiMessage: "Let's get your measurements for better personalization.",
+    type: 'slider',
+    icon: <Ruler className="w-5 h-5" />,
+    category: 'profile',
+    min: 140,
+    max: 220,
+    step: 1,
+    unit: 'cm'
+  },
+  // 8. weight_kg
+  {
+    id: 'weight_kg',
+    question: "What's your current weight?",
+    type: 'slider',
+    icon: <Weight className="w-5 h-5" />,
+    category: 'profile',
+    min: 40,
+    max: 150,
+    step: 1,
+    unit: 'kg'
+  },
+  // 9. available_days_per_week
   {
     id: 'available_days_per_week',
-    question: "How many days can you train per week?",
+    question: "How many days can you realistically train per week?",
     aiMessage: "Let's be realistic here - consistency beats perfection!",
     type: 'slider',
     icon: <Calendar className="w-5 h-5" />,
@@ -100,9 +177,28 @@ const onboardingSteps: OnboardingStep[] = [
     step: 1,
     unit: 'days'
   },
+  // 10. preferred_days
+  {
+    id: 'preferred_days',
+    question: "Which days work best for your workouts?",
+    aiMessage: "I'll build your schedule around your life, not the other way around.",
+    type: 'multiselect',
+    icon: <Calendar className="w-5 h-5" />,
+    category: 'schedule',
+    options: [
+      { value: 'monday', label: 'Monday' },
+      { value: 'tuesday', label: 'Tuesday' },
+      { value: 'wednesday', label: 'Wednesday' },
+      { value: 'thursday', label: 'Thursday' },
+      { value: 'friday', label: 'Friday' },
+      { value: 'saturday', label: 'Saturday' },
+      { value: 'sunday', label: 'Sunday' },
+    ]
+  },
+  // 11. session_duration_minutes
   {
     id: 'session_duration_minutes',
-    question: "How much time can you dedicate per workout?",
+    question: "How long can your typical workouts be?",
     type: 'select',
     icon: <Clock className="w-5 h-5" />,
     category: 'schedule',
@@ -113,6 +209,23 @@ const onboardingSteps: OnboardingStep[] = [
       { value: '90', label: '90+ minutes' },
     ]
   },
+  // 12. split_preference
+  {
+    id: 'split_preference',
+    question: "What training style appeals to you?",
+    aiMessage: "Different splits work better for different goals and schedules.",
+    type: 'select',
+    icon: <Dumbbell className="w-5 h-5" />,
+    category: 'experience',
+    options: [
+      { value: 'full_body', label: 'Full Body - All muscles each session' },
+      { value: 'upper_lower', label: 'Upper/Lower - Split by body half' },
+      { value: 'push_pull_legs', label: 'Push/Pull/Legs - By movement pattern' },
+      { value: 'body_part', label: 'Body Part Split - Focus one area per day' },
+      { value: 'no_preference', label: 'No preference - You decide!' },
+    ]
+  },
+  // 13. location
   {
     id: 'location',
     question: "Where will you be training?",
@@ -125,40 +238,38 @@ const onboardingSteps: OnboardingStep[] = [
       { value: 'both', label: 'Both' },
     ]
   },
+  // 14. equipment
   {
-    id: 'age',
-    question: "What's your age?",
-    aiMessage: "This helps me tailor the intensity and recovery recommendations.",
-    type: 'number',
-    icon: <User className="w-5 h-5" />,
-    category: 'profile',
-    placeholder: 'Enter your age',
-    min: 16,
-    max: 100
-  },
-  {
-    id: 'sex',
-    question: "What's your biological sex?",
-    type: 'select',
-    icon: <User className="w-5 h-5" />,
-    category: 'profile',
+    id: 'equipment',
+    question: "What equipment do you have access to?",
+    aiMessage: "I'll design your workouts based on what's available to you.",
+    type: 'multiselect',
+    icon: <Dumbbell className="w-5 h-5" />,
+    category: 'experience',
     options: [
-      { value: 'male', label: 'Male' },
-      { value: 'female', label: 'Female' },
+      { value: 'dumbbells', label: 'Dumbbells' },
+      { value: 'barbell', label: 'Barbell & Plates' },
+      { value: 'pull_up_bar', label: 'Pull-up Bar' },
+      { value: 'resistance_bands', label: 'Resistance Bands' },
+      { value: 'kettlebells', label: 'Kettlebells' },
+      { value: 'machines', label: 'Gym Machines' },
+      { value: 'none', label: 'Just Bodyweight' },
     ]
   },
+  // 15. injuries
   {
     id: 'injuries',
-    question: "Any injuries or limitations I should know about?",
+    question: "Any injuries or physical limitations I should know about?",
     aiMessage: "Your safety is my priority. I'll adapt exercises accordingly.",
     type: 'text',
     icon: <Heart className="w-5 h-5" />,
     category: 'health',
     placeholder: 'E.g., bad knee, lower back pain, or none'
   },
+  // 16. sleep_hours_normalized
   {
     id: 'sleep_hours_normalized',
-    question: "How many hours do you typically sleep?",
+    question: "How many hours do you typically sleep per night?",
     aiMessage: "Recovery is just as important as training!",
     type: 'slider',
     icon: <Moon className="w-5 h-5" />,
@@ -167,6 +278,26 @@ const onboardingSteps: OnboardingStep[] = [
     max: 10,
     step: 0.5,
     unit: 'hours'
+  },
+  // 17. baseline_capacity
+  {
+    id: 'baseline_capacity',
+    question: "Let's check your current strength levels",
+    aiMessage: "This helps me gauge where to start. Just give me rough numbers!",
+    type: 'text',
+    icon: <Activity className="w-5 h-5" />,
+    category: 'experience',
+    placeholder: 'E.g., 20 pushups, 30 squats, 60 sec plank'
+  },
+  // 18. preferences
+  {
+    id: 'preferences',
+    question: "Any exercises you particularly love or hate?",
+    aiMessage: "I'll try to include what you enjoy and work around what you don't!",
+    type: 'text',
+    icon: <Heart className="w-5 h-5" />,
+    category: 'experience',
+    placeholder: 'E.g., Love deadlifts, hate burpees'
   },
 ];
 
@@ -188,13 +319,20 @@ export function ConversationalOnboarding() {
   }, [currentStep]);
 
   const handleAnswer = async (value: any) => {
-    setAnswers(prev => ({ ...prev, [step.id]: value }));
+    // Convert string to number for goal_timeline_weeks
+    let processedValue = value;
+    if (step.id === 'goal_timeline_weeks' && typeof value === 'string') {
+      processedValue = parseInt(value, 10);
+    }
+    
+    setAnswers(prev => ({ ...prev, [step.id]: processedValue }));
     
     if (currentStep < onboardingSteps.length - 1) {
       setIsTyping(true);
       setTimeout(() => {
         setIsTyping(false);
         setCurrentStep(prev => prev + 1);
+        setInputValue(''); // Reset input value for next step
       }, 800);
     } else {
       // Complete onboarding
@@ -288,6 +426,60 @@ export function ConversationalOnboarding() {
               className="w-full h-14 rounded-2xl font-semibold text-dark-bg bg-gradient-to-r from-accent-lime to-accent-orange flex items-center justify-center gap-2"
             >
               Continue
+              <ChevronRight className="w-5 h-5" />
+            </motion.button>
+          </div>
+        );
+
+      case 'multiselect':
+        const selectedValues = (answers[step.id] as string[]) || [];
+        return (
+          <div className="space-y-4">
+            <div className="space-y-2">
+              {step.options?.map((option) => {
+                const isSelected = selectedValues.includes(option.value);
+                return (
+                  <motion.button
+                    key={option.value}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      const newValues = isSelected
+                        ? selectedValues.filter(v => v !== option.value)
+                        : [...selectedValues, option.value];
+                      setAnswers(prev => ({ ...prev, [step.id]: newValues }));
+                    }}
+                    className={cn(
+                      "w-full p-4 border rounded-2xl transition-all flex items-center gap-3",
+                      isSelected
+                        ? "bg-accent-lime/20 border-accent-lime/50 text-white"
+                        : "bg-white/5 hover:bg-white/10 border-white/10 hover:border-accent-lime/30 text-white"
+                    )}
+                  >
+                    {option.icon && <span className={isSelected ? "text-accent-lime" : "text-accent-lime"}>{option.icon}</span>}
+                    <span className="text-left flex-1">{option.label}</span>
+                    <div className={cn(
+                      "w-5 h-5 rounded border-2 flex items-center justify-center transition-all",
+                      isSelected ? "bg-accent-lime border-accent-lime" : "border-white/40"
+                    )}>
+                      {isSelected && <svg className="w-3 h-3 text-dark-bg" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>}
+                    </div>
+                  </motion.button>
+                );
+              })}
+            </div>
+            <motion.button
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => handleAnswer(selectedValues)}
+              disabled={selectedValues.length === 0}
+              className="w-full h-14 rounded-2xl font-semibold text-dark-bg bg-gradient-to-r from-accent-lime to-accent-orange flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              Continue {selectedValues.length > 0 && `(${selectedValues.length} selected)`}
               <ChevronRight className="w-5 h-5" />
             </motion.button>
           </div>
