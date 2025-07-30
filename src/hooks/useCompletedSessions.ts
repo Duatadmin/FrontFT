@@ -1,7 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { fetchCompletedSessions } from '@/api/workoutPlanService';
 import { rowsToSessionHistory, type CompletedSession } from '@/utils/rowsToSessionHistory';
+import { supabase } from '@/lib/supabase';
 
 
 export type UseCompletedSessionsResult = UseQueryResult<CompletedSession[], Error>;
@@ -11,9 +13,10 @@ export type UseCompletedSessionsResult = UseQueryResult<CompletedSession[], Erro
  */
 export const useCompletedSessions = (): UseCompletedSessionsResult => {
   const user = useUserStore((state) => state.user);
+  const isLoading = useUserStore((state) => state.isLoading);
   const userId = user?.id;
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ['completedSessions', userId],
     queryFn: async () => {
       console.log('[useCompletedSessions] Fetching with userId:', userId);
@@ -30,6 +33,27 @@ export const useCompletedSessions = (): UseCompletedSessionsResult => {
       return processedSessions;
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
-    enabled: !!userId,
+    enabled: !isLoading && !!userId, // Only fetch when auth is loaded and userId exists
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  // Listen for auth state changes and refetch
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[useCompletedSessions] Token refreshed, refetching sessions');
+        // Add a small delay to let the new token propagate
+        setTimeout(() => {
+          query.refetch();
+        }, 100);
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [query]);
+
+  return query;
 };

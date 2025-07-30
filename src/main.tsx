@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'; // Keep BrowserRouter
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // Import QueryClient and Provider
 import AppRouter from './routes/AppRouter'; // Import AppRouter
 import DashboardBackground from './components/layout/DashboardBackground'; // Import DashboardBackground
+import { authStateSync } from './services/authStateSync'; // Import auth state sync service
 
 // CSS imports remain
 import './index.css';
@@ -61,6 +62,9 @@ if (rootElement) {
           queryClient.clear();
         }
       });
+      
+      // Start auth state sync service for Zustand stores
+      authStateSync.start();
 
       ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>

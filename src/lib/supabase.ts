@@ -112,74 +112,33 @@ if (typeof window !== 'undefined') {
 
 // Helper to get the current user ID
 export const getCurrentUserId = async (): Promise<string | null> => {
-  // First check if we can get the user from the store (if it's already loaded)
-  const { default: useUserStore } = await import('./stores/useUserStore');
-  const store = useUserStore.getState();
-  
-  // If the store is still loading, wait for it to complete (with timeout)
-  if (store.isLoading) {
-    console.log('[getCurrentUserId] Waiting for auth initialization...');
+  try {
+    // First try to get from the session directly
+    const { data, error } = await supabase.auth.getSession();
     
-    // Subscribe to store changes and wait for isLoading to become false
-    return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        console.warn('[getCurrentUserId] Timeout waiting for auth, checking session directly');
-        supabase.auth.getSession().then(({ data, error }) => {
-          if (error) {
-            console.error('[getCurrentUserId] Error getting session after timeout:', error);
-            resolve(null);
-          } else {
-            resolve(data.session?.user?.id || null);
-          }
-        });
-      }, 5000); // 5 second timeout
+    if (error) {
+      console.error('[getCurrentUserId] Error getting session:', error);
+      return null;
+    }
+    
+    const userId = data.session?.user?.id || null;
+    
+    // If we have a userId, also check if the store is in sync
+    if (userId) {
+      const { default: useUserStore } = await import('./stores/useUserStore');
+      const store = useUserStore.getState();
       
-      const unsubscribe = useUserStore.subscribe(
-        (state) => state.isLoading,
-        (isLoading) => {
-          if (!isLoading) {
-            clearTimeout(timeout);
-            unsubscribe();
-            const currentState = useUserStore.getState();
-            
-            // If user is in the store, use it directly
-            if (currentState.user) {
-              console.log('[getCurrentUserId] Auth initialized, returning user from store');
-              resolve(currentState.user.id);
-            } else {
-              // Otherwise fall back to checking the session
-              console.log('[getCurrentUserId] Auth initialized, no user in store, checking session');
-              supabase.auth.getSession().then(({ data, error }) => {
-                if (error) {
-                  console.error('[getCurrentUserId] Error getting session:', error);
-                  resolve(null);
-                } else {
-                  resolve(data.session?.user?.id || null);
-                }
-              });
-            }
-          }
-        }
-      );
-    });
-  }
-  
-  // If not loading, check if user is already in the store
-  if (store.user) {
-    console.log('[getCurrentUserId] Returning user from store (already loaded)');
-    return store.user.id;
-  }
-  
-  // Fall back to getting session directly
-  console.log('[getCurrentUserId] No user in store, checking session directly');
-  const { data, error } = await supabase.auth.getSession();
-  
-  if (error) {
-    console.error('[getCurrentUserId] Error getting session:', error);
+      // If store has a different user or no user, log a warning
+      if (store.user?.id && store.user.id !== userId) {
+        console.warn('[getCurrentUserId] Store user mismatch with session');
+      }
+    }
+    
+    return userId;
+  } catch (err) {
+    console.error('[getCurrentUserId] Unexpected error:', err);
     return null;
   }
-  
-  return data.session?.user?.id || null;
 };
 
 // Helper to check if required tables exist in the database

@@ -117,4 +117,5 @@ const useDiaryStore = create<DiaryState>()(
   )
 );
 
+export { useDiaryStore };
 export default useDiaryStore;

@@ -1,7 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { fetchMonthlySessions } from '@/api/workoutPlanService';
 import { rowsToSessionHistory, type CompletedSession } from '@/utils/rowsToSessionHistory';
+import { supabase } from '@/lib/supabase';
 
 export type UseMonthlySessionsResult = UseQueryResult<CompletedSession[], Error>;
 
@@ -12,9 +14,10 @@ export type UseMonthlySessionsResult = UseQueryResult<CompletedSession[], Error>
  */
 export const useMonthlySessions = (year: number, month: number): UseMonthlySessionsResult => {
   const user = useUserStore((state) => state.user);
+  const isLoading = useUserStore((state) => state.isLoading);
   const userId = user?.id;
 
-  return useQuery({
+  const query = useQuery({
     // The query key is an array that uniquely identifies this query.
     // When year, month, or userId changes, react-query will refetch the data.
     queryKey: ['monthlySessions', userId, year, month],
@@ -35,7 +38,28 @@ export const useMonthlySessions = (year: number, month: number): UseMonthlySessi
     },
     // staleTime helps prevent unnecessary refetches. Data is considered fresh for 5 minutes.
     staleTime: 1000 * 60 * 5, // 5 minutes
-    // The query will only run if a userId is available.
-    enabled: !!userId,
+    // The query will only run if auth is loaded and userId is available.
+    enabled: !isLoading && !!userId,
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  // Listen for auth state changes and refetch
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[useMonthlySessions] Token refreshed, refetching sessions');
+        // Add a small delay to let the new token propagate
+        setTimeout(() => {
+          query.refetch();
+        }, 100);
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [query]);
+
+  return query;
 };

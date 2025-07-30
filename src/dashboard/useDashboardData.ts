@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getCurrentUserId } from '../lib/supabase';
+import { useState, useEffect, useRef } from 'react';
+import { getCurrentUserId, supabase } from '../lib/supabase';
 import { fetchWorkoutSessions, calculateWorkoutStats } from '../lib/supabase/dataAdapter';
 import type { WorkoutSession } from '../lib/supabase/schema.types';
 import { useUserStore } from '../lib/stores/useUserStore';
@@ -37,6 +37,7 @@ export function useDashboardData() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<DashboardError | null>(null);
   const { isLoading: authLoading, user: authUser } = useUserStore();
+  const authListenerRef = useRef<{ unsubscribe: () => void } | null>(null);
 
   const fetchData = async () => {
     // Don't fetch if auth is still loading
@@ -160,6 +161,25 @@ export function useDashboardData() {
       fetchData();
     }
   }, [authLoading, authUser]); // Re-fetch when auth state changes
+  
+  // Listen for auth state changes
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[useDashboardData] Token refreshed, refetching data');
+        // Wait a bit for the auth state to stabilize
+        setTimeout(() => {
+          fetchData();
+        }, 500);
+      }
+    });
+    
+    authListenerRef.current = authListener;
+    
+    return () => {
+      authListenerRef.current?.subscription.unsubscribe();
+    };
+  }, []);
 
   return {
     data,

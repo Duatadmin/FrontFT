@@ -69,6 +69,7 @@ export const useProgramStore = create<ProgramState>()(devtools(persist((set, _ge
           .eq('user_id', userId)
           // IMPORTANT: Replace 'active' with the actual value from your 'plan_status' column that denotes an active plan.
           .eq('plan_status', 'active') 
+          .limit(1)
           .maybeSingle(); // Use maybeSingle as a plan might not exist or to prevent errors if query setup could return multiple
         if (error) {
           console.warn('Supabase error fetching plan, falling back to mock data:', error);

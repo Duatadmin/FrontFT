@@ -97,9 +97,12 @@ export const usePlansOverview = (): UseQueryResult<PlanOverview[], Error> => {
   // Listen for auth state changes and refetch
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
-        console.log('[usePlansOverview] Auth event detected, refetching plans:', event);
-        query.refetch();
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[usePlansOverview] Token refreshed, refetching plans');
+        // Add a small delay to let the new token propagate
+        setTimeout(() => {
+          query.refetch();
+        }, 100);
       }
     });
 

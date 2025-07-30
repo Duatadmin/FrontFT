@@ -44,9 +44,12 @@ export const useWorkoutPlan = (): UseWorkoutPlanResult => { // planId prop remov
   // Listen for auth state changes and refetch
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
-        console.log('[useWorkoutPlan] Auth event detected, refetching plan:', event);
-        query.refetch();
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('[useWorkoutPlan] Token refreshed, refetching plan');
+        // Add a small delay to let the new token propagate
+        setTimeout(() => {
+          query.refetch();
+        }, 100);
       }
     });
 
