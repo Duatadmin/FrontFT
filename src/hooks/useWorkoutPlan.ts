@@ -17,7 +17,7 @@ export type UseWorkoutPlanResult = UseQueryResult<WorkoutPlan | null, Error>;
  *          The `data` property will be the transformed WorkoutPlan object or null.
  */
 export const useWorkoutPlan = (): UseWorkoutPlanResult => { // planId prop removed
-  const { user } = useUserStore.getState(); // Get user from store
+  const user = useUserStore((state) => state.user); // Subscribe to user state changes
   const userId = user?.id;
 
   return useQuery<WorkoutFullViewRow[], Error, WorkoutPlan | null, readonly [string, string | null | undefined]>({

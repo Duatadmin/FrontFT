@@ -10,7 +10,7 @@ export type UseCompletedSessionsResult = UseQueryResult<CompletedSession[], Erro
  * Custom hook to fetch and transform completed workout sessions.
  */
 export const useCompletedSessions = (): UseCompletedSessionsResult => {
-  const { user } = useUserStore.getState();
+  const user = useUserStore((state) => state.user);
   const userId = user?.id;
 
   return useQuery({

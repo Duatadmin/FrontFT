@@ -11,7 +11,7 @@ export type UseMonthlySessionsResult = UseQueryResult<CompletedSession[], Error>
  * @param month The month (0-11).
  */
 export const useMonthlySessions = (year: number, month: number): UseMonthlySessionsResult => {
-  const { user } = useUserStore.getState();
+  const user = useUserStore((state) => state.user);
   const userId = user?.id;
 
   return useQuery({

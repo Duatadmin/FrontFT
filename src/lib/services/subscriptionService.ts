@@ -11,8 +11,14 @@ export interface SubscriptionStatus {
 
 export class SubscriptionService {
   /**
-   * Check user's subscription status using the new database logic
-   * Uses is_subscription_active() function and v_active_users view
+   * Check user's subscription status using the database view
+   * 
+   * NOTE: The subscription check uses two methods:
+   * 1. View 'v_active_users' (primary method - always works)
+   * 2. Direct table query to 'stripe_subscriptions' (fallback - may be blocked by RLS)
+   * 
+   * The RPC function 'is_subscription_active' is not implemented in this environment,
+   * so we skip it and use the v_active_users view which is reliable and sufficient.
    */
   static async checkSubscriptionStatus(user: User): Promise<SubscriptionStatus> {
     try {
@@ -26,45 +32,10 @@ export class SubscriptionService {
 
       console.log('[SubscriptionService] Checking subscription for user:', user.id);
 
-      // Method 1: Use the is_subscription_active() function directly
-      try {
-        const { data, error } = await supabase.rpc('is_subscription_active', {
-          uid: user.id
-        });
-
-        if (!error && data !== null) {
-          console.log('[SubscriptionService] Subscription function result:', data);
-          
-          if (data === true) {
-            // Get subscription details for complete response
-            const { data: subscription } = await supabase
-              .from('stripe_subscriptions')
-              .select('id, status, customer_id')
-              .eq('user_id', user.id)
-              .in('status', ['active', 'trialing', 'past_due'])
-              .gte('current_period_end', new Date().toISOString())
-              .order('created', { ascending: false })
-              .limit(1)
-              .single();
-
-            return {
-              isActive: true,
-              status: 'active',
-              subscriptionId: subscription?.id,
-              customerId: subscription?.customer_id
-            };
-          } else {
-            return {
-              isActive: false,
-              status: 'inactive'
-            };
-          }
-        }
-      } catch (funcError) {
-        console.log('[SubscriptionService] Function call failed, trying view approach:', funcError);
-      }
-
-      // Method 2: Fallback to v_active_users view
+      // Skip Method 1 (RPC function) since it doesn't exist in the database
+      // The v_active_users view is the primary reliable method
+      
+      // Method 2: Use v_active_users view (primary method)
       try {
         const { data: activeUsers, error: viewError } = await supabase
           .from('v_active_users')
@@ -77,21 +48,12 @@ export class SubscriptionService {
           console.log('[SubscriptionService] View check result:', isActive);
 
           if (isActive) {
-            // Get subscription details
-            const { data: subscription } = await supabase
-              .from('stripe_subscriptions')
-              .select('id, status, customer_id')
-              .eq('user_id', user.id)
-              .in('status', ['active', 'trialing', 'past_due'])
-              .order('created', { ascending: false })
-              .limit(1)
-              .single();
-
+            // Skip fetching subscription details to avoid RLS errors
+            // The v_active_users view is sufficient to confirm active status
             return {
               isActive: true,
-              status: 'active',
-              subscriptionId: subscription?.id,
-              customerId: subscription?.customer_id
+              status: 'active'
+              // subscriptionId and customerId are not critical for access control
             };
           } else {
             return {
