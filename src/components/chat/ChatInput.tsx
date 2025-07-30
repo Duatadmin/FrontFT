@@ -9,6 +9,7 @@ import VoiceTicker, { ISepiaVoiceRecorder } from './VoiceTicker'; // Import orig
 import { LottieSendButton } from './LottieSendButton';
 
 import { useVoicePlayback } from '../../hooks/useVoicePlayback';
+import { voicePrewarmService } from '../../services/voicePrewarm';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -56,6 +57,10 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
   useEffect(() => {
     const initVoice = async () => {
       try {
+        // Pre-warm voice components for faster initialization
+        voicePrewarmService.prewarm().catch(err => 
+          console.warn('Voice pre-warm failed (non-critical):', err)
+        );
       } catch (error) {
         console.error('Failed to initialize voice module in chat input:', error);
       }

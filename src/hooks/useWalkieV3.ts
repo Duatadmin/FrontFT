@@ -107,9 +107,11 @@ export function useWalkieV3(options: UseWalkieV3Options): {
 
   // Ensure microphone permission
   const ensureMicrophonePermission = async (): Promise<void> => {
+    const permStartTime = performance.now();
     try {
       const status = await (navigator.permissions as any).query({ name: 'microphone' });
       if (status.state === 'granted') {
+        console.log('[useWalkieV3] Microphone permission already granted');
         return;
       }
     } catch {
@@ -119,6 +121,8 @@ export function useWalkieV3(options: UseWalkieV3Options): {
     // Request permission
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach(track => track.stop());
+    const permElapsed = performance.now() - permStartTime;
+    console.log(`[useWalkieV3] Microphone permission obtained in ${permElapsed.toFixed(2)}ms`);
   };
 
   const start = useCallback(async () => {
