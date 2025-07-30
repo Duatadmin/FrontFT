@@ -23,7 +23,8 @@
       "Bash(touch:*)",
       "Bash(npx tailwindcss:*)",
       "Bash(curl:*)",
-      "mcp__playwright__browser_navigate"
+      "mcp__playwright__browser_navigate",
+      "Bash(find:*)"
     ],
     "deny": []
   }

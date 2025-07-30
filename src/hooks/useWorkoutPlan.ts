@@ -1,7 +1,9 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore'; // Import useUserStore
 import { fetchPlanRows, type WorkoutFullViewRow } from '@/api/workoutPlanService';
 import { rowsToPlanTree, type WorkoutPlan } from '@/utils/rowsToPlanTree';
+import { supabase } from '@/lib/supabase';
 
 // Define a type for the hook's return value for clarity
 export type UseWorkoutPlanResult = UseQueryResult<WorkoutPlan | null, Error>;
@@ -18,9 +20,10 @@ export type UseWorkoutPlanResult = UseQueryResult<WorkoutPlan | null, Error>;
  */
 export const useWorkoutPlan = (): UseWorkoutPlanResult => { // planId prop removed
   const user = useUserStore((state) => state.user); // Subscribe to user state changes
+  const isLoading = useUserStore((state) => state.isLoading);
   const userId = user?.id;
 
-  return useQuery<WorkoutFullViewRow[], Error, WorkoutPlan | null, readonly [string, string | null | undefined]>({
+  const query = useQuery<WorkoutFullViewRow[], Error, WorkoutPlan | null, readonly [string, string | null | undefined]>({
     queryKey: ['userActivePlan', userId] as const, // Updated queryKey
     queryFn: async () => {
       if (!userId) {
@@ -28,13 +31,29 @@ export const useWorkoutPlan = (): UseWorkoutPlanResult => { // planId prop remov
         // The query is also disabled via the `enabled` option.
         return [];
       }
+      console.log('[useWorkoutPlan] Fetching plan for user:', userId);
       return fetchPlanRows(userId);
     },
     select: rowsToPlanTree, // Transforms the fetched data
     staleTime: 1000 * 60, // 1 minute
-    enabled: !!userId, // Only run the query if userId is truthy
-    // Optional: Add other TanStack Query options as needed, e.g.,
-    // refetchOnWindowFocus: false,
-    // retry: 1, // Number of retries on failure
+    enabled: !isLoading && !!userId, // Only run the query if auth is loaded and userId is truthy
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
+
+  // Listen for auth state changes and refetch
+  useEffect(() => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
+        console.log('[useWorkoutPlan] Auth event detected, refetching plan:', event);
+        query.refetch();
+      }
+    });
+
+    return () => {
+      authListener?.subscription.unsubscribe();
+    };
+  }, [query]);
+
+  return query;
 };

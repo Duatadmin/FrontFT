@@ -24,8 +24,43 @@ if (rootElement) {
           throw new Error('Supabase client failed to initialize correctly.');
       }
 
-      // Create a client
-      const queryClient = new QueryClient();
+      // Create a client with better default configuration
+      const queryClient = new QueryClient({
+        defaultOptions: {
+          queries: {
+            // Retry failed queries with exponential backoff
+            retry: (failureCount, error) => {
+              // Don't retry on 4xx errors except 401 (unauthorized)
+              if (error instanceof Error) {
+                const message = error.message.toLowerCase();
+                if (message.includes('4') && !message.includes('401')) {
+                  return false;
+                }
+              }
+              return failureCount < 3;
+            },
+            retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+            // Refetch on window focus
+            refetchOnWindowFocus: false,
+            // Consider data stale after 5 minutes
+            staleTime: 5 * 60 * 1000,
+          },
+        },
+      });
+      
+      // Listen for auth state changes globally and invalidate queries
+      supabase.auth.onAuthStateChange((event) => {
+        console.log('[main.tsx] Global auth state change:', event);
+        if (event === 'TOKEN_REFRESHED') {
+          // Invalidate all queries to refetch with new token
+          console.log('[main.tsx] Token refreshed, invalidating all queries');
+          queryClient.invalidateQueries();
+        } else if (event === 'SIGNED_OUT') {
+          // Clear all queries on sign out
+          console.log('[main.tsx] User signed out, clearing query cache');
+          queryClient.clear();
+        }
+      });
 
       ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>

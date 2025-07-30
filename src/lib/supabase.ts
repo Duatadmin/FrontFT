@@ -116,16 +116,29 @@ export const getCurrentUserId = async (): Promise<string | null> => {
   const { default: useUserStore } = await import('./stores/useUserStore');
   const store = useUserStore.getState();
   
-  // If the store is still loading, wait for it to complete
+  // If the store is still loading, wait for it to complete (with timeout)
   if (store.isLoading) {
     console.log('[getCurrentUserId] Waiting for auth initialization...');
     
     // Subscribe to store changes and wait for isLoading to become false
     return new Promise((resolve) => {
+      const timeout = setTimeout(() => {
+        console.warn('[getCurrentUserId] Timeout waiting for auth, checking session directly');
+        supabase.auth.getSession().then(({ data, error }) => {
+          if (error) {
+            console.error('[getCurrentUserId] Error getting session after timeout:', error);
+            resolve(null);
+          } else {
+            resolve(data.session?.user?.id || null);
+          }
+        });
+      }, 5000); // 5 second timeout
+      
       const unsubscribe = useUserStore.subscribe(
         (state) => state.isLoading,
         (isLoading) => {
           if (!isLoading) {
+            clearTimeout(timeout);
             unsubscribe();
             const currentState = useUserStore.getState();
             
