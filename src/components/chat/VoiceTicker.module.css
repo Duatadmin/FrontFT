@@ -18,9 +18,39 @@
    margin-right: var(--dash-gap);
    flex-shrink: 0; /* Prevent dashes from shrinking */
    /* Color is set via inline style by JS for dynamic changes */
-   /* CSS transition removed for stability, JS controls height directly (Option B) */
-   contain: strict; /* Optimize rendering, isolate layout/paint */
-   transform-origin: center; /* ensure growth/scaling is symmetrical */
+   contain: layout style paint; /* Optimize rendering but allow size changes */
+   transform-origin: center bottom; /* Grow from bottom for wave effect */
+   border-radius: 1px; /* Slight rounding for softer look */
+   transition: height 50ms cubic-bezier(0.4, 0, 0.2, 1); /* Faster, smoother transitions */
+   position: relative;
+}
+
+/* Active dash glow effect */
+.dash[data-active="true"] {
+  filter: drop-shadow(0 0 6px currentColor) brightness(1.2);
+  opacity: 1;
+  transform: scaleX(1.2); /* Slightly wider when active */
+}
+
+/* Inactive dash style */
+.dash[data-active="false"] {
+  opacity: 0.4;
+  transform: scaleX(1);
+}
+
+/* Processing state - subtle pulsing */
+.voiceLayer[data-state="processing"] .dash {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+/* Error state - red tint */
+.voiceLayer[data-state="error"] .dash {
+  filter: hue-rotate(-60deg) saturate(1.5);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.9; }
 }
 
 @keyframes slideX {
@@ -32,5 +62,18 @@
     /* Animate towards the origin */
     transform: translateX(0);
   }
+}
+
+/* Screen reader only content */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }
 
