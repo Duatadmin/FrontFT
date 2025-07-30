@@ -23,7 +23,7 @@ export class ASRServiceV3 {
   private socket: WebSocket | null = null;
   private options: ASRServiceOptions;
   private reconnectTimer: NodeJS.Timeout | null = null;
-  private reconnectDelay = 1000;
+  private reconnectDelay = 200;  // Reduced from 1000ms for faster initial reconnect
   private maxReconnectDelay = 30000;
   private isIntentionalClose = false;
   private connectionPromise: Promise<void> | null = null;
@@ -63,7 +63,7 @@ export class ASRServiceV3 {
 
         this.socket.onopen = () => {
           console.log('[ASRServiceV3] WebSocket connected');
-          this.reconnectDelay = 1000; // Reset reconnect delay
+          this.reconnectDelay = 200; // Reset reconnect delay to fast value
           
           if (this.options.onConnectionChange) {
             this.options.onConnectionChange(true);

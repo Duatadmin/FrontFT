@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { memo } from 'react';
 import ChatHeader from './ChatHeader';
 import ChatMessages from './ChatMessages';
 import ChatInput from './ChatInput';
@@ -10,7 +10,7 @@ interface ChatLayoutProps {
   onSendMessage: (message: string) => void;
 }
 
-const ChatLayout: React.FC<ChatLayoutProps> = ({ messages, isLoading, onSendMessage }) => {
+const ChatLayout: React.FC<ChatLayoutProps> = memo(({ messages, isLoading, onSendMessage }) => {
   return (
     <div className="flex flex-col h-lvh">
       <ChatHeader />
@@ -23,6 +23,8 @@ const ChatLayout: React.FC<ChatLayoutProps> = ({ messages, isLoading, onSendMess
       />
     </div>
   );
-};
+});
+
+ChatLayout.displayName = 'ChatLayout';
 
 export default ChatLayout; 

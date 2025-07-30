@@ -122,6 +122,8 @@ export function useWalkieV3(options: UseWalkieV3Options): {
   };
 
   const start = useCallback(async () => {
+    const startTime = performance.now();
+    
     if (state.status === 'connecting' || state.status === 'active') {
       console.warn('[useWalkieV3] Already streaming or connecting');
       return;
@@ -214,7 +216,8 @@ export function useWalkieV3(options: UseWalkieV3Options): {
         level: 0 
       }));
 
-      console.log('[useWalkieV3] Streaming started successfully');
+      const elapsedTime = performance.now() - startTime;
+      console.log(`[useWalkieV3] Streaming started successfully in ${elapsedTime.toFixed(2)}ms`);
 
     } catch (error: any) {
       handleInternalError(

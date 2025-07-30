@@ -10,13 +10,13 @@ export interface UseChatReturn {
 }
 
 export const useChat = (): UseChatReturn => {
-  console.log('[useChat] Hook initialized.');
+  // console.log('[useChat] Hook initialized.');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  console.log('[useChat] Initial isLoading state:', false);
+  // console.log('[useChat] Initial isLoading state:', false);
 
   const onSendMessage = useCallback(async (text: string) => {
-    console.log('[useChat] onSendMessage called with text:', text, 'Current isLoading before set:', isLoading);
+    // console.log('[useChat] onSendMessage called with text:', text, 'Current isLoading before set:', isLoading);
     if (!text.trim()) return;
 
     const userMessage: Message = {
@@ -28,7 +28,7 @@ export const useChat = (): UseChatReturn => {
 
     setMessages((prevMessages) => [...prevMessages, userMessage]);
     setIsLoading(true);
-    console.log('[useChat] setIsLoading(true) called.');
+    // console.log('[useChat] setIsLoading(true) called.');
 
     try {
       // Get the current user ID
@@ -47,7 +47,7 @@ export const useChat = (): UseChatReturn => {
         timestamp: Date.now(),
       };
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
-      console.log('[useChat] Assistant message added.');
+      // console.log('[useChat] Assistant message added.');
     } catch (error) {
       console.error("Error sending message or getting response:", error);
       const errorMessage: Message = {
@@ -61,7 +61,7 @@ export const useChat = (): UseChatReturn => {
       setMessages((prevMessages) => [...prevMessages, errorMessage]);
     } finally {
       setIsLoading(false);
-      console.log('[useChat] setIsLoading(false) called in finally block.');
+      // console.log('[useChat] setIsLoading(false) called in finally block.');
     }
   }, []);
 
@@ -73,7 +73,7 @@ export const useChat = (): UseChatReturn => {
     if (storedPlan) {
       try {
         const planMessage = JSON.parse(storedPlan);
-        console.log('[useChat] Found onboarding plan, displaying it');
+        // console.log('[useChat] Found onboarding plan, displaying it');
         
         // Add the plan as the first message
         setMessages([
