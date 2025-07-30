@@ -112,10 +112,57 @@ if (typeof window !== 'undefined') {
 
 // Helper to get the current user ID
 export const getCurrentUserId = async (): Promise<string | null> => {
+  // First check if we can get the user from the store (if it's already loaded)
+  const { default: useUserStore } = await import('./stores/useUserStore');
+  const store = useUserStore.getState();
+  
+  // If the store is still loading, wait for it to complete
+  if (store.isLoading) {
+    console.log('[getCurrentUserId] Waiting for auth initialization...');
+    
+    // Subscribe to store changes and wait for isLoading to become false
+    return new Promise((resolve) => {
+      const unsubscribe = useUserStore.subscribe(
+        (state) => state.isLoading,
+        (isLoading) => {
+          if (!isLoading) {
+            unsubscribe();
+            const currentState = useUserStore.getState();
+            
+            // If user is in the store, use it directly
+            if (currentState.user) {
+              console.log('[getCurrentUserId] Auth initialized, returning user from store');
+              resolve(currentState.user.id);
+            } else {
+              // Otherwise fall back to checking the session
+              console.log('[getCurrentUserId] Auth initialized, no user in store, checking session');
+              supabase.auth.getSession().then(({ data, error }) => {
+                if (error) {
+                  console.error('[getCurrentUserId] Error getting session:', error);
+                  resolve(null);
+                } else {
+                  resolve(data.session?.user?.id || null);
+                }
+              });
+            }
+          }
+        }
+      );
+    });
+  }
+  
+  // If not loading, check if user is already in the store
+  if (store.user) {
+    console.log('[getCurrentUserId] Returning user from store (already loaded)');
+    return store.user.id;
+  }
+  
+  // Fall back to getting session directly
+  console.log('[getCurrentUserId] No user in store, checking session directly');
   const { data, error } = await supabase.auth.getSession();
   
   if (error) {
-    console.error('Error getting user session:', error);
+    console.error('[getCurrentUserId] Error getting session:', error);
     return null;
   }
   

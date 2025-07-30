@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getCurrentUserId } from '../lib/supabase';
 import { fetchWorkoutSessions, calculateWorkoutStats } from '../lib/supabase/dataAdapter';
 import type { WorkoutSession } from '../lib/supabase/schema.types';
+import { useUserStore } from '../lib/stores/useUserStore';
 
 // Define dashboard data types
 export type TimeRange = 'weekly' | 'monthly' | 'yearly' | 'all';
@@ -35,8 +36,15 @@ export function useDashboardData() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<DashboardError | null>(null);
+  const { isLoading: authLoading, user: authUser } = useUserStore();
 
   const fetchData = async () => {
+    // Don't fetch if auth is still loading
+    if (authLoading) {
+      console.log('[useDashboardData] Auth still loading, waiting...');
+      return;
+    }
+    
     setLoading(true);
     setError(null);
 
@@ -147,8 +155,11 @@ export function useDashboardData() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    // Only fetch when auth is ready
+    if (!authLoading) {
+      fetchData();
+    }
+  }, [authLoading, authUser]); // Re-fetch when auth state changes
 
   return {
     data,

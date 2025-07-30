@@ -5,8 +5,9 @@
  * revalidation, and error handling when working with Supabase data.
  */
 import useSWR from 'swr';
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { supabase, getCurrentUserId, handleSupabaseError } from '../supabase';
+import { useUserStore } from '../stores/useUserStore';
 import { 
   TrainingPlan, 
   WorkoutSession, 
@@ -36,6 +37,8 @@ export const createDateRangeFilter = (from: string, to: string) => {
  * Hook to fetch the current user's data
  */
 export const useCurrentUser = (): SupabaseResponse<User> => {
+  const { isLoading: authLoading, user: authUser } = useUserStore();
+  
   const fetcher = useCallback(async () => {
     try {
       const userId = await getCurrentUserId();
@@ -54,12 +57,22 @@ export const useCurrentUser = (): SupabaseResponse<User> => {
     }
   }, []);
   
-  const { data, error, isLoading, mutate } = useSWR('current-user', fetcher);
+  const { data, error, isLoading, mutate } = useSWR(
+    authLoading ? null : 'current-user', // Don't fetch while auth is loading
+    fetcher
+  );
+  
+  // Revalidate when auth state changes
+  useEffect(() => {
+    if (!authLoading && authUser) {
+      mutate();
+    }
+  }, [authLoading, authUser, mutate]);
   
   return {
     data,
     error: error ? (error as Error).message : null,
-    isLoading,
+    isLoading: authLoading || isLoading,
     mutate
   };
 };
@@ -71,6 +84,8 @@ export const useWorkoutSessions = (
   dateRange?: { from: string; to: string },
   focusArea?: string
 ): SupabaseResponse<WorkoutSession[]> => {
+  const { isLoading: authLoading, user: authUser } = useUserStore();
+  
   const fetcher = useCallback(async () => {
     try {
       const userId = await getCurrentUserId();
@@ -105,14 +120,21 @@ export const useWorkoutSessions = (
   }, [dateRange, focusArea]);
   
   const { data, error, isLoading, mutate } = useSWR(
-    ['workout-sessions', dateRange?.from, dateRange?.to, focusArea].join('-'),
+    authLoading ? null : ['workout-sessions', dateRange?.from, dateRange?.to, focusArea].join('-'),
     fetcher
   );
+  
+  // Revalidate when auth state changes
+  useEffect(() => {
+    if (!authLoading && authUser) {
+      mutate();
+    }
+  }, [authLoading, authUser, mutate]);
   
   return {
     data: data || null,
     error: error ? (error as Error).message : null,
-    isLoading,
+    isLoading: authLoading || isLoading,
     mutate
   };
 };
