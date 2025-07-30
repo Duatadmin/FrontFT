@@ -84,7 +84,7 @@ const ExerciseLibraryPage: React.FC = () => {
   // For simplicity in this step, we'll render the title here and adjust AppRouter later if needed.
 
   return (
-    <div className={`h-full overflow-y-auto text-white ${!selectedExerciseId ? 'p-4 sm:p-6 md:p-8' : ''}`.trim()}>
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-20 sm:pb-8">
       {/* Render ExerciseDetailPage if an exercise is selected */}
       {selectedExerciseId ? (
         <div className="fixed inset-0 z-50 overflow-y-auto safe-top safe-bot safe-left safe-right">
@@ -92,19 +92,22 @@ const ExerciseLibraryPage: React.FC = () => {
         </div>
       ) : (
         <>
-          <header className="mb-6">
-          <h1 className="font-display text-3xl font-bold text-white mb-6">Exercise Library</h1>
-          <p className="text-text-secondary">Browse exercises by muscle group and equipment.</p>
-        </header>
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 py-2 sm:py-4">
+            <div>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white">Exercise Library</h1>
+              <p className="text-sm sm:text-base text-text-secondary mt-2">Browse exercises by muscle group and equipment.</p>
+            </div>
+          </div>
           {!selectedMuscleGroup ? (
         <MuscleGroupSelector onSelectGroup={handleSelectGroup} />
       ) : (
         <>
           <button
             onClick={handleGoBack}
-            className="mb-6 inline-flex items-center text-lime-400 hover:text-lime-300 transition-all duration-300 ease-in-out bg-neutral-700/50 hover:bg-lime-500/10 backdrop-blur-md px-4 py-2 rounded-xl shadow-lg border border-lime-400/60 hover:border-lime-300/80 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-opacity-70"
+            className="mb-4 sm:mb-6 inline-flex items-center text-lime-400 hover:text-lime-300 transition-all duration-300 ease-in-out bg-neutral-700/50 hover:bg-lime-500/10 backdrop-blur-md px-3 sm:px-4 py-2 rounded-xl shadow-lg border border-lime-400/60 hover:border-lime-300/80 focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-opacity-70 text-sm sm:text-base"
           >
-            <ArrowLeft size={20} className="mr-2" />
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5 mr-1.5 sm:mr-2" />
             Back to Muscle Groups
           </button>
 

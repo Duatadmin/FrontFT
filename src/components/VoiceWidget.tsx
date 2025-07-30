@@ -97,14 +97,10 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       return;
     }
 
+    // With the new single button approach, we should never reach here if already active
     if (walkie.state.status === 'active') {
-      console.warn('[VoiceWidget] Walkie is already active. Attempting to stop before starting new session.');
-      try {
-        await walkie.stop();
-        console.log('[VoiceWidget] walkie.stop() called successfully during pre-start cleanup.');
-      } catch (e) {
-        console.error('[VoiceWidget] Error stopping walkie during pre-start cleanup:', e);
-      }
+      console.error('[VoiceWidget] handleStart called while already active - this should not happen with the new implementation');
+      return;
     }
 
     const newSid = uuid();
@@ -204,7 +200,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     if (effectiveIsDisabled) return;
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
-      if (status === 'idle' || status === 'active') { // Allow starting if idle or active (handleStart will stop if active)
+      if (status === 'idle') {
         handleStart();
       }
     }
@@ -220,58 +216,60 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     }
   };
 
+  // Event handlers for the single button approach
+  const handleMouseDown = () => {
+    if (effectiveIsDisabled) return;
+    if (status === 'idle') {
+      handleStart();
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (effectiveIsDisabled) return;
+    if (status === 'active') {
+      handleStop();
+    }
+  };
+
+  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (effectiveIsDisabled) return;
+    if (status === 'idle') {
+      // Prevent default to avoid mouse events on touch devices
+      e.preventDefault();
+      handleStart();
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (effectiveIsDisabled) return;
+    if (status === 'active') {
+      e.preventDefault();
+      handleStop();
+    }
+  };
+
   return (
     <>
-      {isActivated ? (
-        // ACTIVE STATE BUTTON
-        <div
-          className={dynamicButtonClasses}
-          onMouseUp={effectiveIsDisabled ? undefined : handleStop} // Only allow stop if not generally disabled
-          onTouchEnd={effectiveIsDisabled ? undefined : handleStop}
-          onKeyUp={handleKeyRelease} // handleKeyRelease has its own disabled check
-          role="button"
-          tabIndex={effectiveIsDisabled ? -1 : 0}
-          aria-disabled={effectiveIsDisabled}
-          title={currentTitle}
-          aria-label={currentTitle}
-        >
-          <span className="relative flex items-center gap-2 z-10">
-            {currentIcon}
-            <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
-          </span>
-        </div>
-      ) : (
-        // INACTIVE/OTHER STATES BUTTON
-        <div
-          className={dynamicButtonClasses}
-          onMouseDown={() => {
-            if (!effectiveIsDisabled && (status === 'idle' || status === 'active')) {
-              handleStart();
-            } else {
-              console.log(`[VoiceWidget] InactiveButton onMouseDown: handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
-            }
-          }}
-          onTouchStart={(_e) => {
-            if (!effectiveIsDisabled && (status === 'idle' || status === 'active')) {
-              // e.preventDefault(); // Removed to address passive event listener warning
-              handleStart();
-            } else {
-              console.log(`[VoiceWidget] InactiveButton onTouchStart (bubbling): handleStart() blocked. Status: ${status}, effectiveIsDisabled: ${effectiveIsDisabled}`);
-            }
-          }}
-          onKeyDown={handleKeyPress} // handleKeyPress has its own disabled check
-          role="button"
-          tabIndex={effectiveIsDisabled ? -1 : 0}
-          aria-disabled={effectiveIsDisabled}
-          title={currentTitle}
-          aria-label={currentTitle}
-        >
-          <span className="relative flex items-center gap-2 z-10">
-            {currentIcon}
-            <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
-          </span>
-        </div>
-      )}
+      {/* Single button element with conditional event handlers based on state */}
+      <div
+        className={dynamicButtonClasses}
+        onMouseDown={isActivated ? undefined : handleMouseDown}
+        onMouseUp={isActivated ? handleMouseUp : undefined}
+        onTouchStart={isActivated ? undefined : handleTouchStart}
+        onTouchEnd={isActivated ? handleTouchEnd : undefined}
+        onKeyDown={handleKeyPress}
+        onKeyUp={handleKeyRelease}
+        role="button"
+        tabIndex={effectiveIsDisabled ? -1 : 0}
+        aria-disabled={effectiveIsDisabled}
+        title={currentTitle}
+        aria-label={currentTitle}
+      >
+        <span className="relative flex items-center gap-2 z-10">
+          {currentIcon}
+          <span className="font-medium text-xs whitespace-nowrap text-white/50">{currentLabel}</span>
+        </span>
+      </div>
 
       {/* Toast Notification Area */} 
       <div
