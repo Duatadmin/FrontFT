@@ -122,16 +122,8 @@ export const getCurrentUserId = async (): Promise<string | null> => {
   return data.session?.user?.id || null;
 };
 
-// Flag to track if we've checked table existence
-let checkedTables = false;
-let missingTables = false;
-
-// Check if the workout_sessions table exists in the database
+// Helper to check if required tables exist in the database
 export const checkRequiredTables = async (): Promise<boolean> => {
-  if (checkedTables) {
-    return !missingTables;
-  }
-  
   try {
     // Try to query the workout_sessions table directly
     const { data: _data, error } = await supabase
@@ -141,44 +133,16 @@ export const checkRequiredTables = async (): Promise<boolean> => {
     
     if (error) {
       console.error('Error checking workout_sessions table:', error);
-      missingTables = true;
-      checkedTables = true;
       return false;
     }
     
     // If we get here, the workout_sessions table exists
     console.log('workout_sessions table exists');
-    checkedTables = true;
-    missingTables = false;
     return true;
   } catch (err) {
     console.error('Error checking tables:', err);
-    missingTables = true;
-    checkedTables = true;
     return false;
   }
-};
-
-// Helper to check if we should use mock data
-export const isMockData = async (): Promise<boolean> => {
-  // Check if we're explicitly using mock data
-  const useMockDataEnv = import.meta.env.VITE_USE_MOCK_DATA as string | undefined;
-  if (useMockDataEnv === 'true') {
-    console.log('Using mock data based on environment variable VITE_USE_MOCK_DATA');
-    return true;
-  }
-  
-  // Check if workout_sessions table exists
-  const workoutSessionsExist = await checkRequiredTables();
-  
-  // If workout_sessions table doesn't exist, use mock data
-  if (!workoutSessionsExist) {
-    console.log('workout_sessions table is missing, using mock data');
-    return true;
-  }
-  
-  console.log('Using real data from Supabase');
-  return false;
 };
 
 // Error handling wrapper for Supabase queries

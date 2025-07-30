@@ -6,45 +6,7 @@ import { Goal as DBGoal } from '../supabase/schema.types'; // Removed TrainingPl
 
 // Import the getCurrentUserId from our unified client
 
-// Mock data for development or when Supabase connection fails
-const MOCK_TRAINING_PLAN: TrainingPlan = {
-  plan_id: 'mock-plan-001',
-  user_id: 'mock-user-123',
-  split_type: 'Full Body',
-  goal: 'Strength Gain',
-  level: 'Intermediate',
-  plan_status: 'active' // Assuming 'active' is a possible status
-};
-
-// Fallback mock data for goals with properly typed status values
-const MOCK_GOALS: Goal[] = [
-  {
-    id: 'goal-001',
-    user_id: 'mock-user-123',
-    title: 'Increase bench press',
-    description: 'Reach 225lbs on bench press',
-    target_value: 225,
-    current_value: 185,
-    unit: 'lbs',
-    category: 'strength', // Add category property
-    deadline: '2025-06-30',
-    created_at: '2025-03-10T09:00:00Z',
-    status: 'in_progress'
-  },
-  {
-    id: 'goal-002',
-    user_id: 'mock-user-123',
-    title: 'Body fat percentage',
-    description: 'Reduce body fat to 15%',
-    target_value: 15,
-    current_value: 20,
-    unit: '%',
-    category: 'weight', // Add category property
-    deadline: '2025-07-15',
-    created_at: '2025-03-15T14:30:00Z',
-    status: 'in_progress'
-  }
-];
+// Type definitions imported from schema
 
 // Re-export types from schema.types.ts for backwards compatibility
 // This line (export type TrainingPlan = DBTrainingPlan;) is replaced by the interface below
@@ -115,7 +77,7 @@ export const useProgramStore = create<ProgramState>()(devtools(persist((set, _ge
         if (!data) {
           console.log('No active plan found, using mock data');
           set({ 
-            currentPlan: MOCK_TRAINING_PLAN,
+            currentPlan: null,
             isLoading: false
           });
           return;
@@ -128,7 +90,7 @@ export const useProgramStore = create<ProgramState>()(devtools(persist((set, _ge
         // If any error occurs with Supabase, use mock data
         console.log('Using mock data due to Supabase error or development mode');
         set({ 
-          currentPlan: MOCK_TRAINING_PLAN,
+          currentPlan: null,
           isLoading: false,
           error: import.meta.env.DEV ? null : 'Connection error: Using sample data' 
         });
@@ -145,7 +107,7 @@ export const useProgramStore = create<ProgramState>()(devtools(persist((set, _ge
       
       // Fallback to mock data
       set({ 
-        currentPlan: MOCK_TRAINING_PLAN,
+        currentPlan: null,
         isLoading: false,
         error: 'Failed to load your training plan. Using sample data instead.'
       });
@@ -183,14 +145,14 @@ export const useProgramStore = create<ProgramState>()(devtools(persist((set, _ge
         
         // Set the goals in state
         set({ 
-          goals: data || MOCK_GOALS,
+          goals: data || [],
           goalsLoading: false
         });
       } catch (supabaseError) {
         // If any error occurs with Supabase, use mock data
         console.log('Using mock goals data due to Supabase error or development mode');
         set({ 
-          goals: MOCK_GOALS,
+          goals: [],
           goalsLoading: false,
           goalsError: import.meta.env.DEV ? null : 'Connection error: Using sample goals data' 
         });
@@ -202,9 +164,9 @@ export const useProgramStore = create<ProgramState>()(devtools(persist((set, _ge
     } catch (error) {
       console.error('Unexpected error in fetchGoals:', error);
       
-      // Fallback to mock data
+      // Set error state without fallback data
       set({ 
-        goals: MOCK_GOALS,
+        goals: [],
         goalsLoading: false,
         goalsError: error instanceof Error ? error.message : 'Unknown error'
       });

@@ -7,8 +7,8 @@ import {
   stopVoiceRecording
 } from '../../voice/singleton';
 import { setTranscriptTarget } from '../voice';
-import { AudioVisualizer } from '../voice';
 import { clsx as cx } from 'clsx';
+import VoiceTicker, { ISepiaVoiceRecorder } from './VoiceTicker';
 
 interface VoiceInputFieldProps {
   onSendMessage: (message: string) => void;
@@ -24,6 +24,7 @@ const VoiceInputField: React.FC<VoiceInputFieldProps> = ({
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const voiceTickerRecorderRef = useRef<ISepiaVoiceRecorder>({ onResamplerData: undefined });
   
   // Unique ID for transcript targeting
   const chatInputId = 'chat-input';
@@ -170,12 +171,10 @@ const VoiceInputField: React.FC<VoiceInputFieldProps> = ({
                 style={{ scrollbarWidth: 'thin' }}
               />
             ) : (
-              <div className="h-10 flex items-center justify-center">
-                <AudioVisualizer 
-                  width={180} 
-                  height={30}
-                  barColor="#00FFCC"
-                  barCount={30}
+              <div className="h-10 flex items-center justify-center relative">
+                <VoiceTicker 
+                  isRecordingActive={isListening}
+                  recorder={voiceTickerRecorderRef}
                 />
                 <span id={`${chatInputId}-interim`} className="absolute text-white/70 text-sm"></span>
               </div>

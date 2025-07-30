@@ -76,8 +76,8 @@ const EnhancedDashboard: React.FC = () => {
       ) : !data || !volumeMetric || !workoutsMetric || !streakMetric || !completionMetric ? (
         <div className="flex items-center justify-center h-[calc(100vh-200px)]">
           <div className="text-center p-8 bg-white/5 backdrop-blur-md rounded-lg shadow-xl">
-            <h3 className="text-2xl font-semibold text-white mb-3">No data available</h3>
-            <p className="text-gray-300">Dashboard data could not be loaded, and no mock data is available.</p>
+            <h3 className="text-2xl font-semibold text-white mb-3">No workout data yet</h3>
+            <p className="text-gray-300">Start logging your workouts to see your dashboard metrics.</p>
           </div>
         </div>
       ) : (

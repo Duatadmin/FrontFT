@@ -1,5 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Message } from '../types'; // Assuming types.ts is in src/types.ts
+import chatService from '../services/chatService';
+import { getCurrentUserId } from '../lib/supabase';
 
 export interface UseChatReturn {
   messages: Message[];
@@ -28,16 +30,20 @@ export const useChat = (): UseChatReturn => {
     setIsLoading(true);
     console.log('[useChat] setIsLoading(true) called.');
 
-    // Simulate API call or actual backend interaction for receiving a response
-    // For now, let's just add a mock assistant response after a delay
     try {
-      // Simulate network delay
-      await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+      // Get the current user ID
+      const userId = await getCurrentUserId();
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
 
+      // Send message to the real backend service
+      const response = await chatService.sendMessage(text, userId);
+      
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: `Echo: ${text}`, // Simple echo response for now
+        content: response,
         timestamp: Date.now(),
       };
       setMessages((prevMessages) => [...prevMessages, assistantMessage]);
@@ -47,7 +53,9 @@ export const useChat = (): UseChatReturn => {
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: 'system',
-        content: `Error: Could not get a response. Please try again.`,
+        content: error instanceof Error && error.message === 'User not authenticated' 
+          ? 'Please log in to send messages.' 
+          : 'Error: Could not get a response. Please try again.',
         timestamp: Date.now(),
       };
       setMessages((prevMessages) => [...prevMessages, errorMessage]);

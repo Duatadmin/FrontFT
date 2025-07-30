@@ -1,9 +1,9 @@
-import React, { useState, useRef, useEffect, KeyboardEvent } from 'react';
+import React, { useState, useRef, useEffect, KeyboardEvent, memo, useCallback } from 'react';
 import { AnimatePresence, motion } from "motion/react";
 
 import { DashboardButton } from '../chat/DashboardButton'; // Adjusted path
-import VoiceWidget from '../VoiceWidget'; // Added import for VoiceWidget
-import VoiceTicker, { ISepiaVoiceRecorder } from './VoiceTicker'; // Import VoiceTicker and its recorder interface
+import VoiceWidget from '../VoiceWidget'; // Import original VoiceWidget
+import VoiceTicker, { ISepiaVoiceRecorder } from './VoiceTicker'; // Import original VoiceTicker
 // import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
 // import { WalkieTalkieButton } from '../chat/WalkieTalkieButton';// Adjusted path
 import { LottieSendButton } from './LottieSendButton';
@@ -17,7 +17,7 @@ interface ChatInputProps {
   onTtsPlaybackEnd?: () => void;
 }
 
-const ChatInput: React.FC<ChatInputProps> = ({ 
+const ChatInput: React.FC<ChatInputProps> = memo(({ 
   onSendMessage, 
   isLoading,
 }) => {
@@ -25,7 +25,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
     const [isDemoActive, /* setIsDemoActive */] = useState(false); // For testing the ticker animation
   const voiceTickerRecorderRef = useRef<ISepiaVoiceRecorder>({ onResamplerData: undefined });
   const [isSending, setIsSending] = useState(false); // Local state to prevent race conditions
-  console.log('[ChatInput] Initializing: isSending = false, isLoading =', isLoading); // Initial state log
+  // console.log('[ChatInput] Initializing: isSending = false, isLoading =', isLoading); // Initial state log
   const isSendingRef = useRef(false); // Ref for immediate synchronous check
   const [inputValue, setInputValue] = useState('');
   const [hasInteracted, setHasInteracted] = useState(false);
@@ -102,42 +102,52 @@ const ChatInput: React.FC<ChatInputProps> = ({
 
   // When parent signals loading is done, reset our local sending state
   useEffect(() => {
-    console.log('[ChatInput] isLoading prop changed to:', isLoading);
+    // console.log('[ChatInput] isLoading prop changed to:', isLoading);
     if (!isLoading) {
-      console.log('[ChatInput] isLoading is false, resetting lock. isSendingRef was:', isSendingRef.current);
+      // console.log('[ChatInput] isLoading is false, resetting lock. isSendingRef was:', isSendingRef.current);
       setIsSending(false);
       isSendingRef.current = false; // Reset the lock when parent is done
-      console.log('[ChatInput] Lock reset. isSendingRef is now:', isSendingRef.current);
+      // console.log('[ChatInput] Lock reset. isSendingRef is now:', isSendingRef.current);
       
     } else {
-      console.log('[ChatInput] isLoading is true, lock remains active or will be set by send action.');
+      // console.log('[ChatInput] isLoading is true, lock remains active or will be set by send action.');
     }
   }, [isLoading]);
 
-  const handleVoiceSend = (message: string) => {
-    console.log('[ChatInput] handleVoiceSend called. Current isSendingRef.current:', isSendingRef.current);
+  // Moved after variable definitions to avoid reference error
+
+    // Voice widget should be disabled if the parent is loading OR if we've just sent a voice message
+  const isVoiceWidgetDisabled = isLoading || isSending;
+
+  // Text input should be disabled if the voice widget is, OR if the voice widget is actively listening.
+  const isRealVoiceActive = voiceWidgetStatus === 'active';
+  const isTickerActive = isRealVoiceActive || isDemoActive;
+  const isTextInputDisabled = isVoiceWidgetDisabled || isTickerActive || voiceWidgetStatus === 'connecting';
+  
+
+  // Define callbacks after all dependencies are available
+  const handleVoiceSend = useCallback((message: string) => {
+    // console.log('[ChatInput] handleVoiceSend called. Current isSendingRef.current:', isSendingRef.current);
     if (isSendingRef.current) {
-      console.log('[ChatInput] Voice send blocked because isSendingRef.current is true.');
+      // console.log('[ChatInput] Voice send blocked because isSendingRef.current is true.');
       return;
     }
-    console.log('[ChatInput] Setting lock: isSendingRef.current = true, setIsSending(true)');
+    // console.log('[ChatInput] Setting lock: isSendingRef.current = true, setIsSending(true)');
     isSendingRef.current = true; // Set lock immediately
     setIsSending(true); // Set state to trigger UI re-render
     onSendMessage(message);
     
-    console.log('[ChatInput] onSendMessage called with voice message.');
-  };
+    // console.log('[ChatInput] onSendMessage called with voice message.');
+  }, [onSendMessage]);
 
-
-
-  const handleSend = () => {
+  const handleSend = useCallback(() => {
     if (isSendingRef.current) {
-      console.log('[ChatInput] Text send blocked because a message is already in flight.');
+      // console.log('[ChatInput] Text send blocked because a message is already in flight.');
       return;
     }
     const trimmedInput = inputValue.trim();
     if (trimmedInput && !isTextInputDisabled) {
-      console.log('[ChatInput] Setting lock for text send.');
+      // console.log('[ChatInput] Setting lock for text send.');
       isSendingRef.current = true;
       setIsSending(true);
       onSendMessage(trimmedInput);
@@ -148,7 +158,7 @@ const ChatInput: React.FC<ChatInputProps> = ({
         setTimeout(() => textareaRef.current?.focus(), 0);
       }
     }
-  };
+  }, [inputValue, isTextInputDisabled, onSendMessage]);
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
@@ -156,14 +166,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
       handleSend();
     }
   };
-
-    // Voice widget should be disabled if the parent is loading OR if we've just sent a voice message
-  const isVoiceWidgetDisabled = isLoading || isSending;
-
-  // Text input should be disabled if the voice widget is, OR if the voice widget is actively listening.
-  const isRealVoiceActive = voiceWidgetStatus === 'active';
-  const isTickerActive = isRealVoiceActive || isDemoActive;
-  const isTextInputDisabled = isVoiceWidgetDisabled || isTickerActive || voiceWidgetStatus === 'connecting';
 
   // Focus management: when input becomes enabled after bot response, focus if user interacted before
   useEffect(() => {
@@ -219,7 +221,6 @@ const ChatInput: React.FC<ChatInputProps> = ({
           {isTickerActive && (
             <div className="absolute inset-0 pointer-events-none">
               <VoiceTicker isRecordingActive={true} recorder={voiceTickerRecorderRef} />
-
            </div>
           )}
         </div>
@@ -266,6 +267,8 @@ const ChatInput: React.FC<ChatInputProps> = ({
       </div>
     </div>
   );
-};
+});
+
+ChatInput.displayName = 'ChatInput';
 
 export default ChatInput;

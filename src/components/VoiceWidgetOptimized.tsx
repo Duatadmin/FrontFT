@@ -1,5 +1,5 @@
-// src/components/VoiceWidget.tsx
-import React, { useRef, useState, Fragment, useEffect } from 'react';
+// src/components/VoiceWidgetOptimized.tsx
+import React, { useRef, useState, Fragment, useEffect, memo, useCallback } from 'react';
 import { useVoice } from '../hooks/VoiceContext';
 import { useWalkieV3 } from '../hooks/useWalkieV3';
 import { v4 as uuid } from 'uuid';
@@ -34,7 +34,7 @@ const EarbudIcon = () => {
 };
 
 // Props for VoiceWidget
-interface VoiceWidgetProps {
+interface VoiceWidgetOptimizedProps {
   onFinalTranscriptCommitted?: (transcript: string) => void;
   isChatProcessing?: boolean; 
   onStatusChange?: (status: string) => void; 
@@ -42,12 +42,21 @@ interface VoiceWidgetProps {
   onRmsData?: (rms: number) => void;
 }
 
-const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange, isSendingRef, onRmsData }) => {
-  // console.log('[VoiceWidget] Initializing / Re-rendering. isChatProcessing:', isChatProcessing);
+const VoiceWidgetOptimized: React.FC<VoiceWidgetOptimizedProps> = memo(({ 
+  onFinalTranscriptCommitted, 
+  isChatProcessing, 
+  onStatusChange, 
+  isSendingRef, 
+  onRmsData 
+}) => {
   const { voiceEnabled, toggleVoice } = useVoice();
   // Extract host from the full WebSocket URL
   const wsUrl = import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws';
   const wsHost = wsUrl.replace(/^wss?:\/\//, '').replace(/\/.*$/, ''); // Remove protocol and path
+  
+  // Use a ref to store the RMS callback to prevent re-renders
+  const rmsCallbackRef = useRef(onRmsData);
+  rmsCallbackRef.current = onRmsData;
   
   const walkie = useWalkieV3({
     wsHost,
@@ -78,19 +87,24 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     }
   }, [walkie.state.status, walkie.state.errorMessage]);
 
+  // Use a separate effect with a ref to handle status changes without re-renders
+  const statusCallbackRef = useRef(onStatusChange);
+  statusCallbackRef.current = onStatusChange;
+  
   useEffect(() => {
-    if (onStatusChange) {
-      onStatusChange(walkie.state.status);
+    if (statusCallbackRef.current) {
+      statusCallbackRef.current(walkie.state.status);
     }
-  }, [walkie.state.status, onStatusChange]);
+  }, [walkie.state.status]);
 
+  // Handle RMS data updates
   useEffect(() => {
     if (onRmsData && typeof walkie.state.level === 'number') {
       onRmsData(walkie.state.level);
     }
   }, [walkie.state.level, onRmsData]);
 
-  const handleStart = async () => {
+  const handleStart = useCallback(async () => {
     // console.log(`[VoiceWidget] handleStart called. isChatProcessing: ${isChatProcessing}, isSendingRef.current: ${isSendingRef.current}, current walkie status: ${walkie.state.status}`);
     if (isSendingRef.current || isChatProcessing) {
       // console.log('[VoiceWidget] handleStart blocked by isSendingRef or isChatProcessing.');
@@ -99,31 +113,30 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
 
     // With the new single button approach, we should never reach here if already active
     if (walkie.state.status === 'active') {
-      console.error('[VoiceWidget] handleStart called while already active - this should not happen with the new implementation');
       return;
     }
 
-    const newSid = uuid();
-    sidRef.current = newSid;
-    // console.log(`[VoiceWidget] Generated new SID for walkie.start: ${newSid}`);
-
     try {
-      setShowErrorToast(false);
-      setToastMessage('');
+      // Enforce single session constraint
+      const newSid = uuid();
+      sidRef.current = newSid;
+      // console.log(`[VoiceWidget] Generated new SID for walkie.start: ${newSid}`);
+
+      // Enable TTS if needed
       if (!voiceEnabled) {
         // console.log('[VoiceWidget] voiceEnabled is false, calling toggleVoice() to enable TTS.');
         toggleVoice();
       }
-      await walkie.start(); // V3 doesn't need session ID
+      await walkie.start();
       // console.log('[VoiceWidget] walkie.start() called successfully.');
-    } catch (e: any) {
-      console.error('Failed to start walkie:', e);
-      setToastMessage(e.message || 'Failed to start recording.');
+    } catch (error) {
+      console.error('[VoiceWidget] handleStart error:', error);
+      setToastMessage('Failed to start voice recording');
       setShowErrorToast(true);
     }
-  };
+  }, [isChatProcessing, isSendingRef, walkie, voiceEnabled, toggleVoice]);
 
-  const handleStop = async () => {
+  const handleStop = useCallback(async () => {
     // console.log(`[VoiceWidget] handleStop called. Current walkie status: ${walkie.state.status}`);
     try {
       await walkie.stop();
@@ -132,17 +145,17 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
         // console.log('[VoiceWidget] voiceEnabled is true, calling toggleVoice() to disable TTS.');
         toggleVoice();
       }
-    } catch (e: any) {
-      console.error('Failed to stop walkie:', e);
-      setToastMessage(e.message || 'Failed to stop recording.');
-      setShowErrorToast(true);
+      sidRef.current = null;
+    } catch (error) {
+      console.error('[VoiceWidget] handleStop error:', error);
     }
-  };
+  }, [walkie, voiceEnabled, toggleVoice]);
 
-  const { status, errorMessage } = walkie.state;
+  // Voice widget state and styling logic (matching original)
+  const status = walkie.state.status;
+  const effectiveIsDisabled = isChatProcessing || isSendingRef.current;
   const isActivated = status === 'active';
-
-  // Determine button state and appearance
+  
   let currentIcon;
   let currentLabel;
   let currentTitle;
@@ -150,12 +163,10 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   let cursorClass = "cursor-pointer";
   let stateSpecificClasses = "";
 
-  // Combined isDisabled logic for clarity and use in event handlers and ARIA attributes
-  const effectiveIsDisabled = status === 'connecting' || status === 'error' || !!isChatProcessing || !!isSendingRef.current;
-
   switch (status) {
     case 'error':
-      currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-yellow-300 flex-shrink-0" />;
+      const errorMessage = walkie.state.errorMessage || "Unknown error";
+      currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-red-400 flex-shrink-0" />;
       currentLabel = "Error";
       currentTitle = errorMessage || 'Microphone error';
       cursorClass = "cursor-not-allowed";
@@ -182,7 +193,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
       currentIcon = <EarbudIcon />;
       currentLabel = "Voice Mode";
       currentTitle = "Press and hold to talk";
-      if (effectiveIsDisabled && status === 'idle') { // Specifically for idle but otherwise disabled (e.g. chat processing)
+      if (effectiveIsDisabled && status === 'idle') {
         cursorClass = "cursor-not-allowed";
         stateSpecificClasses = "opacity-50";
       }
@@ -191,7 +202,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
 
   if (effectiveIsDisabled) {
     cursorClass = "cursor-not-allowed";
-    stateSpecificClasses = stateSpecificClasses ? `${stateSpecificClasses} opacity-50` : "opacity-50"; // Keep existing opacity if error/connecting
+    stateSpecificClasses = stateSpecificClasses ? `${stateSpecificClasses} opacity-50` : "opacity-50";
   }
 
   const dynamicButtonClasses = `${baseButtonClasses} ${cursorClass} ${stateSpecificClasses}`.replace(/\s+/g, ' ').trim();
@@ -207,10 +218,10 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   };
 
   const handleKeyRelease = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Stop only if it was active and we are not generally disabled
-    if (status === 'active' && !effectiveIsDisabled) { 
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
+    if (effectiveIsDisabled) return;
+    if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (status === 'active') {
         handleStop();
       }
     }
@@ -234,7 +245,6 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
     if (effectiveIsDisabled) return;
     if (status === 'idle') {
-      // Prevent default to avoid mouse events on touch devices
       e.preventDefault();
       handleStart();
     }
@@ -271,52 +281,46 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
         </span>
       </div>
 
-      {/* Toast Notification Area */} 
-      <div
-        aria-live="assertive"
-        className="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6 z-50 safe-top safe-bot safe-left safe-right"
+      {/* Error Toast */}
+      <Transition
+        show={showErrorToast}
+        as={Fragment}
+        enter="transform ease-out duration-300 transition"
+        enterFrom="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
+        enterTo="translate-y-0 opacity-100 sm:translate-x-0"
+        leave="transition ease-in duration-100"
+        leaveFrom="opacity-100"
+        leaveTo="opacity-0"
       >
-        <div className="flex w-full flex-col items-center space-y-4 sm:items-end">
-          <Transition
-            show={showErrorToast}
-            as={Fragment}
-            enter="transform ease-out duration-300 transition"
-            enterFrom="translate-y-2 opacity-0 sm:translate-y-0 sm:translate-x-2"
-            enterTo="translate-y-0 opacity-100 sm:translate-x-0"
-            leave="transition ease-in duration-100"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="pointer-events-auto w-full max-w-sm overflow-hidden rounded-lg bg-red-600 shadow-lg ring-1 ring-black ring-opacity-5">
-              <div className="p-4">
-                <div className="flex items-start">
-                  <div className="flex-shrink-0">
-                    <ExclamationTriangleIcon className="h-6 w-6 text-white" aria-hidden="true" />
-                  </div>
-                  <div className="ml-3 w-0 flex-1 pt-0.5">
-                    <p className="text-sm font-medium text-white">Voice Error</p>
-                    <p className="mt-1 text-sm text-red-100">
-                      {toastMessage || 'An unexpected error occurred.'}
-                    </p>
-                  </div>
-                  <div className="ml-4 flex flex-shrink-0">
-                    <button
-                      type="button"
-                      className="inline-flex rounded-md bg-red-600 text-red-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-red-600"
-                      onClick={() => setShowErrorToast(false)}
-                    >
-                      <span className="sr-only">Close</span>
-                      <XMarkIcon className="h-5 w-5" aria-hidden="true" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+        <div className="fixed bottom-20 right-4 bg-red-900/90 backdrop-blur-sm text-white p-4 rounded-lg shadow-lg max-w-sm">
+          <div className="flex items-start">
+            <ExclamationTriangleIcon className="h-5 w-5 text-red-400 mt-0.5" />
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-medium">Voice Error</p>
+              <p className="mt-1 text-sm text-red-200">{toastMessage}</p>
             </div>
-          </Transition>
+            <button
+              onClick={() => setShowErrorToast(false)}
+              className="ml-4 text-red-400 hover:text-red-300"
+            >
+              <XMarkIcon className="h-5 w-5" />
+            </button>
+          </div>
         </div>
-      </div>
+      </Transition>
     </>
   );
-};
+}, (prevProps, nextProps) => {
+  // Custom comparison function to prevent re-renders from RMS updates
+  return (
+    prevProps.isChatProcessing === nextProps.isChatProcessing &&
+    prevProps.isSendingRef === nextProps.isSendingRef &&
+    prevProps.onFinalTranscriptCommitted === nextProps.onFinalTranscriptCommitted &&
+    prevProps.onStatusChange === nextProps.onStatusChange &&
+    prevProps.onRmsData === nextProps.onRmsData
+  );
+});
 
-export default VoiceWidget;
+VoiceWidgetOptimized.displayName = 'VoiceWidgetOptimized';
+
+export default VoiceWidgetOptimized;
