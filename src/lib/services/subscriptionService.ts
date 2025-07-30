@@ -9,18 +9,88 @@ export interface SubscriptionStatus {
   error?: string;
 }
 
+interface CachedSubscriptionStatus extends SubscriptionStatus {
+  cachedAt: number;
+  userId: string;
+}
+
 export class SubscriptionService {
+  private static readonly CACHE_KEY = 'subscription_status';
+  private static readonly CACHE_TTL = 5 * 60 * 1000; // 5 minutes in milliseconds
+
   /**
-   * Check user's subscription status using the database view
+   * Get cached subscription status if valid
+   */
+  private static getCachedStatus(userId: string): SubscriptionStatus | null {
+    try {
+      const cached = sessionStorage.getItem(this.CACHE_KEY);
+      if (!cached) return null;
+
+      const parsedCache: CachedSubscriptionStatus = JSON.parse(cached);
+      
+      // Check if cache is for the same user and not expired
+      if (parsedCache.userId === userId && 
+          Date.now() - parsedCache.cachedAt < this.CACHE_TTL) {
+        console.log('[SubscriptionService] Using cached subscription status', {
+          userId,
+          cachedAt: new Date(parsedCache.cachedAt).toISOString(),
+          age: `${Math.round((Date.now() - parsedCache.cachedAt) / 1000)}s`
+        });
+        return {
+          isActive: parsedCache.isActive,
+          status: parsedCache.status,
+          subscriptionId: parsedCache.subscriptionId,
+          customerId: parsedCache.customerId,
+          error: parsedCache.error
+        };
+      }
+    } catch (error) {
+      console.warn('[SubscriptionService] Failed to parse cached status:', error);
+    }
+    return null;
+  }
+
+  /**
+   * Cache subscription status
+   */
+  private static cacheStatus(userId: string, status: SubscriptionStatus): void {
+    try {
+      const cacheData: CachedSubscriptionStatus = {
+        ...status,
+        userId,
+        cachedAt: Date.now()
+      };
+      sessionStorage.setItem(this.CACHE_KEY, JSON.stringify(cacheData));
+      console.log('[SubscriptionService] Cached subscription status', {
+        userId,
+        status: status.status,
+        isActive: status.isActive
+      });
+    } catch (error) {
+      console.warn('[SubscriptionService] Failed to cache status:', error);
+    }
+  }
+
+  /**
+   * Clear cached subscription status
+   */
+  static clearCache(): void {
+    sessionStorage.removeItem(this.CACHE_KEY);
+    console.log('[SubscriptionService] Cleared subscription cache');
+  }
+
+  /**
+   * Check user's subscription status using the v_active_users view
    * 
-   * NOTE: The subscription check uses two methods:
-   * 1. View 'v_active_users' (primary method - always works)
-   * 2. Direct table query to 'stripe_subscriptions' (fallback - may be blocked by RLS)
-   * 
-   * The RPC function 'is_subscription_active' is not implemented in this environment,
-   * so we skip it and use the v_active_users view which is reliable and sufficient.
+   * This method now:
+   * 1. Checks cache first
+   * 2. Uses only the reliable v_active_users view
+   * 3. Implements proper error handling
+   * 4. Caches successful results
    */
   static async checkSubscriptionStatus(user: User): Promise<SubscriptionStatus> {
+    const checkStartTime = Date.now();
+    
     try {
       if (!user) {
         return {
@@ -30,111 +100,83 @@ export class SubscriptionService {
         };
       }
 
-      console.log('[SubscriptionService] Checking subscription for user:', user.id);
-
-      // Skip Method 1 (RPC function) since it doesn't exist in the database
-      // The v_active_users view is the primary reliable method
-      
-      // Method 2: Use v_active_users view (primary method)
-      try {
-        const { data: activeUsers, error: viewError } = await supabase
-          .from('v_active_users')
-          .select('user_id')
-          .eq('user_id', user.id)
-          .limit(1);
-
-        if (!viewError) {
-          const isActive = activeUsers && activeUsers.length > 0;
-          console.log('[SubscriptionService] View check result:', isActive);
-
-          if (isActive) {
-            // Skip fetching subscription details to avoid RLS errors
-            // The v_active_users view is sufficient to confirm active status
-            return {
-              isActive: true,
-              status: 'active'
-              // subscriptionId and customerId are not critical for access control
-            };
-          } else {
-            return {
-              isActive: false,
-              status: 'inactive'
-            };
-          }
-        }
-      } catch (viewError) {
-        console.log('[SubscriptionService] View check failed, trying direct query:', viewError);
+      // Check cache first
+      const cachedStatus = this.getCachedStatus(user.id);
+      if (cachedStatus) {
+        return cachedStatus;
       }
 
-      // Method 3: Direct query fallback (matches database logic)
-      const { data: subscriptions, error } = await supabase
-        .from('stripe_subscriptions')
-        .select('id, status, customer_id, current_period_end')
+      console.log('[SubscriptionService] Checking subscription for user:', user.id, {
+        timestamp: new Date().toISOString()
+      });
+
+      // Use only the reliable v_active_users view
+      const { data: activeUsers, error: viewError } = await supabase
+        .from('v_active_users')
+        .select('user_id')
         .eq('user_id', user.id)
-        .in('status', ['active', 'trialing', 'past_due'])
-        .order('created', { ascending: false });
-
-      if (error) {
-        console.error('[SubscriptionService] Error querying subscriptions:', error);
-        
-        // If table doesn't exist or RLS blocks access, assume no subscription
-        if (error.code === 'PGRST116' || error.message.includes('relation') || error.message.includes('permission')) {
-          console.log('[SubscriptionService] Subscriptions table not accessible, user needs subscription');
-          return {
-            isActive: false,
-            status: 'inactive',
-            error: 'Subscriptions table not accessible'
-          };
-        }
-
-        return {
-          isActive: false,
-          status: 'unknown',
-          error: error.message
-        };
-      }
-
-      // Check if any subscription is currently active (matches database logic)
-      const now = new Date();
-      const activeSubscription = subscriptions?.find(sub => 
-        !sub.current_period_end || new Date(sub.current_period_end) >= now
-      );
-
-      if (activeSubscription) {
-        console.log('[SubscriptionService] Active subscription found:', activeSubscription);
-        return {
-          isActive: true,
-          status: 'active',
-          subscriptionId: activeSubscription.id,
-          customerId: activeSubscription.customer_id
-        };
-      }
-
-      // Check for any subscription to determine precise status
-      const { data: allSubscriptions } = await supabase
-        .from('stripe_subscriptions')
-        .select('status')
-        .eq('user_id', user.id)
-        .order('created', { ascending: false })
         .limit(1);
 
-      if (allSubscriptions && allSubscriptions.length > 0) {
-        const latestStatus = allSubscriptions[0].status;
-        console.log('[SubscriptionService] Found inactive subscription with status:', latestStatus);
-        return {
+      const queryDuration = Date.now() - checkStartTime;
+
+      if (viewError) {
+        console.error('[SubscriptionService] View query error:', {
+          error: viewError,
+          duration: `${queryDuration}ms`,
+          code: viewError.code,
+          message: viewError.message
+        });
+
+        // Network or connection error - don't cache, throw for retry
+        if (viewError.message?.includes('network') || 
+            viewError.message?.includes('fetch') ||
+            viewError.code === 'PGRST301') {
+          throw new Error('Network error checking subscription');
+        }
+
+        // Database error - user likely doesn't have subscription
+        const errorStatus: SubscriptionStatus = {
           isActive: false,
-          status: latestStatus === 'incomplete' ? 'pending' : 'inactive'
+          status: 'inactive',
+          error: 'Unable to verify subscription status'
         };
+        
+        // Cache the error status to prevent repeated failed checks
+        this.cacheStatus(user.id, errorStatus);
+        return errorStatus;
       }
 
-      console.log('[SubscriptionService] No subscription found, user needs subscription');
-      return {
-        isActive: false,
-        status: 'inactive'
+      const isActive = activeUsers && activeUsers.length > 0;
+      console.log('[SubscriptionService] View check completed:', {
+        isActive,
+        duration: `${queryDuration}ms`,
+        resultCount: activeUsers?.length || 0
+      });
+
+      const status: SubscriptionStatus = {
+        isActive,
+        status: isActive ? 'active' : 'inactive'
       };
 
+      // Cache the successful result
+      this.cacheStatus(user.id, status);
+      
+      return status;
+
     } catch (error) {
-      console.error('[SubscriptionService] Unexpected error:', error);
+      const totalDuration = Date.now() - checkStartTime;
+      console.error('[SubscriptionService] Unexpected error:', {
+        error,
+        duration: `${totalDuration}ms`,
+        userId: user?.id
+      });
+      
+      // Re-throw network errors for retry logic
+      if (error instanceof Error && error.message.includes('Network error')) {
+        throw error;
+      }
+      
+      // For other errors, return a safe default
       return {
         isActive: false,
         status: 'unknown',
