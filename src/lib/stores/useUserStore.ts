@@ -168,6 +168,12 @@ export const useUserStore = create<UserState>()(
           // Update only the onboarding status
           set({ onboardingComplete: complete });
           console.log('[useUserStore] Onboarding status updated to:', complete);
+          
+          // If marking as complete, ensure we don't redirect back to onboarding
+          if (complete) {
+            // Clear any pending redirects by updating the state
+            set({ onboardingComplete: true });
+          }
         }
       },
     }),

@@ -15,28 +15,29 @@ import CurrentProgramTab from '../../components/programs/CurrentProgramTab';
 const ProgramsPage: React.FC = () => {
   useAuthGuard();
   return (
-    <div className="px-4 py-6">
-      <header className="mb-6">
-        <div className="flex justify-between items-center">
-          <h1 className="font-display text-3xl font-bold text-white mb-6" data-testid="programs-page-title">
+    <div className="max-w-7xl mx-auto space-y-6 sm:space-y-8 pb-20 sm:pb-8">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 sm:gap-6 py-2 sm:py-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white" data-testid="programs-page-title">
             Training Programs & Goals
           </h1>
+          <p className="text-sm sm:text-base text-text-secondary mt-2">Design your training routines and track your fitness objectives.</p>
         </div>
-        <p className="text-text-secondary">Design your training routines and track your fitness objectives.</p>
-      </header>
+      </div>
       
       <Tabs 
         defaultValue="current" 
-        className="w-full mb-4"
+        className="w-full"
         data-testid="programs-tabs"
       >
-        <TabsList className="grid w-full grid-cols-3 mb-6">
+        <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6">
           <TabsTrigger 
             value="current"
             data-testid="current-program-tab-trigger"
-            className="flex items-center justify-center w-full px-[14px] py-2 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
+            className="flex items-center justify-center gap-1 sm:gap-2 w-full px-2 sm:px-3 py-2 rounded-xl text-sm sm:text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
           >
-            <Dumbbell className="h-4 w-4" />
+            <Dumbbell className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="hidden sm:inline">Current Program</span>
             <span className="sm:hidden">Current</span>
           </TabsTrigger>
@@ -44,18 +45,18 @@ const ProgramsPage: React.FC = () => {
           <TabsTrigger 
             value="goals"
             data-testid="goals-tab-trigger"
-            className="flex items-center justify-center w-full px-[14px] py-2 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
+            className="flex items-center justify-center gap-1 sm:gap-2 w-full px-2 sm:px-3 py-2 rounded-xl text-sm sm:text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
           >
-            <Target className="h-4 w-4" />
+            <Target className="h-4 w-4 sm:h-5 sm:w-5" />
             <span>Goals</span>
           </TabsTrigger>
           
           <TabsTrigger 
             value="templates"
             data-testid="templates-tab-trigger"
-            className="flex items-center justify-center w-full px-[14px] py-2 rounded-xl text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
+            className="flex items-center justify-center gap-1 sm:gap-2 w-full px-2 sm:px-3 py-2 rounded-xl text-sm sm:text-base transition-colors focus-visible:ring-2 focus-visible:ring-accent-violet focus-visible:outline-none data-[state=active]:bg-accent-violet/20 data-[state=active]:text-accent-violet"
           >
-            <FileStack className="h-4 w-4" />
+            <FileStack className="h-4 w-4 sm:h-5 sm:w-5" />
             <span className="hidden sm:inline">Templates & Builder</span>
             <span className="sm:hidden">Templates</span>
           </TabsTrigger>

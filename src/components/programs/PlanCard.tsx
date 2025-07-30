@@ -40,46 +40,46 @@ export const PlanCard: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Minimal Program Card Design */}
       <div className="relative overflow-hidden">
         {/* Background with subtle gradient */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#0F1014]/20 via-transparent to-transparent pointer-events-none" />
         
-        <div className="relative bg-[#0F1014]/30 backdrop-blur-sm border border-white/[0.06] rounded-2xl p-8">
+        <div className="relative bg-[#0F1014]/30 backdrop-blur-sm border border-white/[0.06] rounded-2xl p-4 sm:p-6 lg:p-8">
           {/* Top accent line */}
           <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-green-400/20 to-transparent" />
           
           <header>
             {/* Program Type with minimal styling */}
-            <h2 className="text-3xl font-rubik font-bold text-white/90 mb-4">
+            <h2 className="text-2xl sm:text-3xl font-rubik font-bold text-white/90 mb-3 sm:mb-4">
               {formatText(plan.goal) || 'Workout Plan'}
             </h2>
             
             {/* Program details in minimal pills */}
-            <div className="flex flex-wrap gap-3">
+            <div className="flex flex-wrap gap-2 sm:gap-3">
               {/* Split Type */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] rounded-lg border border-white/[0.06]">
+              <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/[0.03] rounded-lg border border-white/[0.06]">
                 <span className="text-xs text-white/40 uppercase tracking-wider">Split</span>
-                <span className="text-sm text-white/80 font-medium">{formatText(plan.splitType) || 'N/A'}</span>
+                <span className="text-xs sm:text-sm text-white/80 font-medium">{formatText(plan.splitType) || 'N/A'}</span>
               </div>
               
               {/* Level */}
-              <div className="flex items-center gap-2 px-4 py-2 bg-white/[0.03] rounded-lg border border-white/[0.06]">
+              <div className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/[0.03] rounded-lg border border-white/[0.06]">
                 <span className="text-xs text-white/40 uppercase tracking-wider">Level</span>
-                <span className="text-sm text-white/80 font-medium">{formatText(plan.level) || 'N/A'}</span>
+                <span className="text-xs sm:text-sm text-white/80 font-medium">{formatText(plan.level) || 'N/A'}</span>
               </div>
               
               {/* Status with subtle accent */}
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all duration-300 ${
+              <div className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border transition-all duration-300 ${
                 plan.planStatus === 'active' 
                   ? 'bg-green-400/[0.05] border-green-400/20' 
                   : 'bg-orange-400/[0.05] border-orange-400/20'
               }`}>
-                <div className={`w-2 h-2 rounded-full ${
+                <div className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full ${
                   plan.planStatus === 'active' ? 'bg-green-400' : 'bg-orange-400'
                 }`} />
-                <span className={`text-sm font-medium ${
+                <span className={`text-xs sm:text-sm font-medium ${
                   plan.planStatus === 'active' ? 'text-green-400/90' : 'text-orange-400/90'
                 }`}>
                   {plan.planStatus || 'N/A'}

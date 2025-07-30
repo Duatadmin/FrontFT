@@ -21,7 +21,9 @@
       "Bash(sed:*)",
       "Bash(dos2unix:*)",
       "Bash(touch:*)",
-      "Bash(npx tailwindcss:*)"
+      "Bash(npx tailwindcss:*)",
+      "Bash(curl:*)",
+      "mcp__playwright__browser_navigate"
     ],
     "deny": []
   }

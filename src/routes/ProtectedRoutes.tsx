@@ -16,6 +16,7 @@ import useMediaQuery from '../hooks/useMediaQuery';
 import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
 import UserProfile from '../components/UserProfile';
 import ResponsiveNutritionPage from '../pages/ResponsiveNutritionPage';
+import { OnboardingCheck } from '@/components/auth/OnboardingCheck';
 
 // Wrapper component to handle props for ExerciseDetailPage
 const ExerciseDetailWrapper = () => {
@@ -45,9 +46,10 @@ const ExerciseDetailWrapper = () => {
 
 export default function ProtectedRoutes() {
   return (
-    <Routes>
-      {/* All routes that require authentication are defined here */}
-      <Route path="/" element={<App />} />
+    <OnboardingCheck>
+      <Routes>
+        {/* All routes that require authentication are defined here */}
+        <Route path="/" element={<App />} />
       <Route path="/dashboard" element={<ResponsiveDashboard />} />
       <Route path="/dashboard-old" element={<Dashboard />} />
       <Route path="/diary" element={<ResponsiveEnhancedDiaryPage />} />
@@ -71,5 +73,6 @@ export default function ProtectedRoutes() {
       {/* This catch-all is important for when this component is rendered under a parent route */}
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </OnboardingCheck>
   );
 }

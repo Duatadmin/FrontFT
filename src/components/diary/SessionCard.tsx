@@ -47,7 +47,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, defaultExpand
     >
       {/* Header Section */}
       <div 
-        className={`p-4 flex items-center justify-between cursor-pointer hover:bg-white/10 ${isExpanded ? 'rounded-t-2xl' : 'rounded-2xl'} transition-colors duration-150`}
+        className={`p-3 sm:p-4 flex items-center justify-between cursor-pointer hover:bg-white/10 ${isExpanded ? 'rounded-t-2xl' : 'rounded-2xl'} transition-colors duration-150`}
         onClick={() => { onClick(); setIsExpanded(!isExpanded); }}
       >
         <div className="flex items-center gap-3 flex-grow min-w-0">
@@ -121,7 +121,7 @@ export const SessionCard: React.FC<SessionCardProps> = ({ session, defaultExpand
 
       {/* Expandable Content Section */}
       {isExpanded && (
-        <div className="px-4 pb-4 pt-2 border-t border-white/10 rounded-b-2xl">
+        <div className="px-3 sm:px-4 pb-3 sm:pb-4 pt-2 border-t border-white/10 rounded-b-2xl">
           {session.exercises.length > 0 ? (
             <div className="space-y-4">
               {session.exercises.map((exercise, index) => (

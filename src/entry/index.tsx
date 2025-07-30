@@ -74,17 +74,42 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
   console.log('[ProtectedRoute] Rendering...');
   const isLoading = useUserStore((state: UserState) => state.isLoading);
   const isAuthenticated = useUserStore((state: UserState) => state.isAuthenticated);
-  const onboardingComplete = useUserStore((state: UserState) => state.onboardingComplete);
-  console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'onboardingComplete:', onboardingComplete);
+  console.log('[ProtectedRoute] State - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   if (isLoading) {
     console.log('[ProtectedRoute] Auth state is loading. Rendering loading spinner.');
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading...</p>
-        </div>
+      <div className="min-h-screen flex items-center justify-center bg-dark-bg bg-gradient-radial-olive">
+        <motion.div 
+          className="text-center"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.3 }}
+        >
+          {/* Logo */}
+          <div className="mb-8 text-accent-lime">
+            <Logo className="w-32 h-auto mx-auto" />
+          </div>
+          
+          {/* Loading indicator */}
+          <div className="flex items-center justify-center gap-1.5">
+            <motion.div
+              className="w-2 h-2 bg-accent-lime rounded-full"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.4, repeat: Infinity, delay: 0 }}
+            />
+            <motion.div
+              className="w-2 h-2 bg-accent-lime rounded-full"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.4, repeat: Infinity, delay: 0.2 }}
+            />
+            <motion.div
+              className="w-2 h-2 bg-accent-lime rounded-full"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.4, repeat: Infinity, delay: 0.4 }}
+            />
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -94,15 +119,6 @@ export const ProtectedRoute = ({ children }: { children: React.ReactElement }) =
     return <Navigate to="/login" replace />;
   }
 
-  // Check if user needs onboarding (authenticated but not onboarded)
-  // Allow access to welcome and onboarding routes
-  const currentPath = window.location.pathname;
-  const allowedPaths = ['/welcome', '/onboarding'];
-  if (!onboardingComplete && !allowedPaths.includes(currentPath)) {
-    console.log('[ProtectedRoute] User not onboarded. Redirecting to /welcome.');
-    return <Navigate to="/welcome" replace />;
-  }
-
-  console.log('[ProtectedRoute] User authenticated and onboarded. Rendering children.');
+  console.log('[ProtectedRoute] User authenticated. Rendering children.');
   return children;
 };
