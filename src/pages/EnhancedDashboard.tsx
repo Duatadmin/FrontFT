@@ -1,9 +1,8 @@
 import React from 'react';
-import { useDashboardData } from '../dashboard/useDashboardData'; // Added
+import { useDashboardData } from '../dashboard/useDashboardDataQuery'; // Use React Query version
 import type { MetricData } from '../dashboard/types'; // Added
 import { Loader2 } from 'lucide-react'; // Added
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import AnalyticsDashboardLayout from '../components/layout/AnalyticsDashboardLayout';
 import KpiCard from '../components/ui/KpiCard';
 
 
@@ -51,7 +50,7 @@ const EnhancedDashboard: React.FC = () => {
   } : null;
 
   return (
-    <AnalyticsDashboardLayout>
+    <>
       <header className="mb-6">
         <div className="flex justify-between items-center">
           <h1 className="font-display text-3xl font-bold text-white mb-6">
@@ -151,7 +150,7 @@ const EnhancedDashboard: React.FC = () => {
           </div>
         </div>
       )}
-    </AnalyticsDashboardLayout>
+    </>
   );
 };
 

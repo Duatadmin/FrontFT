@@ -24,7 +24,16 @@
       "Bash(npx tailwindcss:*)",
       "Bash(curl:*)",
       "mcp__playwright__browser_navigate",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_wait_for",
+      "mcp__playwright__browser_evaluate",
+      "Bash(npx tsc:*)",
+      "Bash(pkill:*)",
+      "Bash(true)"
     ],
     "deny": []
   }

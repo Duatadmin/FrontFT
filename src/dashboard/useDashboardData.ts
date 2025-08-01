@@ -1,4 +1,19 @@
-import { useState, useEffect, useRef } from 'react';
+/**
+ * @deprecated This hook is deprecated. Please use useDashboardDataQuery from './useDashboardDataQuery' instead.
+ * The new hook uses React Query for better request management, caching, and automatic cleanup.
+ * 
+ * Migration example:
+ * ```typescript
+ * // Old:
+ * import { useDashboardData } from '../dashboard/useDashboardData';
+ * 
+ * // New:
+ * import { useDashboardData } from '../dashboard/useDashboardDataQuery';
+ * ```
+ * 
+ * The interface remains the same, so it's a drop-in replacement.
+ */
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { getCurrentUserId, supabase } from '../lib/supabase';
 import { fetchWorkoutSessions, calculateWorkoutStats } from '../lib/supabase/dataAdapter';
 import type { WorkoutSession } from '../lib/supabase/schema.types';
@@ -38,13 +53,32 @@ export function useDashboardData() {
   const [error, setError] = useState<DashboardError | null>(null);
   const { isLoading: authLoading, user: authUser } = useUserStore();
   const authListenerRef = useRef<{ unsubscribe: () => void } | null>(null);
+  const fetchInProgressRef = useRef<boolean>(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     // Don't fetch if auth is still loading
     if (authLoading) {
       console.log('[useDashboardData] Auth still loading, waiting...');
       return;
     }
+    
+    // Prevent concurrent fetches
+    if (fetchInProgressRef.current) {
+      console.log('[useDashboardData] Fetch already in progress, skipping...');
+      return;
+    }
+    
+    // Cancel any existing request
+    if (abortControllerRef.current) {
+      console.log('[useDashboardData] Cancelling previous request');
+      abortControllerRef.current.abort();
+    }
+    
+    // Create new abort controller for this request
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+    fetchInProgressRef.current = true;
     
     setLoading(true);
     setError(null);
@@ -59,6 +93,12 @@ export function useDashboardData() {
           affectedModule: 'dashboard'
         });
         setData(null);
+        return;
+      }
+      
+      // Check if request was aborted
+      if (abortController.signal.aborted) {
+        console.log('[useDashboardData] Request aborted before fetch');
         return;
       }
         // Fetch real data from Supabase using our data adapter
@@ -96,6 +136,12 @@ export function useDashboardData() {
         const recentWorkouts = workoutsResult.data;
         console.log(`Successfully fetched ${recentWorkouts.length} recent workouts`);
         
+        // Check if request was aborted after workout fetch
+        if (abortController.signal.aborted) {
+          console.log('[useDashboardData] Request aborted after fetching workouts');
+          return;
+        }
+        
         // Log what data we're using for each workout
         recentWorkouts.forEach(workout => {
           console.log(`Using workout data - ID: ${workout.id}, Date: ${workout.session_date || workout.created_at}, Focus: ${workout.focus_area}`);
@@ -119,6 +165,12 @@ export function useDashboardData() {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
         const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
         
+        // Check if request was aborted before stats calculation
+        if (abortController.signal.aborted) {
+          console.log('[useDashboardData] Request aborted before stats calculation');
+          return;
+        }
+        
         // Get monthly statistics
         const stats = await calculateWorkoutStats(userId, startOfMonth, endOfMonth);
         
@@ -139,9 +191,21 @@ export function useDashboardData() {
           activityBreakdown: [] // Initialize as empty or with actual data if available
         };
         
+        // Final abort check before setting data
+        if (abortController.signal.aborted) {
+          console.log('[useDashboardData] Request aborted before setting data');
+          return;
+        }
+        
         setData(dashboardData);
         console.log('Dashboard successfully populated with real Supabase data');
     } catch (err) {
+      // Don't set error state if request was aborted
+      if (abortController.signal.aborted) {
+        console.log('[useDashboardData] Request aborted, not setting error');
+        return;
+      }
+      
       console.error('Error fetching dashboard data:', err);
       setError({
         code: 'UNEXPECTED_ERROR',
@@ -151,16 +215,31 @@ export function useDashboardData() {
       
       setData(null);
     } finally {
-      setLoading(false);
+      // Only update loading state if this is still the current request
+      if (abortControllerRef.current === abortController) {
+        setLoading(false);
+        fetchInProgressRef.current = false;
+      }
     }
-  };
+  }, [authLoading]);
 
   useEffect(() => {
     // Only fetch when auth is ready
     if (!authLoading) {
       fetchData();
     }
-  }, [authLoading, authUser]); // Re-fetch when auth state changes
+    
+    // Cleanup function
+    return () => {
+      // Cancel any in-flight requests when component unmounts
+      if (abortControllerRef.current) {
+        console.log('[useDashboardData] Component unmounting, cancelling requests');
+        abortControllerRef.current.abort();
+        abortControllerRef.current = null;
+      }
+      fetchInProgressRef.current = false;
+    };
+  }, [authLoading, fetchData]); // Use fetchData as dependency since it's memoized
   
   // Listen for auth state changes
   useEffect(() => {
@@ -179,7 +258,7 @@ export function useDashboardData() {
     return () => {
       authListenerRef.current?.subscription.unsubscribe();
     };
-  }, []);
+  }, [fetchData]);
 
   return {
     data,

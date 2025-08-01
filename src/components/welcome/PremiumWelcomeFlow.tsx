@@ -38,6 +38,7 @@ import Orb from '@/components/Orb/Orb';
 import ShinyText from '@/components/ShinyText/ShinyText';
 import { submitOnboarding } from '@/services/apiService';
 import { toast } from '@/lib/utils/toast';
+import { BiometricInput } from '@/components/ui/BiometricInput';
 
 interface Feature {
   icon: React.ReactNode;
@@ -860,31 +861,44 @@ export function PremiumWelcomeFlow() {
 
                   {/* Slider Input */}
                   {screen.inputType === 'slider' && (
-                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-white/60">Select value</span>
-                        <span className="text-3xl font-bold text-white">
-                          {onboardingData[screen.fieldName!] || screen.min || 0}
-                        </span>
-                      </div>
-                      <input
-                        type="range"
-                        min={screen.min}
-                        max={screen.max}
-                        step={screen.step}
-                        value={onboardingData[screen.fieldName!] || screen.min || 0}
-                        onChange={(e) => setOnboardingData(prev => ({ 
-                          ...prev, 
-                          [screen.fieldName!]: Number(e.target.value) 
-                        }))}
-                        className="w-full accent-accent-lime"
-                      />
-                      <div className="flex justify-between mt-2">
-                        <span className="text-xs text-white/40">{screen.min}</span>
-                        <span className="text-xs text-white/40 font-medium">{screen.unit}</span>
-                        <span className="text-xs text-white/40">{screen.max}</span>
-                      </div>
-                    </div>
+                    <>
+                      {(screen.fieldName === 'height_cm' || screen.fieldName === 'weight_kg') ? (
+                        <BiometricInput
+                          type={screen.fieldName === 'height_cm' ? 'height' : 'weight'}
+                          value={onboardingData[screen.fieldName!] || screen.min || 0}
+                          onChange={(value) => setOnboardingData(prev => ({ 
+                            ...prev, 
+                            [screen.fieldName!]: value 
+                          }))}
+                        />
+                      ) : (
+                        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                          <div className="flex items-center justify-between mb-4">
+                            <span className="text-white/60">Select value</span>
+                            <span className="text-3xl font-bold text-white">
+                              {onboardingData[screen.fieldName!] || screen.min || 0}
+                            </span>
+                          </div>
+                          <input
+                            type="range"
+                            min={screen.min}
+                            max={screen.max}
+                            step={screen.step}
+                            value={onboardingData[screen.fieldName!] || screen.min || 0}
+                            onChange={(e) => setOnboardingData(prev => ({ 
+                              ...prev, 
+                              [screen.fieldName!]: Number(e.target.value) 
+                            }))}
+                            className="w-full accent-accent-lime"
+                          />
+                          <div className="flex justify-between mt-2">
+                            <span className="text-xs text-white/40">{screen.min}</span>
+                            <span className="text-xs text-white/40 font-medium">{screen.unit}</span>
+                            <span className="text-xs text-white/40">{screen.max}</span>
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
 
                   {/* Multiselect Options */}

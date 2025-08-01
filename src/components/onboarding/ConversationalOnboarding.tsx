@@ -23,6 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { supabase } from '@/lib/supabase';
+import { BiometricInput } from '@/components/ui/BiometricInput';
 
 interface OnboardingStep {
   id: keyof OnboardingData;
@@ -398,27 +399,35 @@ export function ConversationalOnboarding() {
         const sliderValue = answers[step.id] as number || step.min || 0;
         return (
           <div className="space-y-4">
-            <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-white/60">Select value</span>
-                <span className="text-2xl font-bold text-white">
-                  {sliderValue} {step.unit}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={step.min}
-                max={step.max}
-                step={step.step}
+            {(step.id === 'height_cm' || step.id === 'weight_kg') ? (
+              <BiometricInput
+                type={step.id === 'height_cm' ? 'height' : 'weight'}
                 value={sliderValue}
-                onChange={(e) => setAnswers(prev => ({ ...prev, [step.id]: Number(e.target.value) }))}
-                className="w-full accent-accent-lime"
+                onChange={(value) => setAnswers(prev => ({ ...prev, [step.id]: value }))}
               />
-              <div className="flex justify-between mt-2">
-                <span className="text-xs text-white/40">{step.min} {step.unit}</span>
-                <span className="text-xs text-white/40">{step.max} {step.unit}</span>
+            ) : (
+              <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-white/60">Select value</span>
+                  <span className="text-2xl font-bold text-white">
+                    {sliderValue} {step.unit}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={step.min}
+                  max={step.max}
+                  step={step.step}
+                  value={sliderValue}
+                  onChange={(e) => setAnswers(prev => ({ ...prev, [step.id]: Number(e.target.value) }))}
+                  className="w-full accent-accent-lime"
+                />
+                <div className="flex justify-between mt-2">
+                  <span className="text-xs text-white/40">{step.min} {step.unit}</span>
+                  <span className="text-xs text-white/40">{step.max} {step.unit}</span>
+                </div>
               </div>
-            </div>
+            )}
             <motion.button
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
