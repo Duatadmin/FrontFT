@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { useInViewport } from '@/hooks/useInViewport';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -505,20 +505,88 @@ const screens: WelcomeScreen[] = [
 ];
 
 export function PremiumWelcomeFlow() {
-  const [currentScreen, setCurrentScreen] = useState(0);
-  const [onboardingData, setOnboardingData] = useState<Record<string, any>>({});
+  // Load saved state from localStorage
+  const loadSavedState = () => {
+    const saved = localStorage.getItem('onboarding_progress');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          currentScreen: parsed.currentScreen || 0,
+          onboardingData: parsed.onboardingData || {},
+          strengthValues: parsed.strengthValues || { pushups: 0, squats: 0, plank: 0 }
+        };
+      } catch (e) {
+        console.error('Failed to parse saved onboarding state');
+      }
+    }
+    return {
+      currentScreen: 0,
+      onboardingData: {},
+      strengthValues: { pushups: 0, squats: 0, plank: 0 }
+    };
+  };
+
+  const savedState = loadSavedState();
+  const [currentScreen, setCurrentScreen] = useState(savedState.currentScreen);
+  const [onboardingData, setOnboardingData] = useState<Record<string, any>>(savedState.onboardingData);
   const [inputValue, setInputValue] = useState('');
-  const [strengthValues, setStrengthValues] = useState<Record<string, number>>({
-    pushups: 0,
-    squats: 0,
-    plank: 0
-  });
+  const [strengthValues, setStrengthValues] = useState<Record<string, number>>(savedState.strengthValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const dragX = useMotionValue(0);
   const { user, updateOnboardingStatus } = useUserStore();
   const [backgroundRef, isBackgroundInView] = useInViewport<HTMLDivElement>();
   const isMobile = useIsMobile();
+  const inputContainerRef = useRef<HTMLDivElement>(null);
+  const mainContentRef = useRef<HTMLElement>(null);
+
+  // Autosave to localStorage whenever state changes
+  useEffect(() => {
+    const saveState = {
+      currentScreen,
+      onboardingData,
+      strengthValues,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('onboarding_progress', JSON.stringify(saveState));
+  }, [currentScreen, onboardingData, strengthValues]);
+
+  // Auto-scroll to input when screen changes or keyboard opens
+  useEffect(() => {
+    if (isMobile && inputContainerRef.current) {
+      // Small delay to ensure DOM is updated
+      setTimeout(() => {
+        inputContainerRef.current?.scrollIntoView({ 
+          behavior: 'smooth', 
+          block: 'center'
+        });
+      }, 300);
+    }
+  }, [currentScreen, isMobile]);
+
+  // Handle viewport resize (keyboard open/close) on mobile
+  useEffect(() => {
+    if (!isMobile) return;
+
+    const handleViewportResize = () => {
+      if (document.activeElement?.tagName === 'INPUT' || 
+          document.activeElement?.tagName === 'TEXTAREA') {
+        // Keyboard is likely open
+        setTimeout(() => {
+          document.activeElement?.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+          });
+        }, 100);
+      }
+    };
+
+    window.visualViewport?.addEventListener('resize', handleViewportResize);
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewportResize);
+    };
+  }, [isMobile]);
   
   const screen = screens[currentScreen];
   const isOnboardingScreen = screen.isOnboarding;
@@ -632,7 +700,8 @@ export function PremiumWelcomeFlow() {
           // Continue anyway - we have the plan
         }
         
-        // THIRD: Navigate after status is updated
+        // THIRD: Clear saved progress and navigate after status is updated
+        localStorage.removeItem('onboarding_progress'); // Clear saved progress after successful submission
         setIsSubmitting(false);
         toast.success('Your personalized plan is ready!');
         console.log('[PremiumWelcomeFlow] Navigating to chat...');
@@ -685,8 +754,24 @@ export function PremiumWelcomeFlow() {
 
   return (
     <div className="min-h-lvh bg-dark-bg relative flex flex-col">
+      {/* Enhanced Progress Bar */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-dark-bg/80 backdrop-blur-sm border-b border-white/5">
+        <div className="relative h-1 bg-white/10 overflow-hidden">
+          <motion.div
+            className="absolute h-full bg-gradient-to-r from-accent-lime via-accent-lime/80 to-accent-orange shadow-[0_0_20px_rgba(200,255,0,0.5)]"
+            initial={{ width: 0 }}
+            animate={{ width: `${((currentScreen + 1) / screens.length) * 100}%` }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          />
+        </div>
+        {/* Progress Text for accessibility */}
+        <div className="sr-only" role="progressbar" aria-valuenow={currentScreen + 1} aria-valuemin={1} aria-valuemax={screens.length}>
+          Step {currentScreen + 1} of {screens.length}
+        </div>
+      </div>
+
       {/* Dynamic Background */}
-      <div ref={backgroundRef} className="absolute inset-0">
+      <div ref={backgroundRef} className="absolute inset-0 mt-[5px]">
         {/* Animated Gradient Mesh */}
         <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
           <defs>
@@ -764,24 +849,42 @@ export function PremiumWelcomeFlow() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 onClick={() => setCurrentScreen(prev => prev - 1)}
-                className="text-white/60 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-white/60 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
+                aria-label="Go back to previous step"
               >
                 <ArrowLeft className="w-5 h-5" />
+                <span className="text-sm font-medium hidden sm:inline">Back</span>
+              </motion.button>
+            )}
+            {currentScreen === 0 && (
+              <motion.button
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={() => {
+                  // Clear progress and go to login
+                  localStorage.removeItem('onboarding_progress');
+                  navigate('/login');
+                }}
+                className="flex items-center gap-2 text-white/40 hover:text-white/60 transition-colors px-3 py-2"
+                aria-label="Exit onboarding"
+              >
+                <ArrowLeft className="w-5 h-5" />
+                <span className="text-sm hidden sm:inline">Exit</span>
               </motion.button>
             )}
             <motion.button
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               onClick={handleSkip}
-              className="text-white/60 hover:text-white text-sm font-medium transition-colors px-3 py-1"
+              className="text-white/60 hover:text-white text-sm font-medium transition-colors px-3 py-1 rounded-lg hover:bg-white/5"
             >
-              {currentScreen < 4 ? 'Skip' : isOnboardingScreen ? 'Skip question' : 'Skip'}
+              {currentScreen < 4 ? 'Skip intro' : isOnboardingScreen ? 'Skip question' : 'Skip'}
             </motion.button>
           </div>
         </header>
 
         {/* Main Content Area */}
-        <main className="flex-1 flex flex-col px-6">
+        <main ref={mainContentRef} className="flex-1 flex flex-col px-6">
           <div className="flex-1 flex justify-center">
             <div className="w-full lg:w-1/2 lg:max-w-2xl flex flex-col">
           <AnimatePresence mode="wait">
@@ -835,7 +938,7 @@ export function PremiumWelcomeFlow() {
 
               {/* Visual Section OR Input Section */}
               {isOnboardingScreen ? (
-                <div className="flex-1 min-h-0 flex flex-col justify-center space-y-4">
+                <div ref={inputContainerRef} className="flex-1 min-h-0 flex flex-col justify-center space-y-4">
                   {/* Select Options */}
                   {screen.inputType === 'select' && screen.options && (
                     <div className="space-y-3">
@@ -980,8 +1083,10 @@ export function PremiumWelcomeFlow() {
                         placeholder={screen.placeholder}
                         min={screen.min}
                         max={screen.max}
-                        className="w-full p-5 bg-white/5 border border-white/20 rounded-2xl text-white text-lg placeholder-white/40 focus:outline-none focus:border-accent-lime/50 transition-colors"
+                        className="w-full p-5 bg-white/5 border border-white/20 rounded-2xl text-white text-lg placeholder-white/40 focus:outline-none focus:border-accent-lime/50 focus:bg-white/10 transition-all"
                         autoFocus
+                        autoComplete="off"
+                        enterKeyHint="next"
                       />
                     </form>
                   )}

@@ -528,15 +528,20 @@ export function ConversationalOnboarding() {
 
   return (
     <div className="min-h-lvh bg-dark-bg flex flex-col">
-      {/* Progress Bar */}
+      {/* Enhanced Progress Bar */}
       <div className="sticky top-0 z-20 bg-dark-bg/80 backdrop-blur-xl border-b border-white/5">
-        <div className="h-1 bg-white/5">
+        <div className="h-1 bg-white/10">
           <motion.div
-            className="h-full bg-gradient-to-r from-accent-lime to-accent-orange"
+            className="h-full bg-gradient-to-r from-accent-lime via-accent-lime/80 to-accent-orange shadow-[0_0_20px_rgba(200,255,0,0.5)]"
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.5 }}
           />
+        </div>
+        {/* Progress indicator text */}
+        <div className="px-4 py-2 flex items-center justify-between text-xs">
+          <span className="text-white/60">Step {currentStep + 1} of {onboardingSteps.length}</span>
+          <span className="text-accent-lime font-medium">{Math.round(progress)}% Complete</span>
         </div>
       </div>
 
