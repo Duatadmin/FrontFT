@@ -81,47 +81,25 @@ export const useExerciseLibraryQuery = (
       return fetchExercises(muscleGroup, equipmentCategory);
     },
     enabled: !!muscleGroup, // Only fetch if muscleGroup is selected
-    staleTime: 30 * 1000, // Consider data fresh for 30 seconds
-    gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    retry: (failureCount, error: any) => {
-      // Don't retry if query was cancelled or aborted
-      const name = error?.name || '';
-      const msg = (error?.message || '').toLowerCase();
-      if (error?.message === 'Query was cancelled' || name === 'AbortError' || msg.includes('aborted') || msg.includes('cancelled')) {
-        return false;
-      }
-      // Retry auth/timeout/network errors up to 3 times
-      if (msg.includes('authentication required') || msg.includes('timed out') || msg.includes('network')) {
-        return failureCount < 3;
-      }
-      // Retry other errors up to 2 times
-      return failureCount < 2;
-    },
-    retryDelay: (attemptIndex) => {
-      // Exponential backoff with longer delays for auth issues
-      const baseDelay = 1000;
-      const maxDelay = 10000;
-      return Math.min(baseDelay * (2 ** attemptIndex), maxDelay);
-    },
-    refetchOnMount: true, // Refetch if data is stale
-    refetchOnWindowFocus: true, // Refetch on focus to recover after standby
-    refetchOnReconnect: true, // Refetch when reconnecting to network
+    staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes (was 30 seconds - too short!)
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    retry: 1, // Only retry once to prevent cascading retries
+    retryDelay: 1000, // Simple 1 second delay
+    refetchOnMount: false, // Don't refetch on every mount if data exists
+    refetchOnWindowFocus: false, // Don't refetch on window focus - causes too many requests
+    refetchOnReconnect: 'always', // Only refetch on reconnect if needed
   });
 
-  // Log the query state for debugging
+  // Simplified debug logging - only log significant state changes
   useEffect(() => {
-    console.log('[useExerciseLibraryQuery] Query state changed:', {
-      muscleGroup,
-      equipmentCategory,
-      isLoading: query.isLoading,
-      isFetching: query.isFetching,
-      isSuccess: query.isSuccess,
-      isError: query.isError,
-      dataLength: query.data?.length ?? 0,
-      status: query.status,
-      queryKey
-    });
-  }, [muscleGroup, equipmentCategory, query.isLoading, query.isFetching, query.isSuccess, query.isError, query.data?.length, query.status]);
+    if (query.isLoading) {
+      console.log('[useExerciseLibraryQuery] Loading exercises for:', muscleGroup);
+    } else if (query.isSuccess) {
+      console.log('[useExerciseLibraryQuery] Loaded', query.data?.length, 'exercises');
+    } else if (query.isError) {
+      console.error('[useExerciseLibraryQuery] Query error:', query.error);
+    }
+  }, [query.isLoading, query.isSuccess, query.isError]);
 
   return {
     exercises: query.data ?? [],

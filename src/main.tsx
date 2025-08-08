@@ -4,7 +4,7 @@ import { BrowserRouter } from 'react-router-dom'; // Keep BrowserRouter
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // Import QueryClient and Provider
 import AppRouter from './routes/AppRouter'; // Import AppRouter
 import DashboardBackground from './components/layout/DashboardBackground'; // Import DashboardBackground
-import { authStateSync } from './services/authStateSync'; // Import auth state sync service
+// Removed authStateSync - duplicate auth listener
 
 // CSS imports remain
 import './index.css';
@@ -60,46 +60,31 @@ if (rootElement) {
         },
       });
       
-      // Throttle invalidation on repeated TOKEN_REFRESHED bursts
-      let invalidationInFlight = false;
-      let lastInvalidation = 0;
-      
-      // Listen for auth state changes globally and invalidate queries
+      // Single global auth listener - minimal and selective
       supabase.auth.onAuthStateChange((event) => {
-        console.log('[main.tsx] Global auth state change:', event);
-        if (event === 'TOKEN_REFRESHED') {
-          // Invalidate all queries to refetch with new token, but wait briefly
-          // to ensure the refreshed session is fully propagated
-          if (invalidationInFlight && Date.now() - lastInvalidation < 3000) {
-            console.log('[main.tsx] Skipping duplicate token refresh handling (throttled)');
-            return;
-          }
-          invalidationInFlight = true;
-          lastInvalidation = Date.now();
-          console.log('[main.tsx] Token refreshed, waiting for session to settle before invalidating queries');
-          setTimeout(async () => {
-            // Wait a bit for the new token to propagate
-            // Then invalidate queries to refetch with new token
-            await queryClient.invalidateQueries();
-            invalidationInFlight = false;
-          }, 500);
-        } else if (event === 'SIGNED_OUT') {
+        console.log('[main.tsx] Auth event:', event);
+        
+        // Only handle critical auth events
+        if (event === 'SIGNED_OUT') {
           // Clear all queries on sign out
-          console.log('[main.tsx] User signed out, clearing query cache');
           queryClient.clear();
         } else if (event === 'SIGNED_IN') {
-          // Invalidate subscription queries on sign in to fetch fresh data
-          console.log('[main.tsx] User signed in, invalidating subscription queries');
+          // Only invalidate auth-sensitive queries on sign in
           queryClient.invalidateQueries({ queryKey: ['subscription'] });
+          queryClient.invalidateQueries({ queryKey: ['user'] });
         }
+        // REMOVED: TOKEN_REFRESHED handling
+        // Supabase automatically uses the new token for subsequent requests
+        // No need to invalidate all queries on token refresh
       });
       
       // Import and boot the user store first
       const { useUserStore } = await import('./lib/stores/useUserStore');
       await useUserStore.getState().boot();
       
-      // Start auth state sync service for Zustand stores
-      authStateSync.start();
+      // DISABLED: authStateSync creates duplicate auth listener
+      // The global listener above already handles TOKEN_REFRESHED
+      // authStateSync.start();
 
       // SW kill switch: set VITE_DISABLE_SW=1 to forcibly unregister SW and clear caches
       if (import.meta.env.VITE_DISABLE_SW === '1' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
