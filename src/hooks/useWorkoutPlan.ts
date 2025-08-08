@@ -1,9 +1,7 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore'; // Import useUserStore
 import { fetchPlanRows, type WorkoutFullViewRow } from '@/api/workoutPlanService';
 import { rowsToPlanTree, type WorkoutPlan } from '@/utils/rowsToPlanTree';
-import { supabase } from '@/lib/supabase';
 
 // Define a type for the hook's return value for clarity
 export type UseWorkoutPlanResult = UseQueryResult<WorkoutPlan | null, Error>;

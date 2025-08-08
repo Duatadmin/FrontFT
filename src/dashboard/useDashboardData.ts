@@ -52,7 +52,7 @@ export function useDashboardData() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<DashboardError | null>(null);
   const { isLoading: authLoading, user: authUser } = useUserStore();
-  const authListenerRef = useRef<{ unsubscribe: () => void } | null>(null);
+  // Removed authListenerRef - no longer needed as auth listening is handled globally
   const fetchInProgressRef = useRef<boolean>(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -241,24 +241,8 @@ export function useDashboardData() {
     };
   }, [authLoading, fetchData]); // Use fetchData as dependency since it's memoized
   
-  // Listen for auth state changes
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('[useDashboardData] Token refreshed, refetching data');
-        // Wait a bit for the auth state to stabilize
-        setTimeout(() => {
-          fetchData();
-        }, 500);
-      }
-    });
-    
-    authListenerRef.current = authListener;
-    
-    return () => {
-      authListenerRef.current?.subscription.unsubscribe();
-    };
-  }, [fetchData]);
+  // REMOVED: Auth state listener - handled globally in main.tsx
+  // Having multiple listeners causes accumulation and performance issues
 
   return {
     data,

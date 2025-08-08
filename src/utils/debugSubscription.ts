@@ -4,7 +4,6 @@
  */
 
 import { supabase } from '@/lib/supabase';
-import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { useUserStore } from '@/lib/stores/useUserStore';
 
 export const debugSubscription = {
@@ -38,7 +37,6 @@ export const debugSubscription = {
     const store = useUserStore.getState();
     console.log('Store user:', store.user?.id);
     console.log('Store authenticated:', store.isAuthenticated);
-    console.log('Store subscription:', store.subscriptionStatus);
     
     return session?.session;
   },
@@ -63,10 +61,6 @@ export const debugSubscription = {
   async checkSubscription() {
     console.log('=== SUBSCRIPTION CHECK ===');
     
-    // Clear cache first
-    sessionStorage.removeItem('subscription_status');
-    console.log('Cache cleared');
-    
     // Get user
     const store = useUserStore.getState();
     const user = store.user;
@@ -76,15 +70,22 @@ export const debugSubscription = {
       return null;
     }
     
-    // Force fresh check
-    const status = await SubscriptionService.forceCheckSubscriptionStatus(user);
-    console.log('Subscription status:', status);
+    // Check v_active_users view directly
+    const { data, error } = await supabase
+      .from('v_active_users')
+      .select('user_id')
+      .eq('user_id', user.id)
+      .maybeSingle();
     
-    // Update store
-    store.subscriptionStatus = status;
-    console.log('Store updated');
+    if (error) {
+      console.error('Error checking subscription:', error);
+      return { isActive: false, error: error.message };
+    }
     
-    return status;
+    const isActive = !!data;
+    console.log('Subscription status:', { isActive, userId: user.id });
+    
+    return { isActive };
   },
 
   /**

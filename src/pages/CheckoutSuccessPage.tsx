@@ -1,36 +1,30 @@
 import { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { supabase } from '@/lib/supabase';
+import { useInvalidateSubscription } from '@/hooks/useSubscriptionQuery';
 
 import { CheckCircle2, LoaderCircle } from 'lucide-react';
 
 export default function CheckoutSuccessPage() {
   const navigate = useNavigate();
+  const invalidateSubscription = useInvalidateSubscription();
 
   useEffect(() => {
-    const syncAndRedirect = async () => {
-      try {
-        console.log('[CheckoutSuccessPage] Payment completed, refreshing session...');
-        
-        // Refresh the session to get any updated information
-        await supabase.auth.refreshSession();
-        
-        // Wait a moment for the webhook to process and update the subscription
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        
-        console.log('[CheckoutSuccessPage] Redirecting to app...');
-        navigate('/', { replace: true });
-        
-      } catch (error) {
-        console.error('[CheckoutSuccessPage] Error during redirect:', error);
-        // On error, still try to redirect after a delay
-        setTimeout(() => navigate('/', { replace: true }), 3000);
-      }
-    };
-
-    syncAndRedirect();
-  }, [navigate]);
+    // Simple redirect after checkout - no complex dependencies
+    console.log('[CheckoutSuccessPage] Payment completed, waiting for webhook...');
+    
+    // Invalidate the subscription cache so it will refetch fresh data
+    invalidateSubscription();
+    
+    // Set a simple timer to redirect
+    const timer = setTimeout(() => {
+      console.log('[CheckoutSuccessPage] Redirecting to app with checkout flag...');
+      // Navigate with a query parameter to bypass initial subscription check
+      navigate('/?from=checkout', { replace: true });
+    }, 2000);
+    
+    return () => clearTimeout(timer);
+  }, []); // Empty dependency array - only run once on mount
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-4">

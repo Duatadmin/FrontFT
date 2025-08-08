@@ -132,22 +132,9 @@ export function useDashboardDataQuery(): UseDashboardDataQueryResult {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Listen for auth state changes and refetch
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('[useDashboardDataQuery] Token refreshed, refetching data');
-        // Add a small delay to let the new token propagate
-        setTimeout(() => {
-          query.refetch();
-        }, 100);
-      }
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [query]);
+  // REMOVED: Auth state listener - handled globally in main.tsx
+  // Having multiple listeners causes accumulation and performance issues
+  // The global listener in main.tsx will invalidate queries on TOKEN_REFRESHED
 
   return query;
 }

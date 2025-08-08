@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { supabase } from '@/lib/supabase';
 import type { User } from '@supabase/supabase-js';
-import { SubscriptionService, type SubscriptionStatus } from '@/lib/services/subscriptionService';
 
 export interface UserState {
   user: User | null;
@@ -10,14 +9,12 @@ export interface UserState {
   isLoading: boolean;
   error: string | null;
   onboardingComplete: boolean;
-  subscriptionStatus: SubscriptionStatus | null;
   /** one-time initializer; safe to call many times */
   boot: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   getCurrentUser: () => User | null;
   updateOnboardingStatus: (complete: boolean) => Promise<void>;
-  checkSubscription: () => Promise<void>;
 }
 
 let booted = false; // avoid double-init on hot reloads
@@ -31,7 +28,6 @@ export const useUserStore = create<UserState>()(
       isLoading: true,
       error: null,
       onboardingComplete: false,
-      subscriptionStatus: null,
 
       /* ① one-time boot ************************************************** */
       boot: async () => {
@@ -213,47 +209,6 @@ export const useUserStore = create<UserState>()(
           if (complete) {
             // Clear any pending redirects by updating the state
             set({ onboardingComplete: true });
-          }
-        }
-      },
-      
-      /* ⑥ check subscription status ************************************* */
-      checkSubscription: async () => {
-        const user = get().user;
-        if (!user) {
-          console.log('[useUserStore] No user to check subscription for');
-          // Don't clear existing status if we're just between auth states
-          const currentStatus = get().subscriptionStatus;
-          if (!currentStatus) {
-            set({ 
-              subscriptionStatus: { 
-                isActive: false, 
-                status: 'unknown',
-                error: 'No user authenticated'
-              }
-            });
-          }
-          return;
-        }
-        
-        try {
-          console.log('[useUserStore] Checking subscription status...');
-          const status = await SubscriptionService.checkSubscriptionStatus(user);
-          set({ subscriptionStatus: status });
-          console.log('[useUserStore] Subscription status updated:', status);
-        } catch (error) {
-          console.error('[useUserStore] Failed to check subscription:', error);
-          // Keep existing status on network errors
-          const currentStatus = get().subscriptionStatus;
-          
-          // Only set error status if it's not a network error (which should be retried)
-          if (!(error instanceof Error && error.message.includes('Network error'))) {
-            const errorStatus = {
-              isActive: currentStatus?.isActive || false, // Preserve active state if known
-              status: 'unknown' as const,
-              error: error instanceof Error ? error.message : 'Failed to check subscription'
-            };
-            set({ subscriptionStatus: errorStatus });
           }
         }
       },

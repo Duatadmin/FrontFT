@@ -1,9 +1,7 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query';
-import { useEffect } from 'react';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { fetchCompletedSessions } from '@/api/workoutPlanService';
 import { rowsToSessionHistory, type CompletedSession } from '@/utils/rowsToSessionHistory';
-import { supabase } from '@/lib/supabase';
 
 
 export type UseCompletedSessionsResult = UseQueryResult<CompletedSession[], Error>;
@@ -44,22 +42,9 @@ export const useCompletedSessions = (): UseCompletedSessionsResult => {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Listen for auth state changes and refetch
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('[useCompletedSessions] Token refreshed, refetching sessions');
-        // Add a small delay to let the new token propagate
-        setTimeout(() => {
-          query.refetch();
-        }, 100);
-      }
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [query]);
+  // REMOVED: Auth state listener - handled globally in main.tsx
+  // Having multiple listeners causes accumulation and performance issues
+  // The global listener in main.tsx will invalidate queries on TOKEN_REFRESHED
 
   return query;
 };

@@ -87,23 +87,8 @@ if (import.meta.env.MODE !== 'production' && typeof window !== 'undefined') {
   console.log('[DevHelper] window.supabase is now available');
 }
 
-// Global Auth State Change Logger
-if (typeof window !== 'undefined' && !(globalThis as any).__SB_AUTH_SUB__) {
-  console.log('[AUTH] Subscribing to onAuthStateChange');
-  (globalThis as any).__SB_AUTH_SUB__ = supabase.auth.onAuthStateChange(
-    (event, session) => {
-      console.log(
-        '[AUTH] event:', event,
-        'session status:', session ? 'exists' : 'null',
-        'access_token:', session?.access_token?.slice(0, 10) + (session?.access_token ? '...' : ''),
-        'user_id:', session?.user?.id
-      );
-    }
-  ).data.subscription;
-  if (!(globalThis as any).__SB_AUTH_SUB__) {
-    console.error('[AUTH] Failed to subscribe to onAuthStateChange!');
-  }
-}
+// REMOVED: Global auth logger - redundant with main.tsx listener
+// Having multiple global listeners causes performance issues
 
 // DevTools Helper to show current session
 if (typeof window !== 'undefined') {
