@@ -4,11 +4,13 @@ import { supabase } from '@/lib/supabase';
 import { ExerciseCardProps } from '@/components/ExerciseCard';
 import { EquipmentCategory } from '@/components/EquipmentFilter';
 import { supabaseQueryWithTimeout } from '@/utils/supabaseWithTimeout';
+import type { Database } from '@/lib/supabase/schema.types';
 
 const fetchExercises = async (
   muscleGroup: string | null, 
   equipmentCategory: EquipmentCategory | null,
-  isFirstFetch: boolean = false
+  isFirstFetch: boolean = false,
+  abortSignal?: AbortSignal
 ): Promise<ExerciseCardProps[]> => {
   try {
     if (!muscleGroup) {
@@ -23,34 +25,13 @@ const fetchExercises = async (
       isFirstFetch
     });
 
-    // Try to refresh the session first if needed (BEFORE starting any timeout)
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('[useExerciseLibraryQuery] Error getting session:', sessionError);
-      // Don't throw here, let's try to refresh
-    }
-    
-    if (!session) {
-      console.log('[useExerciseLibraryQuery] No session found, attempting to refresh...');
-      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
-      if (refreshError) {
-        console.error('[useExerciseLibraryQuery] Failed to refresh session:', refreshError);
-        throw new Error('Authentication required');
-      }
-      if (refreshedSession) {
-        console.log('[useExerciseLibraryQuery] Session refreshed successfully');
-      } else {
-        console.warn('[useExerciseLibraryQuery] No session after refresh attempt');
-        throw new Error('Authentication required');
-      }
-    } else {
-      console.log('[useExerciseLibraryQuery] Session valid, proceeding with query');
-    }
+    // This table is publicly readable; avoid blocking on auth/session readiness.
+    // If the backend ever restricts it, the query will fail fast and surface an error.
+    console.log('[useExerciseLibraryQuery] Proceeding without auth gating');
 
     // Build the query function
     console.log('[useExerciseLibraryQuery] Building query...');
-    const queryBuilder = () => {
+    const queryBuilder = (timeoutSignal: AbortSignal) => {
       let query = supabase
         .from('exrcwiki')
         .select('*')
@@ -60,17 +41,24 @@ const fetchExercises = async (
         query = query.eq('equipment_category', equipmentCategory);
       }
 
+      // Allow cancellation from our timeout as well as external signal via supabaseQueryWithTimeout
+      if ('abortSignal' in query && timeoutSignal) {
+        // @ts-ignore - supabase-js v2 supports abortSignal on PostgrestQueryBuilder
+        query = query.abortSignal(timeoutSignal);
+      }
+
       console.log('[useExerciseLibraryQuery] Executing Supabase query...');
       return query;
     };
 
-    // Use longer timeout for first fetch (might need session refresh) or after standby
+    // Use longer timeout for first fetch
     const timeoutMs = isFirstFetch ? 15000 : 10000;
     
     // Execute query with timeout using the utility
-    const { data, error } = await supabaseQueryWithTimeout(
+    const { data, error } = await supabaseQueryWithTimeout<Database['public']['Tables']['exrcwiki']['Row'][]>(
       queryBuilder,
-      timeoutMs
+      timeoutMs,
+      abortSignal
     );
 
     if (error) {
@@ -86,10 +74,10 @@ const fetchExercises = async (
     console.log('[useExerciseLibraryQuery] Supabase returned:', data.length, 'exercises for', muscleGroup);
 
     // Map the data from supabase to ExerciseCardProps
-    const formattedExercises = data.map((item: any) => ({
+    const formattedExercises = (data as any[]).map((item: any) => ({
       id: item.exercise_id,
       name: item.name,
-      gifUrl: item.gif_url,
+      gifUrl: item.gif_url ?? item.gifurl,
       bodypart: item.muscle_group, // Map from muscle_group to bodypart for the component
       equipment: item.equipment,
       tier: item.tier,
@@ -132,18 +120,20 @@ export const useExerciseLibraryQuery = (
         isFirstFetchRef.current = false;
       }
       
-      return fetchExercises(muscleGroup, equipmentCategory, isFirstFetch);
+      return fetchExercises(muscleGroup, equipmentCategory, isFirstFetch, signal as AbortSignal);
     },
     enabled: !!muscleGroup, // Only fetch if muscleGroup is selected
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
     gcTime: 5 * 60 * 1000, // Keep in cache for 5 minutes
-    retry: (failureCount, error) => {
-      // Don't retry if query was cancelled
-      if (error?.message === 'Query was cancelled') {
+    retry: (failureCount, error: any) => {
+      // Don't retry if query was cancelled or aborted
+      const name = error?.name || '';
+      const msg = (error?.message || '').toLowerCase();
+      if (error?.message === 'Query was cancelled' || name === 'AbortError' || msg.includes('aborted') || msg.includes('cancelled')) {
         return false;
       }
-      // Retry auth errors up to 3 times
-      if (error?.message === 'Authentication required') {
+      // Retry auth/timeout/network errors up to 3 times
+      if (msg.includes('authentication required') || msg.includes('timed out') || msg.includes('network')) {
         return failureCount < 3;
       }
       // Retry other errors up to 2 times
@@ -156,7 +146,7 @@ export const useExerciseLibraryQuery = (
       return Math.min(baseDelay * (2 ** attemptIndex), maxDelay);
     },
     refetchOnMount: true, // Refetch if data is stale
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnWindowFocus: true, // Refetch on focus to recover after standby
     refetchOnReconnect: true, // Refetch when reconnecting to network
   });
 

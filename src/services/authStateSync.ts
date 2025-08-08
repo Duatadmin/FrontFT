@@ -1,4 +1,6 @@
 import { supabase } from '@/lib/supabase';
+import { waitForSupabaseReady } from '@/utils/supabaseWithTimeout';
+
 import { useProgramStore } from '@/lib/stores/useProgramStore';
 import useDiaryStore from '@/store/useDiaryStore';
 
@@ -9,6 +11,8 @@ import useDiaryStore from '@/store/useDiaryStore';
 export class AuthStateSync {
   private static instance: AuthStateSync;
   private unsubscribe: (() => void) | null = null;
+  private isRefetching = false;
+  private lastRefetchAt = 0;
 
   private constructor() {}
 
@@ -30,18 +34,37 @@ export class AuthStateSync {
 
     console.log('[AuthStateSync] Starting auth state synchronization...');
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, _session) => {
       console.log('[AuthStateSync] Auth event:', event);
 
       switch (event) {
         case 'TOKEN_REFRESHED':
           // Only refetch on token refresh, not on initial sign in
-          console.log('[AuthStateSync] Token refreshed, refetching data...');
-          // Add a small delay to let the new token propagate
-          setTimeout(() => {
-            this.refetchAllStores();
-          }, 500);
+          console.log('[AuthStateSync] Token refreshed, scheduling store refetch after readiness...');
+          // Throttle duplicate refresh bursts
+          if (Date.now() - this.lastRefetchAt < 3000) {
+            console.log('[AuthStateSync] Skipping refetch (throttled)');
+            return;
+          }
+          // Add a small delay to let the new token propagate, then wait for readiness
+          setTimeout(async () => {
+            if (this.isRefetching) {
+              console.warn('[AuthStateSync] Refetch already in progress, skipping');
+              return;
+            }
+            this.isRefetching = true;
+            try {
+              await waitForSupabaseReady(6000);
+              await this.refetchAllStores();
+            } catch (e) {
+              console.warn('[AuthStateSync] Refetch after token refresh encountered an error:', e);
+            } finally {
+              this.isRefetching = false;
+              this.lastRefetchAt = Date.now();
+            }
+          }, 300);
           break;
+
         case 'SIGNED_OUT':
           // Clear store data
           this.clearAllStores();

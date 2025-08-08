@@ -18,12 +18,12 @@ export const useCompletedSessions = (): UseCompletedSessionsResult => {
 
   const query = useQuery({
     queryKey: ['completedSessions', userId],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       console.log('[useCompletedSessions] Fetching with userId:', userId);
       if (!userId) {
         return [];
       }
-      const rows = await fetchCompletedSessions(userId);
+      const rows = await fetchCompletedSessions(userId, { signal: signal as AbortSignal, timeoutMs: 12000 });
       console.log('[useCompletedSessions] Raw rows from Supabase:', rows);
       return rows;
     },
@@ -34,7 +34,13 @@ export const useCompletedSessions = (): UseCompletedSessionsResult => {
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
     enabled: !isLoading && !!userId, // Only fetch when auth is loaded and userId exists
-    retry: 3,
+    retry: (failureCount, error: any) => {
+      const name = error?.name || '';
+      const msg = (error?.message || '').toLowerCase();
+      // Do not retry on aborts/cancellations
+      if (name === 'AbortError' || msg.includes('aborted') || msg.includes('cancelled')) return false;
+      return failureCount < 3;
+    },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 

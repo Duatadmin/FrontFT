@@ -42,8 +42,23 @@ export default defineConfig({
           }
         ]
       },
+      devOptions: {
+        // Ensure SW is not active during Vite dev
+        enabled: false
+      },
       workbox: {
-        maximumFileSizeToCacheInBytes: 3145728 // 3 MB
+        cleanupOutdatedCaches: true,
+        skipWaiting: true,
+        clientsClaim: true,
+        maximumFileSizeToCacheInBytes: 3145728, // 3 MB
+        // Never cache or intercept Supabase traffic
+        runtimeCaching: [
+          { urlPattern: /^https?:\/\/(.+\.)?supabase\.(co|in)\//, handler: 'NetworkOnly', method: 'GET' },
+          { urlPattern: /^https?:\/\/(.+\.)?supabase\.(co|in)\//, handler: 'NetworkOnly', method: 'POST' },
+          { urlPattern: /^https?:\/\/(.+\.)?supabase\.(co|in)\//, handler: 'NetworkOnly', method: 'PUT' },
+          { urlPattern: /^https?:\/\/(.+\.)?supabase\.(co|in)\//, handler: 'NetworkOnly', method: 'PATCH' },
+          { urlPattern: /^https?:\/\/(.+\.)?supabase\.(co|in)\//, handler: 'NetworkOnly', method: 'DELETE' }
+        ]
       }
     })
   ],

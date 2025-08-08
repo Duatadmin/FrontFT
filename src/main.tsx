@@ -46,21 +46,44 @@ if (rootElement) {
               return failureCount < 3;
             },
             retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-            // Refetch on window focus
-            refetchOnWindowFocus: false,
+            // Refetch on window focus (helps recover after standby)
+            refetchOnWindowFocus: true,
             // Consider data stale after 5 minutes
             staleTime: 5 * 60 * 1000,
           },
         },
       });
       
+      // Throttle invalidation on repeated TOKEN_REFRESHED bursts
+      let invalidationInFlight = false;
+      let lastInvalidation = 0;
+      
       // Listen for auth state changes globally and invalidate queries
       supabase.auth.onAuthStateChange((event) => {
         console.log('[main.tsx] Global auth state change:', event);
         if (event === 'TOKEN_REFRESHED') {
-          // Invalidate all queries to refetch with new token
-          console.log('[main.tsx] Token refreshed, invalidating all queries');
-          queryClient.invalidateQueries();
+          // Invalidate all queries to refetch with new token, but wait briefly
+          // to ensure the refreshed session is fully propagated
+          if (invalidationInFlight && Date.now() - lastInvalidation < 3000) {
+            console.log('[main.tsx] Skipping duplicate token refresh handling (throttled)');
+            return;
+          }
+          invalidationInFlight = true;
+          lastInvalidation = Date.now();
+          console.log('[main.tsx] Token refreshed, waiting for session to settle before invalidating queries');
+          setTimeout(async () => {
+            try {
+              const { waitForSupabaseReady } = await import('./utils/supabaseWithTimeout');
+              await waitForSupabaseReady(6000);
+            } catch (e) {
+              console.warn('[main.tsx] waitForSupabaseReady failed or timed out, proceeding to invalidate');
+            } finally {
+              // Avoid overlapping old requests during token switch
+              await queryClient.cancelQueries();
+              await queryClient.invalidateQueries();
+              invalidationInFlight = false;
+            }
+          }, 500);
         } else if (event === 'SIGNED_OUT') {
           // Clear all queries on sign out
           console.log('[main.tsx] User signed out, clearing query cache');
@@ -74,6 +97,18 @@ if (rootElement) {
       
       // Start auth state sync service for Zustand stores
       authStateSync.start();
+
+      // SW kill switch: set VITE_DISABLE_SW=1 to forcibly unregister SW and clear caches
+      if (import.meta.env.VITE_DISABLE_SW === '1' && typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.getRegistrations().then((regs) => {
+          regs.forEach((r) => r.unregister());
+          console.log('[SW] Unregistered all service workers via VITE_DISABLE_SW=1');
+        });
+        if ('caches' in window) {
+          caches.keys().then((keys) => keys.forEach((k) => caches.delete(k)));
+          console.log('[SW] Cleared all CacheStorage entries');
+        }
+      }
 
       ReactDOM.createRoot(rootElement).render(
         <React.StrictMode>

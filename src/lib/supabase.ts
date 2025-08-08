@@ -1,6 +1,11 @@
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient } from '@supabase/supabase-js';
 import Cookies from 'js-cookie';
-import { Database } from './supabase/schema.types'; // Added Database type import
+import type { Database as GenDatabase } from './supabase/schema.types'; // Generated types
+
+// Fix PostgrestVersion type mismatch between generated types and supabase-js
+type DatabaseFixed = Omit<GenDatabase, '__InternalSupabase'> & {
+  __InternalSupabase: { PostgrestVersion: '12' }
+};
 
 // Type definitions (moved from supabaseClient.ts)
 export type TrainingPlan = {
@@ -32,6 +37,48 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error(errorMessage);
 }
 
+// Global fetch wrapper with timeout and no-store to avoid hanging requests after standby
+const DEFAULT_FETCH_TIMEOUT_MS = 12000;
+
+function timeoutFetchFactory(defaultTimeoutMs = DEFAULT_FETCH_TIMEOUT_MS) {
+  return async function timeoutFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutMs = defaultTimeoutMs;
+    const timeoutId = setTimeout(() => {
+      try {
+        const url = typeof input === 'string' ? input : (input as Request).url ?? String(input);
+        console.error(`[supabase:fetch] Aborting request after ${timeoutMs}ms`, url);
+      } catch {}
+      controller.abort();
+    }, timeoutMs);
+
+    // If caller supplied a signal, link it so either aborts the request
+    if (init?.signal) {
+      const externalSignal = init.signal as AbortSignal;
+      if (externalSignal.aborted) {
+        controller.abort();
+      } else {
+        externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+      }
+    }
+
+    try {
+      const finalInit: RequestInit = {
+        ...init,
+        // Merge/override with our combined signal
+        signal: controller.signal,
+        // Avoid returning cached/opaque responses from SW or HTTP cache
+        cache: 'no-store'
+      };
+      return await fetch(input as any, finalInit);
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  };
+}
+
+const timeoutFetch = timeoutFetchFactory();
+
 export const HybridStorage = {
   getItem: (k: string) => Cookies.get(k) ?? (typeof window !== 'undefined' ? window.localStorage.getItem(k) : null),
   setItem: (k: string, v: string) => {
@@ -56,7 +103,7 @@ export const HybridStorage = {
   }
 };
 
-export const supabase: SupabaseClient<Database> = createClient<Database>(
+export const supabase = createClient<DatabaseFixed>(
   supabaseUrl, 
   supabaseAnonKey,
   {
@@ -66,6 +113,10 @@ export const supabase: SupabaseClient<Database> = createClient<Database>(
       autoRefreshToken: true,
       persistSession: true,
       detectSessionInUrl: true,
+    },
+    global: {
+      // Ensure all Supabase requests are time-limited and skip caches
+      fetch: timeoutFetch,
     },
   }
 ); // Typed client

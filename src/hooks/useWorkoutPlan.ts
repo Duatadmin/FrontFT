@@ -25,19 +25,25 @@ export const useWorkoutPlan = (): UseWorkoutPlanResult => { // planId prop remov
 
   const query = useQuery<WorkoutFullViewRow[], Error, WorkoutPlan | null, readonly [string, string | null | undefined]>({
     queryKey: ['userActivePlan', userId] as const, // Updated queryKey
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!userId) {
         // If userId is not available, return an empty array.
         // The query is also disabled via the `enabled` option.
         return [];
       }
       console.log('[useWorkoutPlan] Fetching plan for user:', userId);
-      return fetchPlanRows(userId);
+      return fetchPlanRows(userId, { signal: signal as AbortSignal, timeoutMs: 15000 });
     },
     select: rowsToPlanTree, // Transforms the fetched data
     staleTime: 1000 * 60, // 1 minute
     enabled: !isLoading && !!userId, // Only run the query if auth is loaded and userId is truthy
-    retry: 3,
+    retry: (failureCount, error: any) => {
+      const name = error?.name || '';
+      const msg = (error?.message || '').toLowerCase();
+      // Do not retry on aborts/cancellations
+      if (name === 'AbortError' || msg.includes('aborted') || msg.includes('cancelled')) return false;
+      return failureCount < 3;
+    },
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 

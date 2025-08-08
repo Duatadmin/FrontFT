@@ -1,7 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '@/lib/stores/useUserStore';
-import { supabase } from '@/lib/supabase';
+import { waitForSupabaseReady } from '@/utils/supabaseWithTimeout';
 
 interface SubscriptionGateProps {
   children: ReactNode;
@@ -38,11 +38,9 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
         return;
       }
       
-      // First, validate that we have a valid session
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError || !sessionData.session) {
-        console.error('[SubscriptionGate] No valid session, redirecting to login', sessionError);
-        navigate('/login', { replace: true });
+      // If not authenticated, let route guards handle redirection; avoid calling getSession here
+      if (!isAuthenticated || !user) {
+        console.log('[SubscriptionGate] Not authenticated; skipping subscription check');
         return;
       }
       
@@ -70,32 +68,15 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
         return;
       }
 
-      // The ProtectedRoute component will handle redirection for unauthenticated users,
-      // so we just need to ensure we don't run the subscription check if there's no user.
-      if (!isAuthenticated || !user) {
-        return;
-      }
-
-
       const startTime = Date.now();
       
       // Check if we already have a valid subscription status in the store
-      // BUT also validate the session is still valid
       if (subscriptionStatus && subscriptionStatus.isActive) {
-        // Double-check the session is still valid before trusting cached status
-        const { data: sessionCheck } = await supabase.auth.getSession();
-        if (!sessionCheck.session) {
-          console.warn('[SubscriptionGate] Cached active status but session invalid, clearing cache');
-          // Clear the cache and force recheck
-          sessionStorage.removeItem('subscription_status');
-          useUserStore.setState({ subscriptionStatus: null });
-        } else {
-          console.log('[SubscriptionGate] Using existing active subscription status from store', {
-            status: subscriptionStatus,
-            userId: user.id
-          });
-          return;
-        }
+        console.log('[SubscriptionGate] Using existing active subscription status from store', {
+          status: subscriptionStatus,
+          userId: user.id
+        });
+        return;
       }
       
       // Mark that we've initiated a check globally
@@ -112,6 +93,8 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
       });
 
       try {
+        // Wait briefly for Supabase readiness to avoid race after token refresh
+        await waitForSupabaseReady(3000);
         // Try to use the store method first (which includes caching)
         await checkSubscription();
         
