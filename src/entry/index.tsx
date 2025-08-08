@@ -4,7 +4,7 @@ import { Navigate, useNavigate } from 'react-router-dom';
 // Navigate component is used for redirection in ProtectedRoute, useNavigate for LoginPage.
 import { motion } from "framer-motion"; // For SplashScreen
 // Session is no longer directly used here
-import { supabase } from "../lib/supabase/browser"; // Import the new browser Supabase client
+import { supabase } from "../lib/supabase"; // Use the main Supabase client
 
 
 

@@ -113,15 +113,14 @@ export default function ProfileSettingsPage() {
 
       // Keep auth metadata in sync for display name
       if (payload.user_name) {
-        const { data: upd, error: authErr } = await supabase.auth.updateUser({
+        const { error: authErr } = await supabase.auth.updateUser({
           data: { full_name: payload.user_name },
         });
         if (authErr) {
           console.warn('[ProfileSettings] Failed to update auth metadata:', authErr);
-        } else if (upd?.user) {
-          // Update zustand store user so UI reflects immediately
-          useUserStore.setState({ user: upd.user });
         }
+        // Don't manually update the store - let the auth listener handle it
+        // This prevents race conditions and state conflicts
       }
 
       toast.success('Profile updated');

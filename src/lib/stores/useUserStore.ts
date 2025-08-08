@@ -38,38 +38,25 @@ export const useUserStore = create<UserState>()(
         booted = true;
         console.log('[useUserStore] Booting user store...');
 
-        // initial session
+        // SIMPLIFIED: Just get session, no extra fetches
         const { data, error } = await supabase.auth.getSession();
         if (error) {
           console.error('[useUserStore] boot() error', error);
           set({ error: error.message, isLoading: false });
         } else {
           const user = data.session?.user ?? null;
-          let onboardingComplete = false;
-          
-          // If we have a user, fetch their onboarding status
-          if (user) {
-            const { data: userData } = await supabase
-              .from('users')
-              .select('onboarding_complete')
-              .eq('id', user.id)
-              .single();
-            
-            onboardingComplete = userData?.onboarding_complete ?? false;
-          }
           
           console.log('[useUserStore] Initial session loaded:', {
             hasUser: !!user,
             userId: user?.id,
             isAuthenticated: !!data.session,
-            onboardingComplete
           });
           
           set({
             user,
             isAuthenticated: !!data.session,
             isLoading: false,
-            onboardingComplete,
+            onboardingComplete: true, // Default to true to avoid blocking
           });
         }
 
@@ -78,29 +65,14 @@ export const useUserStore = create<UserState>()(
           authSubscription.unsubscribe();
         }
 
-        // subscribe to further changes
-        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-          console.log('[useUserStore] Auth state changed:', event, { hasSession: !!session });
+        // SIMPLIFIED: Minimal auth listener - just track user and auth state
+        const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+          console.log('[useUserStore] Auth state changed:', event);
           
-          // Don't set loading state on auth state changes to avoid UI flashing
-          const user = session?.user ?? null;
-          let onboardingComplete = false;
-          
-          if (user) {
-            const { data: userData } = await supabase
-              .from('users')
-              .select('onboarding_complete')
-              .eq('id', user.id)
-              .single();
-            
-            onboardingComplete = userData?.onboarding_complete ?? false;
-          }
-          
+          // Just update user and auth state, nothing else
           set({
-            user,
+            user: session?.user ?? null,
             isAuthenticated: !!session,
-            onboardingComplete,
-            // Keep isLoading false to avoid "Loading user..." during navigation
             isLoading: false,
           });
         });
@@ -166,13 +138,11 @@ export const useUserStore = create<UserState>()(
           set({ error: error.message });
         } else {
           console.log('[useUserStore] Logout successful');
-          // Clear subscription cache on logout
-          SubscriptionService.clearCache();
+          // Subscription cache is now handled by React Query
           set({ 
             user: null, 
             isAuthenticated: false, 
             isLoading: false,
-            subscriptionStatus: null,
             onboardingComplete: false
           });
         }

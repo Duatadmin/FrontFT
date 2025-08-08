@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/browser';
+import { supabase } from '@/lib/supabase';
 import { TrendingUp, Trophy, Loader, AlertTriangle, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   ResponsiveContainer,

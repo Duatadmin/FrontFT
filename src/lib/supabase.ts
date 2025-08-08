@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import Cookies from 'js-cookie';
 import type { Database as GenDatabase } from './supabase/schema.types'; // Generated types
 
 // Fix PostgrestVersion type mismatch between generated types and supabase-js
@@ -40,45 +39,20 @@ if (!supabaseUrl || !supabaseAnonKey) {
 // Removed timeoutFetch wrapper - it was causing AbortController memory leaks
 // Supabase has its own timeout and retry logic built in
 
-export const HybridStorage = {
-  getItem: (k: string) => Cookies.get(k) ?? (typeof window !== 'undefined' ? window.localStorage.getItem(k) : null),
-  setItem: (k: string, v: string) => {
-    Cookies.set(k, v, { sameSite: 'Lax', secure: true });
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.setItem(k, v);
-      } catch (error) {
-        console.warn(`[HybridStorage] Error setting localStorage item ${k}:`, error);
-      }
-    }
-  },
-  removeItem: (k: string) => { 
-    Cookies.remove(k); 
-    if (typeof window !== 'undefined') {
-      try {
-        window.localStorage.removeItem(k); 
-      } catch (error) {
-        console.warn(`[HybridStorage] Error removing localStorage item ${k}:`, error);
-      }
-    }
-  }
-};
+// Removed HybridStorage - using default localStorage
 
+// Create Supabase client with minimal configuration
+// No singleton pattern, no complex storage, just basics
 export const supabase = createClient<DatabaseFixed>(
   supabaseUrl, 
   supabaseAnonKey,
   {
     auth: {
-      storage: HybridStorage,
-      flowType: 'pkce',
-      autoRefreshToken: true,
       persistSession: true,
-      detectSessionInUrl: true,
-    },
-    // Removed custom fetch wrapper - using Supabase's default fetch
-    // This fixes the AbortController memory leak that was causing degradation over time
+      autoRefreshToken: true,
+    }
   }
-); // Typed client
+);
 
 // Expose Supabase client globally in development for easier debugging
 if (import.meta.env.MODE !== 'production' && typeof window !== 'undefined') {
@@ -105,71 +79,10 @@ if (typeof window !== 'undefined') {
   console.log('[DevHelper] __showSession() is now available in the console.');
 }
 
-// Helper to get the current user ID
+// Simple helper to get the current user ID
 export const getCurrentUserId = async (): Promise<string | null> => {
-  try {
-    // First try to get from the session directly
-    const { data, error } = await supabase.auth.getSession();
-    
-    if (error) {
-      // Check if it's a network/temp error vs auth error
-      if (error.message?.includes('network') || error.message?.includes('fetch')) {
-        console.warn('[getCurrentUserId] Network error getting session, will retry:', error);
-        // Try once more after a brief delay
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        const retry = await supabase.auth.getSession();
-        if (retry.data?.session?.user?.id) {
-          return retry.data.session.user.id;
-        }
-      }
-      console.error('[getCurrentUserId] Error getting session:', error);
-      // Clear subscription cache on auth errors
-      const { default: useUserStore } = await import('./stores/useUserStore');
-      const store = useUserStore.getState();
-      if (store.subscriptionStatus?.isActive) {
-        console.warn('[getCurrentUserId] Clearing subscription status due to auth error');
-        sessionStorage.removeItem('subscription_status');
-        store.subscriptionStatus = null;
-      }
-      return null;
-    }
-    
-    // If no session, try to refresh it (session might have expired)
-    if (!data.session) {
-      console.log('[getCurrentUserId] No session found, attempting refresh...');
-      const { data: refreshData } = await supabase.auth.refreshSession();
-      if (refreshData.session?.user?.id) {
-        console.log('[getCurrentUserId] Session refreshed successfully');
-        return refreshData.session.user.id;
-      }
-      // Clear subscription cache if no valid session
-      const { default: useUserStore } = await import('./stores/useUserStore');
-      const store = useUserStore.getState();
-      if (store.subscriptionStatus?.isActive) {
-        console.warn('[getCurrentUserId] Clearing subscription status - no valid session');
-        sessionStorage.removeItem('subscription_status');
-        store.subscriptionStatus = null;
-      }
-      return null;
-    }
-    
-    const userId = data.session.user.id;
-    
-    // Sync with store if needed
-    const { default: useUserStore } = await import('./stores/useUserStore');
-    const store = useUserStore.getState();
-    
-    if (!store.user || store.user.id !== userId) {
-      console.log('[getCurrentUserId] Syncing store with session user');
-      store.user = data.session.user;
-      store.isAuthenticated = true;
-    }
-    
-    return userId;
-  } catch (err) {
-    console.error('[getCurrentUserId] Unexpected error:', err);
-    return null;
-  }
+  const { data } = await supabase.auth.getSession();
+  return data.session?.user?.id ?? null;
 };
 
 // Helper to check if required tables exist in the database

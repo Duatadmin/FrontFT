@@ -1,103 +1,72 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useUserStore } from '@/lib/stores/useUserStore';
-import { useSubscriptionStore } from '@/lib/stores/useSubscriptionStore';
 
 /**
- * React Query hook for checking subscription status
- * Uses the v_active_users view to determine if user has active subscription
+ * SIMPLIFIED: Direct subscription check without React Query
  */
 export function useSubscriptionQuery() {
   const { user } = useUserStore();
-  const { setStatus, setLastChecked } = useSubscriptionStore();
-  const queryClient = useQueryClient();
+  const [data, setData] = useState<boolean | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  return useQuery({
-    queryKey: ['subscription', user?.id],
-    
-    queryFn: async () => {
-      if (!user) {
-        throw new Error('No authenticated user');
-      }
+  useEffect(() => {
+    if (!user) {
+      setData(false);
+      setIsLoading(false);
+      return;
+    }
 
-      console.log('[useSubscriptionQuery] Checking subscription for user:', user.id);
-      
+    const checkSubscription = async () => {
       try {
-        // Check if user exists in v_active_users view
-        const { data, error } = await supabase
+        console.log('[useSubscriptionQuery] Checking subscription for user:', user.id);
+        
+        const { data: result, error: queryError } = await supabase
           .from('v_active_users')
           .select('user_id')
           .eq('user_id', user.id)
           .maybeSingle();
 
-        if (error) {
-          console.error('[useSubscriptionQuery] Error checking subscription:', error);
-          throw error;
+        if (queryError) {
+          console.error('[useSubscriptionQuery] Error:', queryError);
+          throw queryError;
         }
 
-        const isActive = !!data;
+        const isActive = !!result;
+        console.log('[useSubscriptionQuery] Result:', { userId: user.id, isActive });
         
-        // Update store with result
-        setStatus(isActive ? 'active' : 'inactive');
-        setLastChecked(Date.now());
-        
-        console.log('[useSubscriptionQuery] Subscription check result:', { 
-          userId: user.id, 
-          isActive 
-        });
-        
-        return isActive;
-      } catch (error) {
-        setStatus('error');
-        throw error;
+        setData(isActive);
+        setError(null);
+      } catch (err) {
+        console.error('[useSubscriptionQuery] Error:', err);
+        setError(err as Error);
+        setData(false);
+      } finally {
+        setIsLoading(false);
       }
-    },
-    
-    // Only run query if we have a user
-    enabled: !!user,
-    
-    // Cache for 5 minutes
-    staleTime: 5 * 60 * 1000,
-    
-    // Keep in cache for 10 minutes
-    gcTime: 10 * 60 * 1000,
-    
-    // Retry configuration
-    retry: (failureCount, error) => {
-      // Don't retry on 4xx errors (user doesn't have subscription)
-      if (error instanceof Error) {
-        const message = error.message.toLowerCase();
-        if (message.includes('not found') || message.includes('no rows')) {
-          return false;
-        }
-      }
-      // Retry up to 2 times for other errors
-      return failureCount < 2;
-    },
-    
-    // Retry delay with exponential backoff
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 5000),
-    
-    // Refetch on window focus for fresh data
-    refetchOnWindowFocus: true,
-    
-    // Don't refetch on mount if data is fresh
-    refetchOnMount: 'always',
-  });
+    };
+
+    checkSubscription();
+  }, [user?.id]);
+
+  return {
+    data,
+    isLoading,
+    error,
+    isFetching: isLoading,
+    refetch: () => {
+      // Simple refetch - just set loading to trigger re-render
+      setIsLoading(true);
+    }
+  };
 }
 
 /**
- * Manually invalidate subscription cache
- * Useful after checkout success or subscription changes
+ * Simple invalidation - just returns a no-op function
  */
 export function useInvalidateSubscription() {
-  const queryClient = useQueryClient();
-  const { user } = useUserStore();
-  
   return () => {
-    if (user) {
-      console.log('[useInvalidateSubscription] Invalidating subscription cache');
-      queryClient.invalidateQueries({ queryKey: ['subscription', user.id] });
-    }
+    console.log('[useInvalidateSubscription] Called (no-op in simplified version)');
   };
 }

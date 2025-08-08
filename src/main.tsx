@@ -50,8 +50,11 @@ if (rootElement) {
               return failureCount < 3;
             },
             retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-            // Refetch on window focus (helps recover after standby)
-            refetchOnWindowFocus: true,
+            // Disable aggressive refetching at global level to prevent query pile-up
+            // Individual queries can opt-in if needed
+            refetchOnWindowFocus: false,
+            refetchOnMount: false,
+            refetchOnReconnect: false,
             // Consider data stale after 5 minutes
             staleTime: 5 * 60 * 1000,
             // Keep cache for 10 minutes
@@ -60,23 +63,7 @@ if (rootElement) {
         },
       });
       
-      // Single global auth listener - minimal and selective
-      supabase.auth.onAuthStateChange((event) => {
-        console.log('[main.tsx] Auth event:', event);
-        
-        // Only handle critical auth events
-        if (event === 'SIGNED_OUT') {
-          // Clear all queries on sign out
-          queryClient.clear();
-        } else if (event === 'SIGNED_IN') {
-          // Only invalidate auth-sensitive queries on sign in
-          queryClient.invalidateQueries({ queryKey: ['subscription'] });
-          queryClient.invalidateQueries({ queryKey: ['user'] });
-        }
-        // REMOVED: TOKEN_REFRESHED handling
-        // Supabase automatically uses the new token for subsequent requests
-        // No need to invalidate all queries on token refresh
-      });
+      // Remove all auth listeners from here - let useUserStore handle it
       
       // Import and boot the user store first
       const { useUserStore } = await import('./lib/stores/useUserStore');
@@ -99,16 +86,14 @@ if (rootElement) {
       }
 
       ReactDOM.createRoot(rootElement).render(
-        <React.StrictMode>
-          <QueryClientProvider client={queryClient}>
-            <BrowserRouter>
-              {/* DashboardBackground wraps entire app for consistent styling */}
-              <DashboardBackground>
-                <AppRouter />
-              </DashboardBackground>
-            </BrowserRouter>
-          </QueryClientProvider>
-        </React.StrictMode>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            {/* DashboardBackground wraps entire app for consistent styling */}
+            <DashboardBackground>
+              <AppRouter />
+            </DashboardBackground>
+          </BrowserRouter>
+        </QueryClientProvider>
       );
     } catch (error) {
       console.error('Failed to initialize the application:', error);
