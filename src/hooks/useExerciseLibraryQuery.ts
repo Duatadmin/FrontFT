@@ -1,16 +1,12 @@
-import { useEffect, useRef } from 'react';
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { ExerciseCardProps } from '@/components/ExerciseCard';
 import { EquipmentCategory } from '@/components/EquipmentFilter';
-import { supabaseQueryWithTimeout } from '@/utils/supabaseWithTimeout';
-import type { Database } from '@/lib/supabase/schema.types';
 
 const fetchExercises = async (
   muscleGroup: string | null, 
-  equipmentCategory: EquipmentCategory | null,
-  isFirstFetch: boolean = false,
-  abortSignal?: AbortSignal
+  equipmentCategory: EquipmentCategory | null
 ): Promise<ExerciseCardProps[]> => {
   try {
     if (!muscleGroup) {
@@ -21,45 +17,22 @@ const fetchExercises = async (
     console.log('[useExerciseLibraryQuery] Starting fetch for:', { 
       muscleGroup, 
       equipmentCategory,
-      timestamp: new Date().toISOString(),
-      isFirstFetch
+      timestamp: new Date().toISOString()
     });
 
-    // This table is publicly readable; avoid blocking on auth/session readiness.
-    // If the backend ever restricts it, the query will fail fast and surface an error.
-    console.log('[useExerciseLibraryQuery] Proceeding without auth gating');
-
-    // Build the query function
+    // Build and execute the query directly
     console.log('[useExerciseLibraryQuery] Building query...');
-    const queryBuilder = (timeoutSignal: AbortSignal) => {
-      let query = supabase
-        .from('exrcwiki')
-        .select('*')
-        .eq('muscle_group', muscleGroup);
+    let query = supabase
+      .from('exrcwiki')
+      .select('*')
+      .eq('muscle_group', muscleGroup);
 
-      if (equipmentCategory) {
-        query = query.eq('equipment_category', equipmentCategory);
-      }
+    if (equipmentCategory) {
+      query = query.eq('equipment_category', equipmentCategory);
+    }
 
-      // Allow cancellation from our timeout as well as external signal via supabaseQueryWithTimeout
-      if ('abortSignal' in query && timeoutSignal) {
-        // @ts-ignore - supabase-js v2 supports abortSignal on PostgrestQueryBuilder
-        query = query.abortSignal(timeoutSignal);
-      }
-
-      console.log('[useExerciseLibraryQuery] Executing Supabase query...');
-      return query;
-    };
-
-    // Use longer timeout for first fetch (increased for better reliability)
-    const timeoutMs = isFirstFetch ? 30000 : 20000;
-    
-    // Execute query with timeout using the utility
-    const { data, error } = await supabaseQueryWithTimeout<Database['public']['Tables']['exrcwiki']['Row'][]>(
-      queryBuilder,
-      timeoutMs,
-      abortSignal
-    );
+    console.log('[useExerciseLibraryQuery] Executing Supabase query...');
+    const { data, error } = await query;
 
     if (error) {
       console.error('[useExerciseLibraryQuery] Supabase error:', error);
@@ -95,32 +68,17 @@ export const useExerciseLibraryQuery = (
   muscleGroup: string | null, 
   equipmentCategory: EquipmentCategory | null
 ) => {
-  // Track if this is the first fetch for this query key
-  const isFirstFetchRef = useRef(true);
-  
   // Use a unique query key for each combination
   const queryKey = ['exercises', muscleGroup, equipmentCategory] as const;
   
   const query = useQuery({
     queryKey,
-    queryFn: async ({ signal }) => {
-      // Pass abort signal to handle query cancellation
+    queryFn: async () => {
       if (!muscleGroup) {
         return [];
       }
       
-      // Check if query was cancelled
-      if (signal?.aborted) {
-        throw new Error('Query was cancelled');
-      }
-      
-      // Determine if this is the first fetch
-      const isFirstFetch = isFirstFetchRef.current;
-      if (isFirstFetch) {
-        isFirstFetchRef.current = false;
-      }
-      
-      return fetchExercises(muscleGroup, equipmentCategory, isFirstFetch, signal as AbortSignal);
+      return fetchExercises(muscleGroup, equipmentCategory);
     },
     enabled: !!muscleGroup, // Only fetch if muscleGroup is selected
     staleTime: 30 * 1000, // Consider data fresh for 30 seconds
@@ -149,11 +107,6 @@ export const useExerciseLibraryQuery = (
     refetchOnWindowFocus: true, // Refetch on focus to recover after standby
     refetchOnReconnect: true, // Refetch when reconnecting to network
   });
-
-  // Reset isFirstFetchRef when query key changes
-  useEffect(() => {
-    isFirstFetchRef.current = true;
-  }, [muscleGroup, equipmentCategory]);
 
   // Log the query state for debugging
   useEffect(() => {

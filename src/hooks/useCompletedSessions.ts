@@ -23,7 +23,7 @@ export const useCompletedSessions = (): UseCompletedSessionsResult => {
       if (!userId) {
         return [];
       }
-      const rows = await fetchCompletedSessions(userId, { signal: signal as AbortSignal, timeoutMs: 12000 });
+      const rows = await fetchCompletedSessions(userId);
       console.log('[useCompletedSessions] Raw rows from Supabase:', rows);
       return rows;
     },

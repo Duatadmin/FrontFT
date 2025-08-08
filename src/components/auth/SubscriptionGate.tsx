@@ -1,7 +1,6 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '@/lib/stores/useUserStore';
-import { waitForSupabaseReady } from '@/utils/supabaseWithTimeout';
 
 interface SubscriptionGateProps {
   children: ReactNode;
@@ -93,8 +92,6 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
       });
 
       try {
-        // Wait briefly for Supabase readiness to avoid race after token refresh
-        await waitForSupabaseReady(3000);
         // Try to use the store method first (which includes caching)
         await checkSubscription();
         

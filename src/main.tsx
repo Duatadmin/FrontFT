@@ -78,17 +78,10 @@ if (rootElement) {
           lastInvalidation = Date.now();
           console.log('[main.tsx] Token refreshed, waiting for session to settle before invalidating queries');
           setTimeout(async () => {
-            try {
-              const { waitForSupabaseReady } = await import('./utils/supabaseWithTimeout');
-              await waitForSupabaseReady(6000);
-            } catch (e) {
-              console.warn('[main.tsx] waitForSupabaseReady failed or timed out, proceeding to invalidate');
-            } finally {
-              // Invalidate queries to refetch with new token
-              // Don't cancel queries - let them finish naturally
-              await queryClient.invalidateQueries();
-              invalidationInFlight = false;
-            }
+            // Wait a bit for the new token to propagate
+            // Then invalidate queries to refetch with new token
+            await queryClient.invalidateQueries();
+            invalidationInFlight = false;
           }, 500);
         } else if (event === 'SIGNED_OUT') {
           // Clear all queries on sign out

@@ -1,5 +1,4 @@
 import { supabase } from '@/lib/supabase';
-import { waitForSupabaseReady } from '@/utils/supabaseWithTimeout';
 
 import { useProgramStore } from '@/lib/stores/useProgramStore';
 import useDiaryStore from '@/store/useDiaryStore';
@@ -54,7 +53,7 @@ export class AuthStateSync {
             }
             this.isRefetching = true;
             try {
-              await waitForSupabaseReady(6000);
+              // Wait a bit for token to propagate then refetch stores
               await this.refetchAllStores();
             } catch (e) {
               console.warn('[AuthStateSync] Refetch after token refresh encountered an error:', e);

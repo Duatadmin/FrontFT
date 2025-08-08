@@ -32,7 +32,7 @@ export const useWorkoutPlan = (): UseWorkoutPlanResult => { // planId prop remov
         return [];
       }
       console.log('[useWorkoutPlan] Fetching plan for user:', userId);
-      return fetchPlanRows(userId, { signal: signal as AbortSignal, timeoutMs: 15000 });
+      return fetchPlanRows(userId);
     },
     select: rowsToPlanTree, // Transforms the fetched data
     staleTime: 1000 * 60, // 1 minute

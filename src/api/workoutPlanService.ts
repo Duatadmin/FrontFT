@@ -1,6 +1,5 @@
 import { supabase } from '@/lib/supabase';
 import { Database } from '@/lib/database.types';
-import { supabaseQueryWithTimeout } from '@/utils/supabaseWithTimeout';
 
 // Define a type for a single row from the workout_full_view
 // This should align with the columns in your docs/plan_full_view.md
@@ -13,39 +12,20 @@ export type WorkoutFullViewRow = Database['public']['Views']['workout_full_view'
  * @throws Will throw an error if the Supabase query fails.
  */
 export const fetchPlanRows = async (
-  userId: string,
-  options?: { signal?: AbortSignal; timeoutMs?: number }
+  userId: string
 ): Promise<WorkoutFullViewRow[]> => {
   if (!userId) {
     console.error('fetchPlanRows: userId is required');
-    // Consider throwing an error or returning a more specific error object
-    // depending on how TanStack Query and the calling code should handle this.
     return [];
   }
 
   console.log('[fetchPlanRows] Starting fetch for userId:', userId);
-  
-  const { signal, timeoutMs } = options ?? {};
 
-  const queryBuilder = (timeoutSignal: AbortSignal) => {
-    let query = supabase
-      .from('workout_full_view')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('plan_status', 'active'); // Assuming 'active' is the status for the current plan
-    // Attach abort signal
-    if ('abortSignal' in query && timeoutSignal) {
-      // @ts-ignore supabase-js v2 supports abortSignal on PostgrestQueryBuilder
-      query = query.abortSignal(timeoutSignal);
-    }
-    return query;
-  };
-
-  const { data, error } = await supabaseQueryWithTimeout<WorkoutFullViewRow[]>(
-    queryBuilder,
-    timeoutMs ?? 30000, // Increased from 12s to 30s for better reliability
-    signal
-  );
+  const { data, error } = await supabase
+    .from('workout_full_view')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('plan_status', 'active'); // Assuming 'active' is the status for the current plan
 
   if (error) {
     console.error('[fetchPlanRows] Supabase error:', {
@@ -80,35 +60,19 @@ export const fetchPlanRows = async (
  * @throws Will throw an error if the Supabase query fails.
  */
 export const fetchCompletedSessions = async (
-  userId: string,
-  options?: { signal?: AbortSignal; timeoutMs?: number }
+  userId: string
 ): Promise<WorkoutFullViewRow[]> => {
   if (!userId) {
     console.error('fetchCompletedSessions: userId is required');
     return [];
   }
 
-  const { signal, timeoutMs } = options ?? {};
-
-  const queryBuilder = (timeoutSignal: AbortSignal) => {
-    let query = supabase
-      .from('workout_full_view')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('session_completed', true)
-      .order('session_date', { ascending: false });
-    if ('abortSignal' in query && timeoutSignal) {
-      // @ts-ignore
-      query = query.abortSignal(timeoutSignal);
-    }
-    return query;
-  };
-
-  const { data, error } = await supabaseQueryWithTimeout<WorkoutFullViewRow[]>(
-    queryBuilder,
-    timeoutMs ?? 30000, // Increased from 12s to 30s for better reliability
-    signal
-  );
+  const { data, error } = await supabase
+    .from('workout_full_view')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('session_completed', true)
+    .order('session_date', { ascending: false });
 
   if (error) {
     console.error('Error fetching completed sessions for userId:', userId, error);
@@ -129,8 +93,7 @@ export const fetchCompletedSessions = async (
 export const fetchMonthlySessions = async (
   userId: string,
   year: number,
-  month: number,
-  options?: { signal?: AbortSignal; timeoutMs?: number }
+  month: number
 ): Promise<WorkoutFullViewRow[]> => {
   if (!userId) {
     console.error('fetchMonthlySessions: userId is required');
@@ -141,29 +104,14 @@ export const fetchMonthlySessions = async (
   const startDate = new Date(year, month, 1).toISOString();
   const endDate = new Date(year, month + 1, 0).toISOString();
 
-  const { signal, timeoutMs } = options ?? {};
-
-  const queryBuilder = (timeoutSignal: AbortSignal) => {
-    let query = supabase
-      .from('workout_full_view')
-      .select('*')
-      .eq('user_id', userId)
-      .eq('session_completed', true)
-      .gte('session_date', startDate)
-      .lte('session_date', endDate)
-      .order('session_date', { ascending: true });
-    if ('abortSignal' in query && timeoutSignal) {
-      // @ts-ignore
-      query = query.abortSignal(timeoutSignal);
-    }
-    return query;
-  };
-
-  const { data, error } = await supabaseQueryWithTimeout<WorkoutFullViewRow[]>(
-    queryBuilder,
-    timeoutMs ?? 30000, // Increased from 12s to 30s for better reliability
-    signal
-  );
+  const { data, error } = await supabase
+    .from('workout_full_view')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('session_completed', true)
+    .gte('session_date', startDate)
+    .lte('session_date', endDate)
+    .order('session_date', { ascending: true });
 
   if (error) {
     console.error(`Error fetching sessions for ${year}-${month + 1} for userId:`, userId, error);
