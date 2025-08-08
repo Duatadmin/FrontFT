@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import ExerciseCard from '@/components/ExerciseCard';
-import { useExerciseLibrary } from '@/hooks/useExerciseLibrary';
+import { useExerciseLibraryQuery } from '@/hooks/useExerciseLibraryQuery';
 import MuscleGroupSelector from '@/components/MuscleGroupSelector';
 import EquipmentFilter, { EquipmentCategory } from '@/components/EquipmentFilter';
 import { ArrowLeft } from 'lucide-react';
@@ -14,7 +14,13 @@ const ExerciseLibraryPage: React.FC = () => {
     () => (searchParams.get('equipment') as EquipmentCategory) || null
   );
   const [selectedExerciseId, setSelectedExerciseId] = useState<string | null>(null); // State for selected exercise ID
-  const { exercises, loading, error } = useExerciseLibrary(selectedMuscleGroup, selectedEquipmentCategory);
+  
+  // Reset equipment category when muscle group changes
+  useEffect(() => {
+    setSelectedEquipmentCategory(null);
+  }, [selectedMuscleGroup]);
+  
+  const { exercises, loading, error } = useExerciseLibraryQuery(selectedMuscleGroup, selectedEquipmentCategory);
   useEffect(() => {
     const newSearchParams = new URLSearchParams(searchParams);
     if (selectedEquipmentCategory) {
@@ -118,17 +124,29 @@ const ExerciseLibraryPage: React.FC = () => {
 
           {loading && (
             <div className="flex justify-center items-center h-64">
-              <p className="text-neutral-400">Loading exercises...</p>
+              <div className="flex flex-col items-center gap-2">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-lime-400"></div>
+                <p className="text-neutral-400">Loading exercises...</p>
+              </div>
             </div>
           )}
 
           {error && (
             <div className="flex flex-col items-center justify-center h-64">
-              <p className="text-red-500 text-lg">Error: {error}</p>
+              <p className="text-red-500 text-lg">
+                {error.includes('timeout') ? 'Connection timeout' : `Error: ${error}`}
+              </p>
               <p className="text-neutral-400 mt-2">
-              Could not fetch exercises for {selectedMuscleGroup}
-              {selectedEquipmentCategory ? ` with ${selectedEquipmentCategory}` : ''}. Please try again.
-            </p>
+                {error.includes('timeout') 
+                  ? 'The request took too long. Please refresh the page and try again.'
+                  : `Could not fetch exercises for ${selectedMuscleGroup}${selectedEquipmentCategory ? ` with ${selectedEquipmentCategory}` : ''}. Please try again.`}
+              </p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-4 px-4 py-2 bg-lime-500 text-black rounded-lg hover:bg-lime-400 transition-colors"
+              >
+                Refresh Page
+              </button>
             </div>
           )}
 

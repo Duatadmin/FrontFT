@@ -66,7 +66,10 @@ export interface WorkoutPlan {
 // -------------------------------------------------------------------------------------
 
 export const rowsToPlanTree = (rows: WorkoutFullViewRow[] | null | undefined): WorkoutPlan | null => {
+  console.log('[rowsToPlanTree] Starting transformation with rows:', rows?.length);
+  
   if (!rows || rows.length === 0) {
+    console.log('[rowsToPlanTree] No rows to transform, returning null');
     return null;
   }
 
@@ -74,9 +77,19 @@ export const rowsToPlanTree = (rows: WorkoutFullViewRow[] | null | undefined): W
   // All rows should belong to the same plan for this function.
   const firstRowPlanId = rows[0]?.plan_id;
   if (!firstRowPlanId) {
-      console.warn('rowsToPlanTree: No plan_id found in the first row or rows array is invalid.');
+      console.warn('[rowsToPlanTree] No plan_id found in the first row or rows array is invalid.');
       return null;
   }
+
+  console.log('[rowsToPlanTree] Creating plan with ID:', firstRowPlanId);
+  console.log('[rowsToPlanTree] First row data:', {
+    planId: rows[0]?.plan_id,
+    userId: rows[0]?.user_id,
+    splitType: rows[0]?.split_type,
+    goal: rows[0]?.goal,
+    level: rows[0]?.level,
+    planStatus: rows[0]?.plan_status
+  });
 
   const plan: WorkoutPlan = {
     planId: firstRowPlanId,
@@ -177,6 +190,14 @@ export const rowsToPlanTree = (rows: WorkoutFullViewRow[] | null | undefined): W
         exercise.sets.sort((a, b) => (a.setNo ?? 0) - (b.setNo ?? 0));
       });
     });
+  });
+
+  console.log('[rowsToPlanTree] Transformation complete:', {
+    planId: plan.planId,
+    weeksCount: plan.weeks.length,
+    totalSessions: plan.weeks.reduce((acc, w) => acc + w.sessions.length, 0),
+    totalExercises: plan.weeks.reduce((acc, w) => 
+      acc + w.sessions.reduce((acc2, s) => acc2 + s.exercises.length, 0), 0)
   });
 
   return plan;

@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -17,8 +17,7 @@ import {
   LogIn,
   TrendingUp // Added for Analytics icon
 } from 'lucide-react';
-import { supabase } from '../../lib/supabase'; // Corrected path
-import type { User, AuthChangeEvent, Session } from '@supabase/supabase-js';
+import { useUserStore } from '../../lib/stores/useUserStore'; // Use global user store
 
 // Track which modules have been prefetched to prevent redundant fetches
 const prefetchedModules = new Set<string>();
@@ -100,39 +99,21 @@ const SidebarLink: React.FC<SidebarLinkProps> = ({
 const Sidebar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const [user, setUser] = useState<User | null>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  
+  // Use global user store instead of local state
+  const user = useUserStore((state) => state.user);
+  const isLoading = useUserStore((state) => state.isLoading);
+  const logout = useUserStore((state) => state.logout);
 
-  useEffect(() => {
-    const fetchUserSession = async () => {
-      setLoadingUser(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-      setLoadingUser(false);
-    };
-
-    fetchUserSession();
-
-    const { data: { subscription: authListener } } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
-      setUser(session?.user ?? null);
-      setLoadingUser(false);
-    });
-
-    return () => {
-      authListener?.unsubscribe();
-    };
-  }, []);
-
-  const handleLogout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      console.error('Error logging out:', error.message);
+  const handleLogout = useCallback(async () => {
+    try {
+      await logout();
+      navigate('/login'); // Navigate to login page after logout
+    } catch (error) {
+      console.error('Error logging out:', error);
       // TODO: Show toast notification for error
-    } else {
-      setUser(null); // Clear user state immediately
-      navigate('/login'); // Navigate to login page
     }
-  };
+  }, [logout, navigate]);
 
   const getAvatarUrl = () => {
     if (user?.user_metadata?.avatar_url) {
@@ -243,7 +224,7 @@ const Sidebar: React.FC = () => {
       
       {/* User Account */}
       <div className="mt-auto p-4 border-t border-border-light">
-        {loadingUser ? (
+        {isLoading ? (
           <div className="flex items-center justify-center h-[56px]">
             <p className="text-sm text-text-secondary animate-pulse">Loading user...</p>
           </div>

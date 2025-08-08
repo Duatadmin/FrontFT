@@ -68,6 +68,10 @@ if (rootElement) {
         }
       });
       
+      // Import and boot the user store first
+      const { useUserStore } = await import('./lib/stores/useUserStore');
+      await useUserStore.getState().boot();
+      
       // Start auth state sync service for Zustand stores
       authStateSync.start();
 

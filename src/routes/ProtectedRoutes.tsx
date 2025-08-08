@@ -17,6 +17,7 @@ import MobileDashboardLayout from '../components/layout/MobileDashboardLayout';
 import UserProfile from '../components/UserProfile';
 import ResponsiveNutritionPage from '../pages/ResponsiveNutritionPage';
 import { OnboardingCheck } from '@/components/auth/OnboardingCheck';
+import ProfileSettingsPage from '@/pages/ProfileSettingsPage';
 
 // Wrapper component to handle props for ExerciseDetailPage
 const ExerciseDetailWrapper = () => {
@@ -68,6 +69,7 @@ export default function ProtectedRoutes() {
       <Route path="/programs" element={<ResponsiveProgramsPage />} />
       <Route path="/analytics" element={<ResponsiveAnalyticsDashboardPage />} />
       <Route path="/profile" element={<UserProfile />} />
+      <Route path="/settings/profile" element={<ProfileSettingsPage />} />
       <Route path="/nutrition" element={<ResponsiveNutritionPage />} />
       
       {/* This catch-all is important for when this component is rendered under a parent route */}

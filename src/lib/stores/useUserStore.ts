@@ -21,6 +21,7 @@ export interface UserState {
 }
 
 let booted = false; // avoid double-init on hot reloads
+let authSubscription: { unsubscribe: () => void } | null = null;
 
 export const useUserStore = create<UserState>()(
   devtools(
@@ -34,8 +35,12 @@ export const useUserStore = create<UserState>()(
 
       /* ① one-time boot ************************************************** */
       boot: async () => {
-        if (booted) return;
+        if (booted) {
+          console.log('[useUserStore] Already booted, skipping...');
+          return;
+        }
         booted = true;
+        console.log('[useUserStore] Booting user store...');
 
         // initial session
         const { data, error } = await supabase.auth.getSession();
@@ -57,6 +62,13 @@ export const useUserStore = create<UserState>()(
             onboardingComplete = userData?.onboarding_complete ?? false;
           }
           
+          console.log('[useUserStore] Initial session loaded:', {
+            hasUser: !!user,
+            userId: user?.id,
+            isAuthenticated: !!data.session,
+            onboardingComplete
+          });
+          
           set({
             user,
             isAuthenticated: !!data.session,
@@ -65,8 +77,16 @@ export const useUserStore = create<UserState>()(
           });
         }
 
+        // Unsubscribe from previous listener if exists
+        if (authSubscription) {
+          authSubscription.unsubscribe();
+        }
+
         // subscribe to further changes
-        supabase.auth.onAuthStateChange(async (_ev, session) => {
+        const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+          console.log('[useUserStore] Auth state changed:', event, { hasSession: !!session });
+          
+          // Don't set loading state on auth state changes to avoid UI flashing
           const user = session?.user ?? null;
           let onboardingComplete = false;
           
@@ -84,8 +104,12 @@ export const useUserStore = create<UserState>()(
             user,
             isAuthenticated: !!session,
             onboardingComplete,
+            // Keep isLoading false to avoid "Loading user..." during navigation
+            isLoading: false,
           });
         });
+        
+        authSubscription = authListener.subscription;
       },
 
       /* ② email-password login ******************************************* */
@@ -137,11 +161,15 @@ export const useUserStore = create<UserState>()(
 
       /* ③ logout ********************************************************* */
       logout: async () => {
-        set({ isLoading: true, error: null });
+        // Don't set isLoading to true during logout to avoid UI flashing
+        set({ error: null });
+        console.log('[useUserStore] Logging out...');
         const { error } = await supabase.auth.signOut();
         if (error) {
-          set({ error: error.message, isLoading: false });
+          console.error('[useUserStore] Logout error:', error);
+          set({ error: error.message });
         } else {
+          console.log('[useUserStore] Logout successful');
           // Clear subscription cache on logout
           SubscriptionService.clearCache();
           set({ 

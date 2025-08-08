@@ -13,8 +13,21 @@ export const PlanCard: React.FC = () => {
   const setInitialPlan = useWorkoutStore((state) => state.setInitialPlan);
   const { data: plan, isLoading, error, isError } = useWorkoutPlan(); // Correctly destructure isError, remove unused refetch
 
+  console.log('[PlanCard] Render state:', {
+    isLoading,
+    isError,
+    hasData: !!plan,
+    planSummary: plan ? {
+      planId: plan.planId,
+      goal: plan.goal,
+      status: plan.planStatus,
+      weeksCount: plan.weeks?.length
+    } : null
+  });
+
   useEffect(() => {
     if (plan) {
+      console.log('[PlanCard] Setting initial plan in store');
       setInitialPlan(plan);
     }
   }, [plan, setInitialPlan]);
