@@ -10,6 +10,11 @@ import { authStateSync } from './services/authStateSync'; // Import auth state s
 import './index.css';
 import './styles/animations.css';
 
+// Import debug tools in development
+if (import.meta.env.MODE !== 'production') {
+  import('./utils/debugSubscription').catch(console.error);
+}
+
 // Attempt to import supabase client and render app
 // This is to catch critical errors during Supabase client initialization
 const rootElement = document.getElementById('root');

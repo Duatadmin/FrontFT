@@ -80,6 +80,15 @@ export class SubscriptionService {
   }
 
   /**
+   * Force a fresh subscription check, bypassing cache
+   */
+  static async forceCheckSubscriptionStatus(user: User): Promise<SubscriptionStatus> {
+    console.log('[SubscriptionService] Forcing fresh subscription check');
+    this.clearCache();
+    return this.checkSubscriptionStatus(user);
+  }
+
+  /**
    * Check user's subscription status using the v_active_users view
    * 
    * This method now:
@@ -100,7 +109,7 @@ export class SubscriptionService {
         };
       }
 
-      // Check cache first
+      // Check cache first (unless bypassed)
       const cachedStatus = this.getCachedStatus(user.id);
       if (cachedStatus) {
         return cachedStatus;

@@ -19,6 +19,8 @@ export const fetchPlanRows = async (userId: string): Promise<WorkoutFullViewRow[
     return [];
   }
 
+  console.log('[fetchPlanRows] Starting fetch for userId:', userId);
+  
   const { data, error } = await supabase
     .from('workout_full_view')
     .select('*')
@@ -26,10 +28,26 @@ export const fetchPlanRows = async (userId: string): Promise<WorkoutFullViewRow[
     .eq('plan_status', 'active'); // Assuming 'active' is the status for the current plan
 
   if (error) {
-    console.error('Error fetching active plan rows for userId:', userId, error);
+    console.error('[fetchPlanRows] Supabase error:', {
+      userId,
+      error,
+      code: error.code,
+      message: error.message,
+      details: error.details,
+      hint: error.hint
+    });
+    // Check for specific error types
+    if (error.code === 'PGRST301' || error.message?.includes('JWT')) {
+      console.error('[fetchPlanRows] Authentication/JWT error detected');
+    }
+    if (error.code === '42501' || error.message?.includes('permission denied')) {
+      console.error('[fetchPlanRows] RLS policy violation - user lacks permission');
+    }
     // Re-throw the error so it can be caught and handled by TanStack Query's error state
     throw error;
   }
+  
+  console.log('[fetchPlanRows] Fetch successful, rows:', data?.length || 0);
 
   // Ensure 'data' is not null; if it is, return an empty array.
   return data || [];

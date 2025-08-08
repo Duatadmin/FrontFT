@@ -128,6 +128,14 @@ export const getCurrentUserId = async (): Promise<string | null> => {
         }
       }
       console.error('[getCurrentUserId] Error getting session:', error);
+      // Clear subscription cache on auth errors
+      const { default: useUserStore } = await import('./stores/useUserStore');
+      const store = useUserStore.getState();
+      if (store.subscriptionStatus?.isActive) {
+        console.warn('[getCurrentUserId] Clearing subscription status due to auth error');
+        sessionStorage.removeItem('subscription_status');
+        store.subscriptionStatus = null;
+      }
       return null;
     }
     
@@ -138,6 +146,14 @@ export const getCurrentUserId = async (): Promise<string | null> => {
       if (refreshData.session?.user?.id) {
         console.log('[getCurrentUserId] Session refreshed successfully');
         return refreshData.session.user.id;
+      }
+      // Clear subscription cache if no valid session
+      const { default: useUserStore } = await import('./stores/useUserStore');
+      const store = useUserStore.getState();
+      if (store.subscriptionStatus?.isActive) {
+        console.warn('[getCurrentUserId] Clearing subscription status - no valid session');
+        sessionStorage.removeItem('subscription_status');
+        store.subscriptionStatus = null;
       }
       return null;
     }

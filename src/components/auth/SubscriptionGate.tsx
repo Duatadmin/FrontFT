@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '@/lib/stores/useUserStore';
+import { supabase } from '@/lib/supabase';
 
 interface SubscriptionGateProps {
   children: ReactNode;
@@ -34,6 +35,14 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
       // Don't redirect if already on subscription-required page
       if (location.pathname === '/subscription-required') {
         console.log('[SubscriptionGate] Already on subscription-required page, skipping');
+        return;
+      }
+      
+      // First, validate that we have a valid session
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError || !sessionData.session) {
+        console.error('[SubscriptionGate] No valid session, redirecting to login', sessionError);
+        navigate('/login', { replace: true });
         return;
       }
       
@@ -71,12 +80,22 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
       const startTime = Date.now();
       
       // Check if we already have a valid subscription status in the store
+      // BUT also validate the session is still valid
       if (subscriptionStatus && subscriptionStatus.isActive) {
-        console.log('[SubscriptionGate] Using existing active subscription status from store', {
-          status: subscriptionStatus,
-          userId: user.id
-        });
-        return;
+        // Double-check the session is still valid before trusting cached status
+        const { data: sessionCheck } = await supabase.auth.getSession();
+        if (!sessionCheck.session) {
+          console.warn('[SubscriptionGate] Cached active status but session invalid, clearing cache');
+          // Clear the cache and force recheck
+          sessionStorage.removeItem('subscription_status');
+          useUserStore.setState({ subscriptionStatus: null });
+        } else {
+          console.log('[SubscriptionGate] Using existing active subscription status from store', {
+            status: subscriptionStatus,
+            userId: user.id
+          });
+          return;
+        }
       }
       
       // Mark that we've initiated a check globally
