@@ -18,6 +18,7 @@ import UserProfile from '../components/UserProfile';
 import ResponsiveNutritionPage from '../pages/ResponsiveNutritionPage';
 import { OnboardingCheck } from '@/components/auth/OnboardingCheck';
 import ProfileSettingsPage from '@/pages/ProfileSettingsPage';
+import TestSubscriptionV2 from '@/pages/TestSubscriptionV2';
 
 // Wrapper component to handle props for ExerciseDetailPage
 const ExerciseDetailWrapper = () => {
@@ -71,6 +72,7 @@ export default function ProtectedRoutes() {
       <Route path="/profile" element={<UserProfile />} />
       <Route path="/settings/profile" element={<ProfileSettingsPage />} />
       <Route path="/nutrition" element={<ResponsiveNutritionPage />} />
+      <Route path="/test-subscription-v2" element={<TestSubscriptionV2 />} />
       
       {/* This catch-all is important for when this component is rendered under a parent route */}
       <Route path="*" element={<Navigate to="/" replace />} />

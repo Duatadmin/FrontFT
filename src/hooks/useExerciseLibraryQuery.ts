@@ -51,8 +51,8 @@ const fetchExercises = async (
       return query;
     };
 
-    // Use longer timeout for first fetch
-    const timeoutMs = isFirstFetch ? 15000 : 10000;
+    // Use longer timeout for first fetch (increased for better reliability)
+    const timeoutMs = isFirstFetch ? 30000 : 20000;
     
     // Execute query with timeout using the utility
     const { data, error } = await supabaseQueryWithTimeout<Database['public']['Tables']['exrcwiki']['Row'][]>(

@@ -47,22 +47,8 @@ export const useWorkoutPlan = (): UseWorkoutPlanResult => { // planId prop remov
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
   });
 
-  // Listen for auth state changes and refetch
-  useEffect(() => {
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('[useWorkoutPlan] Token refreshed, refetching plan');
-        // Add a small delay to let the new token propagate
-        setTimeout(() => {
-          query.refetch();
-        }, 100);
-      }
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [query]);
+  // REMOVED: Auth state listener - handled globally in main.tsx
+  // Having multiple listeners causes race conditions and connection pool exhaustion
 
   return query;
 };

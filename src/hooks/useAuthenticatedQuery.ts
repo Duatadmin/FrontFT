@@ -37,21 +37,9 @@ export function useAuthenticatedQuery<
     staleTime: options.staleTime ?? 1000 * 60 * 5, // 5 minutes default
   });
 
-  // Listen for auth state changes and refetch when needed
-  useEffect(() => {
-    if (!requireAuth) return;
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'TOKEN_REFRESHED' || event === 'SIGNED_IN') {
-        console.log(`[useAuthenticatedQuery] Auth event detected for ${String(options.queryKey)}, refetching:`, event);
-        query.refetch();
-      }
-    });
-
-    return () => {
-      authListener?.subscription.unsubscribe();
-    };
-  }, [query, requireAuth, options.queryKey]);
+  // REMOVED: Auth state listener - handled globally in main.tsx
+  // Having multiple listeners causes race conditions and connection pool exhaustion
+  // The global listener in main.tsx will invalidate queries on TOKEN_REFRESHED
 
   return query;
 }

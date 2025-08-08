@@ -39,6 +39,10 @@ if (rootElement) {
               // Don't retry on 4xx errors except 401 (unauthorized)
               if (error instanceof Error) {
                 const message = error.message.toLowerCase();
+                // Don't retry "no rows" errors (user doesn't have subscription)
+                if (message.includes('no rows') || message.includes('not found')) {
+                  return false;
+                }
                 if (message.includes('4') && !message.includes('401')) {
                   return false;
                 }
@@ -50,6 +54,8 @@ if (rootElement) {
             refetchOnWindowFocus: true,
             // Consider data stale after 5 minutes
             staleTime: 5 * 60 * 1000,
+            // Keep cache for 10 minutes
+            gcTime: 10 * 60 * 1000,
           },
         },
       });
@@ -78,8 +84,8 @@ if (rootElement) {
             } catch (e) {
               console.warn('[main.tsx] waitForSupabaseReady failed or timed out, proceeding to invalidate');
             } finally {
-              // Avoid overlapping old requests during token switch
-              await queryClient.cancelQueries();
+              // Invalidate queries to refetch with new token
+              // Don't cancel queries - let them finish naturally
               await queryClient.invalidateQueries();
               invalidationInFlight = false;
             }
@@ -88,6 +94,10 @@ if (rootElement) {
           // Clear all queries on sign out
           console.log('[main.tsx] User signed out, clearing query cache');
           queryClient.clear();
+        } else if (event === 'SIGNED_IN') {
+          // Invalidate subscription queries on sign in to fetch fresh data
+          console.log('[main.tsx] User signed in, invalidating subscription queries');
+          queryClient.invalidateQueries({ queryKey: ['subscription'] });
         }
       });
       

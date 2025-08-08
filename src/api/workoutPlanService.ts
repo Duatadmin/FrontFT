@@ -43,7 +43,7 @@ export const fetchPlanRows = async (
 
   const { data, error } = await supabaseQueryWithTimeout<WorkoutFullViewRow[]>(
     queryBuilder,
-    timeoutMs ?? 12000,
+    timeoutMs ?? 30000, // Increased from 12s to 30s for better reliability
     signal
   );
 
@@ -106,7 +106,7 @@ export const fetchCompletedSessions = async (
 
   const { data, error } = await supabaseQueryWithTimeout<WorkoutFullViewRow[]>(
     queryBuilder,
-    timeoutMs ?? 12000,
+    timeoutMs ?? 30000, // Increased from 12s to 30s for better reliability
     signal
   );
 
@@ -161,7 +161,7 @@ export const fetchMonthlySessions = async (
 
   const { data, error } = await supabaseQueryWithTimeout<WorkoutFullViewRow[]>(
     queryBuilder,
-    timeoutMs ?? 12000,
+    timeoutMs ?? 30000, // Increased from 12s to 30s for better reliability
     signal
   );
 

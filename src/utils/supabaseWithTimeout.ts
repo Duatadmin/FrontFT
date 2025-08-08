@@ -1,50 +1,39 @@
 import { supabase } from '@/lib/supabase';
 
 /**
- * Wrapper for Supabase queries with timeout handling
- * Prevents queries from hanging indefinitely
+ * Simple wrapper for Supabase queries
+ * 
+ * NOTE: Timeout handling was causing more problems than it solved.
+ * Supabase doesn't support AbortController properly, and artificial timeouts
+ * were just masking the real issue (duplicate auth listeners causing race conditions).
+ * 
+ * Now this is just a pass-through that respects external abort signals.
  */
 export async function supabaseQueryWithTimeout<T>(
   queryBuilder: (signal: AbortSignal) => any,
-  timeoutMs: number = 10000,
+  timeoutMs: number = 60000, // Increased to 60s, but mostly ignored
   externalSignal?: AbortSignal
 ): Promise<{ data: T | null; error: any }> {
-  return new Promise((resolve) => {
-    let timeoutId: NodeJS.Timeout;
-    let settled = false;
+  // Check if external signal is already aborted
+  if (externalSignal?.aborted) {
+    return { data: null, error: new Error('Query aborted by external signal') };
+  }
 
+  try {
+    // Just execute the query directly
+    // Supabase has its own internal timeouts and retry logic
     const controller = new AbortController();
+    
     // Link external signal if provided
     if (externalSignal) {
-      if (externalSignal.aborted) controller.abort();
-      else externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
+      externalSignal.addEventListener('abort', () => controller.abort(), { once: true });
     }
-
-    // Set timeout that aborts the underlying request
-    timeoutId = setTimeout(() => {
-      if (!settled) {
-        console.error('[supabaseQueryWithTimeout] Query timed out after', timeoutMs, 'ms');
-        controller.abort();
-      }
-    }, timeoutMs);
-
-    // Execute query with our abort signal
-    Promise.resolve(queryBuilder(controller.signal))
-      .then((result: any) => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timeoutId);
-          resolve(result);
-        }
-      })
-      .catch((error: any) => {
-        if (!settled) {
-          settled = true;
-          clearTimeout(timeoutId);
-          resolve({ data: null, error });
-        }
-      });
-  });
+    
+    const result = await queryBuilder(controller.signal);
+    return result;
+  } catch (error) {
+    return { data: null, error };
+  }
 }
 
 /**
