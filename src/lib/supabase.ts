@@ -117,21 +117,41 @@ export const getCurrentUserId = async (): Promise<string | null> => {
     const { data, error } = await supabase.auth.getSession();
     
     if (error) {
+      // Check if it's a network/temp error vs auth error
+      if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        console.warn('[getCurrentUserId] Network error getting session, will retry:', error);
+        // Try once more after a brief delay
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        const retry = await supabase.auth.getSession();
+        if (retry.data?.session?.user?.id) {
+          return retry.data.session.user.id;
+        }
+      }
       console.error('[getCurrentUserId] Error getting session:', error);
       return null;
     }
     
-    const userId = data.session?.user?.id || null;
-    
-    // If we have a userId, also check if the store is in sync
-    if (userId) {
-      const { default: useUserStore } = await import('./stores/useUserStore');
-      const store = useUserStore.getState();
-      
-      // If store has a different user or no user, log a warning
-      if (store.user?.id && store.user.id !== userId) {
-        console.warn('[getCurrentUserId] Store user mismatch with session');
+    // If no session, try to refresh it (session might have expired)
+    if (!data.session) {
+      console.log('[getCurrentUserId] No session found, attempting refresh...');
+      const { data: refreshData } = await supabase.auth.refreshSession();
+      if (refreshData.session?.user?.id) {
+        console.log('[getCurrentUserId] Session refreshed successfully');
+        return refreshData.session.user.id;
       }
+      return null;
+    }
+    
+    const userId = data.session.user.id;
+    
+    // Sync with store if needed
+    const { default: useUserStore } = await import('./stores/useUserStore');
+    const store = useUserStore.getState();
+    
+    if (!store.user || store.user.id !== userId) {
+      console.log('[getCurrentUserId] Syncing store with session user');
+      store.user = data.session.user;
+      store.isAuthenticated = true;
     }
     
     return userId;

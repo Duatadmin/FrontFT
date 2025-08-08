@@ -590,6 +590,7 @@ export function PremiumWelcomeFlow() {
   
   const screen = screens[currentScreen];
   const isOnboardingScreen = screen.isOnboarding;
+  const isPreparingPlanScreen = screen.id === 'complete';
   
   // Remove auto-navigation - we'll navigate after API response instead
 
@@ -844,7 +845,7 @@ export function PremiumWelcomeFlow() {
           </motion.div>
           
           <div className="flex items-center gap-3">
-            {currentScreen > 0 && (
+            {currentScreen > 0 && !isPreparingPlanScreen && (
               <motion.button
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
@@ -872,14 +873,16 @@ export function PremiumWelcomeFlow() {
                 <span className="text-sm hidden sm:inline">Exit</span>
               </motion.button>
             )}
-            <motion.button
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              onClick={handleSkip}
-              className="text-white/60 hover:text-white text-sm font-medium transition-colors px-3 py-1 rounded-lg hover:bg-white/5"
-            >
-              {currentScreen < 4 ? 'Skip intro' : isOnboardingScreen ? 'Skip question' : 'Skip'}
-            </motion.button>
+            {!isPreparingPlanScreen && (
+              <motion.button
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                onClick={handleSkip}
+                className="text-white/60 hover:text-white text-sm font-medium transition-colors px-3 py-1 rounded-lg hover:bg-white/5"
+              >
+                {currentScreen < 4 ? 'Skip intro' : isOnboardingScreen ? 'Skip question' : 'Skip'}
+              </motion.button>
+            )}
           </div>
         </header>
 

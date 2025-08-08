@@ -194,13 +194,17 @@ export const useUserStore = create<UserState>()(
         const user = get().user;
         if (!user) {
           console.log('[useUserStore] No user to check subscription for');
-          set({ 
-            subscriptionStatus: { 
-              isActive: false, 
-              status: 'unknown',
-              error: 'No user authenticated'
-            }
-          });
+          // Don't clear existing status if we're just between auth states
+          const currentStatus = get().subscriptionStatus;
+          if (!currentStatus) {
+            set({ 
+              subscriptionStatus: { 
+                isActive: false, 
+                status: 'unknown',
+                error: 'No user authenticated'
+              }
+            });
+          }
           return;
         }
         
@@ -211,15 +215,16 @@ export const useUserStore = create<UserState>()(
           console.log('[useUserStore] Subscription status updated:', status);
         } catch (error) {
           console.error('[useUserStore] Failed to check subscription:', error);
-          // Set an error status but don't assume inactive
-          const errorStatus = {
-            isActive: false,
-            status: 'unknown' as const,
-            error: error instanceof Error ? error.message : 'Failed to check subscription'
-          };
+          // Keep existing status on network errors
+          const currentStatus = get().subscriptionStatus;
           
           // Only set error status if it's not a network error (which should be retried)
           if (!(error instanceof Error && error.message.includes('Network error'))) {
+            const errorStatus = {
+              isActive: currentStatus?.isActive || false, // Preserve active state if known
+              status: 'unknown' as const,
+              error: error instanceof Error ? error.message : 'Failed to check subscription'
+            };
             set({ subscriptionStatus: errorStatus });
           }
         }

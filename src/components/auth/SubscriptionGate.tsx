@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState, useRef } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUserStore } from '@/lib/stores/useUserStore';
 
@@ -6,16 +6,24 @@ interface SubscriptionGateProps {
   children: ReactNode;
 }
 
+// Global state to prevent multiple simultaneous checks across all instances
+let globalCheckInProgress = false;
+let lastCheckUserId: string | null = null;
+let lastCheckTime = 0;
+
 export default function SubscriptionGate({ children }: SubscriptionGateProps) {
   const { user, isAuthenticated, subscriptionStatus, checkSubscription } = useUserStore();
   const navigate = useNavigate();
   const location = useLocation();
   const [checkAttempts, setCheckAttempts] = useState(0);
-  const hasInitiatedCheck = useRef(false);
 
-  // Reset the check flag when user changes
+  // Reset global check state when user changes
   useEffect(() => {
-    hasInitiatedCheck.current = false;
+    if (user?.id !== lastCheckUserId) {
+      globalCheckInProgress = false;
+      lastCheckUserId = user?.id || null;
+      lastCheckTime = 0;
+    }
   }, [user?.id]);
 
   useEffect(() => {
@@ -23,9 +31,33 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
     let isMounted = true;
 
     const performSubscriptionCheck = async () => {
-      // Prevent multiple simultaneous checks
-      if (hasInitiatedCheck.current) {
-        console.log('[SubscriptionGate] Check already in progress, skipping...');
+      // Don't redirect if already on subscription-required page
+      if (location.pathname === '/subscription-required') {
+        console.log('[SubscriptionGate] Already on subscription-required page, skipping');
+        return;
+      }
+      
+      // Always check if we need to redirect based on current status
+      const currentStatus = useUserStore.getState().subscriptionStatus;
+      if (currentStatus && currentStatus.status !== 'unknown' && !currentStatus.isActive) {
+        console.log('[SubscriptionGate] User has inactive subscription, redirecting...', {
+          status: currentStatus.status,
+          path: location.pathname
+        });
+        navigate('/subscription-required', { replace: true });
+        return;
+      }
+      
+      // Prevent multiple simultaneous checks globally
+      if (globalCheckInProgress) {
+        console.log('[SubscriptionGate] Check already in progress globally, skipping API call');
+        return;
+      }
+      
+      // Skip API call if we checked recently (within 10 seconds) for the same user
+      const now = Date.now();
+      if (user?.id === lastCheckUserId && (now - lastCheckTime) < 10000) {
+        console.log('[SubscriptionGate] Recently checked for this user, skipping API call');
         return;
       }
 
@@ -35,11 +67,6 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
         return;
       }
 
-      // Prevent redirect loops - don't check on subscription-required page
-      if (location.pathname === '/subscription-required') {
-        console.log('[SubscriptionGate] On subscription-required page, skipping check');
-        return;
-      }
 
       const startTime = Date.now();
       
@@ -52,8 +79,10 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
         return;
       }
       
-      // Mark that we've initiated a check
-      hasInitiatedCheck.current = true;
+      // Mark that we've initiated a check globally
+      globalCheckInProgress = true;
+      lastCheckUserId = user.id;
+      lastCheckTime = Date.now();
       
       console.log('[SubscriptionGate] Starting subscription check...', { 
         userId: user.id, 
@@ -80,15 +109,32 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
           fromCache: checkDuration < 100 // Likely from cache if very fast
         });
 
-        if (!isMounted) return;
+        if (!isMounted) {
+          globalCheckInProgress = false; // Reset global flag even if unmounted
+          return;
+        }
 
-        // If we don't have a status or subscription is not active, redirect
-        if (!status || !status.isActive) {
-          console.log('[SubscriptionGate] Subscription inactive. Redirecting...', {
+        // Log the actual status for debugging
+        console.log('[SubscriptionGate] Status check result:', {
+          status,
+          isActive: status?.isActive,
+          statusType: status?.status,
+          shouldRedirect: status && status.status !== 'unknown' && !status.isActive
+        });
+        
+        // Only redirect if we have a definitive inactive status
+        // Don't redirect on missing status (could be checking) or unknown status
+        if (status && status.status !== 'unknown' && !status.isActive) {
+          console.log('[SubscriptionGate] Subscription definitively inactive. Redirecting...', {
             status: status?.status,
             error: status?.error
           });
           navigate('/subscription-required', { replace: true });
+        } else if (!status) {
+          // No status yet, but don't redirect - the check might still be in progress
+          console.log('[SubscriptionGate] No subscription status yet, waiting for check to complete');
+        } else {
+          console.log('[SubscriptionGate] Not redirecting - either active or unknown status');
         }
       } catch (error) {
         console.error('[SubscriptionGate] Error checking subscription:', {
@@ -97,7 +143,10 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
           duration: `${Date.now() - startTime}ms`
         });
         
-        if (!isMounted) return;
+        if (!isMounted) {
+          globalCheckInProgress = false; // Reset global flag even if unmounted  
+          return;
+        }
 
         // Retry logic for transient errors
         if (checkAttempts < 2) {
@@ -106,7 +155,7 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
             delay: '1000ms'
           });
           setCheckAttempts(prev => prev + 1);
-          hasInitiatedCheck.current = false; // Allow retry
+          globalCheckInProgress = false; // Allow retry
           timeoutId = setTimeout(performSubscriptionCheck, 1000); // Retry after 1 second
         } else {
           // After retries, assume no subscription
@@ -122,8 +171,8 @@ export default function SubscriptionGate({ children }: SubscriptionGateProps) {
           navigate('/subscription-required', { replace: true });
         }
       } finally {
-        // Reset the check flag after completion
-        hasInitiatedCheck.current = false;
+        // Reset the global check flag after completion
+        globalCheckInProgress = false;
       }
     };
 

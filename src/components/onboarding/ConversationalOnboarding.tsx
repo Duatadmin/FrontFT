@@ -307,6 +307,7 @@ export function ConversationalOnboarding() {
   const [answers, setAnswers] = useState<OnboardingData>({});
   const [isTyping, setIsTyping] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [isProcessingPlan, setIsProcessingPlan] = useState(false);
   const navigate = useNavigate();
   const { user, updateOnboardingStatus } = useUserStore();
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -314,6 +315,7 @@ export function ConversationalOnboarding() {
 
   const step = onboardingSteps[currentStep];
   const progress = ((currentStep + 1) / onboardingSteps.length) * 100;
+  const isLastStep = currentStep === onboardingSteps.length - 1;
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -344,6 +346,8 @@ export function ConversationalOnboarding() {
   const completeOnboarding = async () => {
     if (!user) return;
     
+    setIsProcessingPlan(true);
+    
     try {
       // Save onboarding data to user profile
       const { error } = await supabase
@@ -363,6 +367,7 @@ export function ConversationalOnboarding() {
       navigate('/');
     } catch (error) {
       console.error('Failed to save onboarding data:', error);
+      setIsProcessingPlan(false);
     }
   };
 
@@ -652,8 +657,8 @@ export function ConversationalOnboarding() {
         </div>
       </div>
 
-      {/* Skip Button - Centered and half width on desktop */}
-      {currentStep < onboardingSteps.length - 1 && (
+      {/* Skip Button - Hide on last step and when processing plan */}
+      {!isLastStep && !isProcessingPlan && (
         <div className="sticky bottom-0 p-4 bg-dark-bg/80 backdrop-blur-xl border-t border-white/5 flex justify-center">
           <div className="w-full lg:w-1/2 lg:max-w-2xl flex justify-end">
             <button
