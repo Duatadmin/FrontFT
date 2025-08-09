@@ -9,6 +9,7 @@ export interface UserState {
   isLoading: boolean;
   error: string | null;
   onboardingComplete: boolean;
+  onboardingChecked: boolean;
   /** one-time initializer; safe to call many times */
   boot: () => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
@@ -28,6 +29,7 @@ export const useUserStore = create<UserState>()(
       isLoading: true,
       error: null,
       onboardingComplete: false,
+      onboardingChecked: false,
 
       /* ① one-time boot ************************************************** */
       boot: async () => {
@@ -56,8 +58,36 @@ export const useUserStore = create<UserState>()(
             user,
             isAuthenticated: !!data.session,
             isLoading: false,
-            onboardingComplete: true, // Default to true to avoid blocking
           });
+
+          // Resolve onboarding status once per session (per tab) using sessionStorage cache
+          if (user?.id) {
+            try {
+              const cacheKey = `onboardingChecked:${user.id}`;
+              const cached = sessionStorage.getItem(cacheKey);
+              if (cached !== null) {
+                set({ onboardingComplete: cached === 'true', onboardingChecked: true });
+              } else {
+                const { data: userData, error: onboardingErr } = await supabase
+                  .from('users')
+                  .select('onboarding_complete')
+                  .eq('id', user.id)
+                  .single();
+                if (onboardingErr) {
+                  console.warn('[useUserStore] onboarding status fetch failed on boot:', onboardingErr);
+                }
+                const val = userData?.onboarding_complete ?? false;
+                sessionStorage.setItem(cacheKey, val ? 'true' : 'false');
+                set({ onboardingComplete: val, onboardingChecked: true });
+              }
+            } catch (e: unknown) {
+              console.warn('[useUserStore] Failed to resolve onboarding status on boot:', e);
+              set({ onboardingComplete: false, onboardingChecked: true });
+            }
+          } else {
+            // No authenticated user; nothing to check
+            set({ onboardingChecked: true });
+          }
         }
 
         // Unsubscribe from previous listener if exists
@@ -75,6 +105,43 @@ export const useUserStore = create<UserState>()(
             isAuthenticated: !!session,
             isLoading: false,
           });
+
+          // Resolve onboarding on sign-in; clear flags on sign-out
+          if (event === 'SIGNED_IN' && session?.user?.id) {
+            try {
+              const cacheKey = `onboardingChecked:${session.user.id}`;
+              const cached = sessionStorage.getItem(cacheKey);
+              if (cached !== null) {
+                set({ onboardingComplete: cached === 'true', onboardingChecked: true });
+              } else {
+                void (async () => {
+                  try {
+                    const { data, error } = await supabase
+                      .from('users')
+                      .select('onboarding_complete')
+                      .eq('id', session.user.id)
+                      .single();
+                    if (error) {
+                      console.warn('[useUserStore] onboarding status fetch failed on SIGNED_IN:', error);
+                    }
+                    const val = data?.onboarding_complete ?? false;
+                    sessionStorage.setItem(cacheKey, val ? 'true' : 'false');
+                    set({ onboardingComplete: val, onboardingChecked: true });
+                  } catch (err) {
+                    console.warn('[useUserStore] Failed to resolve onboarding status on SIGNED_IN:', err);
+                    set({ onboardingComplete: false, onboardingChecked: true });
+                  }
+                })();
+              }
+            } catch (e: unknown) {
+              console.warn('[useUserStore] Error handling SIGNED_IN onboarding resolution:', e);
+              set({ onboardingComplete: false, onboardingChecked: true });
+            }
+          }
+
+          if (event === 'SIGNED_OUT') {
+            set({ onboardingComplete: false, onboardingChecked: false });
+          }
         });
         
         authSubscription = authListener.subscription;
@@ -91,7 +158,6 @@ export const useUserStore = create<UserState>()(
             message: error.message,
             status: error.status,
             name: error.name,
-            cause: error.cause
           });
           
           // Provide more specific error messages
@@ -117,9 +183,13 @@ export const useUserStore = create<UserState>()(
             .select('onboarding_complete')
             .eq('id', session.user.id)
             .single();
-          
+          const val = userData?.onboarding_complete ?? false;
+          try {
+            sessionStorage.setItem(`onboardingChecked:${session.user.id}`, val ? 'true' : 'false');
+          } catch {}
           set({
-            onboardingComplete: userData?.onboarding_complete ?? false,
+            onboardingComplete: val,
+            onboardingChecked: true,
             isLoading: false,
           });
         } else {
@@ -143,7 +213,8 @@ export const useUserStore = create<UserState>()(
             user: null, 
             isAuthenticated: false, 
             isLoading: false,
-            onboardingComplete: false
+            onboardingComplete: false,
+            onboardingChecked: false
           });
         }
       },
@@ -172,7 +243,10 @@ export const useUserStore = create<UserState>()(
           set({ error: error.message });
         } else {
           // Update only the onboarding status
-          set({ onboardingComplete: complete });
+          try {
+            sessionStorage.setItem(`onboardingChecked:${user.id}`, complete ? 'true' : 'false');
+          } catch {}
+          set({ onboardingComplete: complete, onboardingChecked: true });
           console.log('[useUserStore] Onboarding status updated to:', complete);
           
           // If marking as complete, ensure we don't redirect back to onboarding

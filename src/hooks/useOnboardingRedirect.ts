@@ -13,29 +13,31 @@ export function useOnboardingRedirect() {
   
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   const onboardingComplete = useUserStore((state) => state.onboardingComplete);
-  const isLoading = useUserStore((state) => state.isLoading);
+  const onboardingChecked = useUserStore((state) => state.onboardingChecked);
 
   useEffect(() => {
-    // Skip if already checked, still loading, or not authenticated
-    if (hasChecked.current || isLoading || !isAuthenticated) {
-      return;
-    }
+    // Wait until we have auth and onboarding has been checked this session (per tab)
+    if (hasChecked.current) return;
+    if (!isAuthenticated) return;
+    if (!onboardingChecked) return; // non-blocking: UI renders while we wait
 
-    // Mark as checked to prevent multiple redirects
-    hasChecked.current = true;
+    // Exempt paths that should not be gated by onboarding
+    const exempt = new Set([
+      '/welcome',
+      '/onboarding',
+      '/login',
+      '/checkout-success',
+      '/cancel',
+      '/subscription-required',
+    ]);
+    const isExempt = exempt.has(location.pathname);
 
-    // Don't redirect if already on onboarding routes
-    const onboardingRoutes = ['/welcome', '/onboarding'];
-    if (onboardingRoutes.includes(location.pathname)) {
-      return;
-    }
-
-    // Redirect to welcome if authenticated but not onboarded
-    if (isAuthenticated && !onboardingComplete) {
+    if (!isExempt && !onboardingComplete) {
+      hasChecked.current = true; // only once per login per tab
       console.log('[useOnboardingRedirect] User needs onboarding, redirecting to /welcome');
       navigate('/welcome', { replace: true });
     }
-  }, [isAuthenticated, onboardingComplete, isLoading, navigate, location.pathname]);
+  }, [isAuthenticated, onboardingComplete, onboardingChecked, navigate, location.pathname]);
 
   // Reset check when auth state changes
   useEffect(() => {
@@ -44,5 +46,5 @@ export function useOnboardingRedirect() {
     }
   }, [isAuthenticated]);
 
-  return { needsOnboarding: isAuthenticated && !onboardingComplete };
+  return { needsOnboarding: isAuthenticated && onboardingChecked && !onboardingComplete };
 }
