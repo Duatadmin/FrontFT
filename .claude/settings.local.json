@@ -33,7 +33,11 @@
       "mcp__playwright__browser_evaluate",
       "Bash(npx tsc:*)",
       "Bash(pkill:*)",
-      "Bash(true)"
+      "Bash(true)",
+      "Bash(node:*)",
+      "Bash(source .env)",
+      "Bash(export VITE_SUPABASE_URL=\"https://usmbvieiwmnzbqbhhbob.supabase.co\")",
+      "Bash(export:*)"
     ],
     "deny": []
   }

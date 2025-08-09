@@ -20,15 +20,22 @@ import {
   Edit3,
   Camera,
   Crown,
-  Trophy
+  Trophy,
+  CheckCircle,
+  XCircle,
+  RefreshCw
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { toast } from '@/lib/utils/toast';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
+import { useSubscription } from '@/hooks/useSubscription';
 
 const UserProfile: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useUserStore();
+  const { isActive: hasSubscription, refetch: refetchSubscription } = useSubscription();
   const [loading, setLoading] = useState(false);
+  const [checkingSubscription, setCheckingSubscription] = useState(false);
   const [stats, setStats] = useState({
     totalWorkouts: 0,
     currentStreak: 0,
@@ -65,6 +72,48 @@ const UserProfile: React.FC = () => {
       console.error('Error fetching user stats:', error);
     } finally {
       setStatsLoading(false);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    if (!user) {
+      toast.error('Please log in to manage subscription');
+      return;
+    }
+
+    setCheckingSubscription(true);
+    try {
+      // Create a portal session to manage subscription
+      const result = await SubscriptionService.createPortalSession(user);
+      
+      if (result.needsSubscription) {
+        // User doesn't have a subscription, redirect to checkout
+        toast.info('No subscription found', {
+          description: 'Redirecting to subscription page...'
+        });
+        // You can redirect to your subscription/pricing page here
+        navigate('/pricing');
+        return;
+      }
+      
+      if (result.error) {
+        toast.error('Failed to open subscription management', {
+          description: result.error
+        });
+        return;
+      }
+      
+      if (result.url) {
+        // Redirect to Stripe Customer Portal
+        await SubscriptionService.redirectToPortal(result.url);
+      }
+    } catch (error: any) {
+      console.error('Portal session error:', error);
+      toast.error('Failed to open subscription management', {
+        description: error.message || 'Please try again later.'
+      });
+    } finally {
+      setCheckingSubscription(false);
     }
   };
 
@@ -194,13 +243,23 @@ const UserProfile: React.FC = () => {
                   <Edit3 size={16} aria-hidden="true" />
                   <span>Edit profile</span>
                 </Link>
-                <Link
-                  to="/settings/billing"
-                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime"
+                <button
+                  onClick={handleManageSubscription}
+                  disabled={checkingSubscription}
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white/5 text-white hover:bg-white/10 border border-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-lime disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                 >
-                  <CreditCard size={16} aria-hidden="true" />
-                  <span>Subscription</span>
-                </Link>
+                  {checkingSubscription ? (
+                    <RefreshCw size={16} className="animate-spin" aria-hidden="true" />
+                  ) : (
+                    <>
+                      <CreditCard size={16} aria-hidden="true" />
+                      {hasSubscription && (
+                        <CheckCircle size={14} className="text-green-400" aria-hidden="true" />
+                      )}
+                    </>
+                  )}
+                  <span>{checkingSubscription ? 'Loading...' : 'Manage Subscription'}</span>
+                </button>
               </div>
             </div>
 

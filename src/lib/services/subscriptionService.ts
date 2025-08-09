@@ -244,4 +244,68 @@ export class SubscriptionService {
       };
     }
   }
+
+  /**
+   * Create a Stripe Customer Portal session for subscription management
+   * Allows users to:
+   * - View subscription details
+   * - Cancel or pause subscription
+   * - Update payment methods
+   * - Download invoices
+   */
+  static async createPortalSession(
+    user: User,
+    returnUrl?: string
+  ): Promise<{ url?: string; error?: string; needsSubscription?: boolean }> {
+    try {
+      console.log('[SubscriptionService] Creating portal session for user:', user.id);
+
+      const { data, error } = await supabase.functions.invoke('create-portal-session', {
+        body: { returnUrl: returnUrl || window.location.href },
+      });
+
+      if (error) {
+        console.error('[SubscriptionService] Edge function error:', error);
+        return { error: error.message || 'Failed to create portal session' };
+      }
+
+      if (data?.needsSubscription) {
+        console.log('[SubscriptionService] User needs subscription first');
+        return { 
+          needsSubscription: true,
+          error: 'No subscription found. Please subscribe first.' 
+        };
+      }
+      
+      if (!data?.url) {
+        console.error('[SubscriptionService] No portal URL received:', data);
+        return { error: 'No portal URL received from service' };
+      }
+      
+      console.log('[SubscriptionService] Portal session created:', data.url);
+      return { url: data.url };
+      
+    } catch (error) {
+      console.error('[SubscriptionService] Portal creation error:', error);
+      return { 
+        error: error instanceof Error ? error.message : 'Failed to create portal session' 
+      };
+    }
+  }
+
+  /**
+   * Redirect user to Stripe Customer Portal
+   */
+  static async redirectToPortal(portalUrl: string): Promise<{ error?: string }> {
+    try {
+      console.log('[SubscriptionService] Redirecting to portal:', portalUrl);
+      window.location.href = portalUrl;
+      return {};
+    } catch (error) {
+      console.error('[SubscriptionService] Portal redirect error:', error);
+      return { 
+        error: error instanceof Error ? error.message : 'Failed to redirect to portal' 
+      };
+    }
+  }
 }
