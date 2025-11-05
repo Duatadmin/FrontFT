@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuthGuard } from '../../hooks/useAuthGuard';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/Tabs';
-import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/Card';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
+import { Card, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
 
 import { Dumbbell, Target, FileStack } from 'lucide-react';
 import CurrentProgramTab from '../../components/programs/CurrentProgramTab';

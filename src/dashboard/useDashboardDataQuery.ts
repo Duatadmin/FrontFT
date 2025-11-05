@@ -71,6 +71,78 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
   // Get monthly statistics
   const stats = await calculateWorkoutStats(userId, startOfMonth, endOfMonth);
   
+  // Populate volume chart data (last 30 days)
+  const volumeChartData: { date: string; value: number }[] = [];
+  const last30Days = new Date();
+  last30Days.setDate(last30Days.getDate() - 30);
+  
+  // Group workouts by date and calculate daily volume
+  const dailyVolume = new Map<string, number>();
+  recentWorkouts.forEach(workout => {
+    const date = new Date(workout.session_date || workout.created_at);
+    if (date >= last30Days) {
+      const dateKey = date.toISOString().split('T')[0];
+      const currentVolume = dailyVolume.get(dateKey) || 0;
+      
+      // Calculate volume from completed exercises
+      let workoutVolume = 0;
+      if (workout.completed_exercises) {
+        Object.values(workout.completed_exercises).forEach((sets: any) => {
+          if (Array.isArray(sets)) {
+            sets.forEach((set: any) => {
+              if (set.weight && set.reps) {
+                workoutVolume += set.weight * set.reps;
+              }
+            });
+          }
+        });
+      }
+      
+      dailyVolume.set(dateKey, currentVolume + workoutVolume);
+    }
+  });
+  
+  // Convert to chart format
+  Array.from(dailyVolume.entries())
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .forEach(([date, volume]) => {
+      volumeChartData.push({
+        date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        value: Math.round(volume)
+      });
+    });
+  
+  // Populate PR timeline (placeholder for now - would need more complex logic)
+  const prTimelineData: { name: string; value: number }[] = [];
+  
+  // Populate activity breakdown by focus area
+  const activityBreakdownData: { name: string; value: number; color: string }[] = [];
+  const focusAreaCounts = new Map<string, number>();
+  
+  recentWorkouts.forEach(workout => {
+    if (workout.focus_area) {
+      const count = focusAreaCounts.get(workout.focus_area) || 0;
+      focusAreaCounts.set(workout.focus_area, count + 1);
+    }
+  });
+  
+  const colors: Record<string, string> = {
+    'Upper Body': '#84cc16',
+    'Lower Body': '#8b5cf6',
+    'Full Body': '#06b6d4',
+    'Core': '#f59e0b',
+    'Cardio': '#ef4444',
+    'Other': '#6b7280'
+  };
+  
+  Array.from(focusAreaCounts.entries()).forEach(([area, count]) => {
+    activityBreakdownData.push({
+      name: area,
+      value: count,
+      color: colors[area] || '#6b7280'
+    });
+  });
+  
   // Construct dashboard data
   const dashboardData: DashboardData = {
     recentWorkouts: recentWorkouts.slice(0, 5), // Limit to 5 most recent
@@ -82,10 +154,10 @@ async function fetchDashboardData(userId: string): Promise<DashboardData> {
     },
     currentProgram: null, // Will be populated by the program store
     upcomingWorkouts: [], // Would need additional logic to generate
-    // Ensure all properties from DashboardData are present
-    volumeChart: [], // Initialize as empty or with actual data if available
-    prTimeline: [],  // Initialize as empty or with actual data if available
-    activityBreakdown: [] // Initialize as empty or with actual data if available
+    // Now populated with real data
+    volumeChart: volumeChartData,
+    prTimeline: prTimelineData,
+    activityBreakdown: activityBreakdownData
   };
   
   console.log('[useDashboardDataQuery] Dashboard data fetched successfully');

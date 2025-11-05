@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
-import { Button } from '../ui/Button';
-import { Card, CardContent } from '../ui/Card';
+import { Button } from '../ui/button';
+import { Card, CardContent } from '../ui/card';
 import { cn } from '@/lib/utils';
 import { welcomeSlides } from './welcomeData';
 

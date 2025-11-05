@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import MainLayout from '@/components/layout/MainLayout';
-import { Card } from '@/components/ui/Card';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { Card } from '@/components/ui/card';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { supabase } from '@/lib/supabase';
 import type { Database } from '@/lib/supabase/schema.types';

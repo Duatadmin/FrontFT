@@ -25,6 +25,106 @@ export interface WorkoutDataError {
 }
 
 /**
+ * Movement pattern categories for exercise classification
+ */
+export type MovementPattern = 'H-Push' | 'H-Pull' | 'V-Push' | 'V-Pull' | 'Legs' | 'Core';
+
+/**
+ * Exercise classification mapping
+ * Maps common exercise names to their primary movement pattern
+ */
+export const exerciseClassification: Record<string, MovementPattern> = {
+  // Horizontal Push
+  'bench press': 'H-Push',
+  'push up': 'H-Push',
+  'push-up': 'H-Push',
+  'dumbbell press': 'H-Push',
+  'chest press': 'H-Push',
+  'chest fly': 'H-Push',
+  'dips': 'H-Push',
+  
+  // Horizontal Pull
+  'row': 'H-Pull',
+  'barbell row': 'H-Pull',
+  'dumbbell row': 'H-Pull',
+  'cable row': 'H-Pull',
+  'seated row': 'H-Pull',
+  'bent over row': 'H-Pull',
+  't-bar row': 'H-Pull',
+  
+  // Vertical Push
+  'overhead press': 'V-Push',
+  'shoulder press': 'V-Push',
+  'military press': 'V-Push',
+  'dumbbell shoulder press': 'V-Push',
+  'arnold press': 'V-Push',
+  'lateral raise': 'V-Push',
+  'front raise': 'V-Push',
+  
+  // Vertical Pull
+  'pull up': 'V-Pull',
+  'pull-up': 'V-Pull',
+  'pullup': 'V-Pull',
+  'chin up': 'V-Pull',
+  'chin-up': 'V-Pull',
+  'lat pulldown': 'V-Pull',
+  'pulldown': 'V-Pull',
+  
+  // Legs
+  'squat': 'Legs',
+  'deadlift': 'Legs',
+  'leg press': 'Legs',
+  'lunge': 'Legs',
+  'leg curl': 'Legs',
+  'leg extension': 'Legs',
+  'calf raise': 'Legs',
+  'romanian deadlift': 'Legs',
+  'rdl': 'Legs',
+  'bulgarian split squat': 'Legs',
+  
+  // Core
+  'plank': 'Core',
+  'crunch': 'Core',
+  'sit up': 'Core',
+  'sit-up': 'Core',
+  'russian twist': 'Core',
+  'leg raise': 'Core',
+  'ab wheel': 'Core',
+  'cable crunch': 'Core',
+  'wood chopper': 'Core',
+};
+
+/**
+ * Classify an exercise by its movement pattern
+ */
+export function classifyExercise(exerciseName: string): MovementPattern {
+  const normalized = exerciseName.toLowerCase().trim();
+  
+  // Direct match
+  if (exerciseClassification[normalized]) {
+    return exerciseClassification[normalized];
+  }
+  
+  // Partial match - check if exercise name contains any key patterns
+  for (const [pattern, category] of Object.entries(exerciseClassification)) {
+    if (normalized.includes(pattern)) {
+      return category;
+    }
+  }
+  
+  // Default classification based on common keywords
+  if (normalized.includes('chest') || normalized.includes('pec')) return 'H-Push';
+  if (normalized.includes('back') || normalized.includes('lat')) return 'H-Pull';
+  if (normalized.includes('shoulder') || normalized.includes('delt')) return 'V-Push';
+  if (normalized.includes('bicep') || normalized.includes('curl')) return 'V-Pull';
+  if (normalized.includes('leg') || normalized.includes('glute') || normalized.includes('quad') || normalized.includes('hamstring')) return 'Legs';
+  if (normalized.includes('ab') || normalized.includes('core') || normalized.includes('oblique')) return 'Core';
+  
+  // Default to Legs if unknown (most common compound movements)
+  return 'Legs';
+}
+
+/**
  * Result type for workout data operations
  */
 export interface WorkoutDataResult<T> {

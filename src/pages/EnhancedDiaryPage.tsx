@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuthGuard } from '../hooks/useAuthGuard';
 import useDiaryStore from '../store/useDiaryStore';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/Tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { CalendarDays, BarChart2, Target } from 'lucide-react';
 
 // Tab content (lazy-loaded)

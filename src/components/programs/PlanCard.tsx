@@ -3,7 +3,7 @@ import { useWorkoutPlan } from '@/hooks/useWorkoutPlan';
 import { WeekTabs } from './WeekTabs'; // Assuming WeekTabs will be created next
 import { useWorkoutStore } from '@/stores/useWorkoutStore';
 import { formatText } from '../../utils/TextOutputAdapter';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 // planId prop is no longer needed as useWorkoutPlan fetches based on user context
 // interface PlanCardProps {

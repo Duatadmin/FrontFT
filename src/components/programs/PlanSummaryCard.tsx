@@ -1,7 +1,7 @@
 import React from 'react';
 import { PlanOverview } from '@/types/plan';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Badge } from '../ui/Badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '../ui/badge';
 import { cleanSplitType } from '@/utils/TextOutputAdapter';
 
 interface PlanSummaryCardProps {

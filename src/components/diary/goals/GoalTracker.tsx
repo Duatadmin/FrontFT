@@ -4,7 +4,7 @@ import useDiaryStore from '../../../store/useDiaryStore';
 import type { Goal } from '../../../store/diaryTypes';
 import useUserStore from '../../../store/useUserStore';
 import createLogger from '../../../utils/logger';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 /**
  * Goal Tracker Component

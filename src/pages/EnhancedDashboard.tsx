@@ -3,7 +3,7 @@ import { useDashboardData } from '../dashboard/useDashboardDataQuery'; // Use Re
 import type { MetricData } from '../dashboard/types'; // Added
 import { Loader2 } from 'lucide-react'; // Added
 import { useAuthGuard } from '../hooks/useAuthGuard';
-import KpiCard from '../components/ui/KpiCard';
+import KpiCard from '../components/ui/kpi-card';
 
 
 import { motion } from 'framer-motion';

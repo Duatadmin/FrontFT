@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import DayCell from '@/components/diary/calendar/DayCell';
 import { useMonthlySessions } from '@/hooks/useMonthlySessions';
 import { SessionDetailPanel } from './SessionDetailPanel';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 const daysOfWeek = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
 

@@ -1,7 +1,7 @@
 import { ReactNode, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useSubscription } from '@/hooks/useSubscription';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 interface SubscriptionGateProps {
   children: ReactNode;

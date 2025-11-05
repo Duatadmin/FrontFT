@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import MainLayout from '@/components/layout/MainLayout';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { 
   User, 
   Shield, 

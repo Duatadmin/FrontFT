@@ -4,7 +4,7 @@ import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
 import { cn } from '../../../lib/utils';
 import createLogger from '../../../utils/logger';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 const logger = createLogger('StreakCounter');
 

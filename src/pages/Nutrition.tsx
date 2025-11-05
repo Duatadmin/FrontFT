@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card } from '@/components/ui/Card';
+import { Card } from '@/components/ui/card';
 import { 
   Plus, 
   Search, 

@@ -1,7 +1,7 @@
 import { useSubscription, usePremiumAccess } from '@/hooks/useSubscription';
 import { useSubscriptionStore } from '@/lib/stores/useSubscriptionStore';
-import { Button } from '@/components/ui/Button';
-import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 import { SubscriptionGateV2 } from '@/components/auth/SubscriptionGateV2';
 
 /**

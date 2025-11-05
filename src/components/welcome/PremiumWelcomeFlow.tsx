@@ -38,7 +38,7 @@ import Orb from '@/components/Orb/Orb';
 import ShinyText from '@/components/ShinyText/ShinyText';
 import { submitOnboarding } from '@/services/apiService';
 import { toast } from '@/lib/utils/toast';
-import { BiometricInput } from '@/components/ui/BiometricInput';
+import { BiometricInput } from '@/components/ui/biometric-input';
 
 interface Feature {
   icon: React.ReactNode;

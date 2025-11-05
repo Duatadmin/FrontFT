@@ -3,7 +3,7 @@ import { CalendarClock, BarChart2, Award, Clock, Dumbbell, Heart } from 'lucide-
 import useDiaryStore from '../../../store/useDiaryStore';
 import useUserStore from '../../../store/useUserStore';
 import type { WeeklyReflection } from '../../../store/diaryTypes';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 /**
  * WeeklySummaryCard Component

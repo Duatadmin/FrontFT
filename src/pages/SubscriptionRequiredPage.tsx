@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { createCheckoutSession, redirectToCheckout } from '@/lib/utils/subscription';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { Check, CircleAlert, LoaderCircle, Lock, CreditCard, Sparkles, Shield, TrendingUp } from 'lucide-react';
 import ShinyText from '@/components/ShinyText/ShinyText';
 

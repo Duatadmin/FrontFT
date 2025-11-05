@@ -23,7 +23,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { supabase } from '@/lib/supabase';
-import { BiometricInput } from '@/components/ui/BiometricInput';
+import { BiometricInput } from '@/components/ui/biometric-input';
 
 interface OnboardingStep {
   id: keyof OnboardingData;

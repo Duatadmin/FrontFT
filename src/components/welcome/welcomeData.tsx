@@ -12,7 +12,7 @@ import {
   MessageSquare,
   Sparkles
 } from 'lucide-react';
-import { Badge } from '../ui/Badge';
+import { Badge } from '../ui/badge';
 
 interface WelcomeSlide {
   id: string;

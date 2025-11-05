@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
-import { BarChart as BarChartIcon, AlertTriangle, Loader } from 'lucide-react';
+import { BarChart as BarChartIcon, AlertTriangle, Loader, ChevronLeft, ChevronRight } from 'lucide-react';
+import { startOfWeek, subWeeks, addWeeks, format } from 'date-fns';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -38,7 +39,10 @@ const TrainingLoadCard: React.FC = () => {
   const [chartData, setChartData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0); // 0 means current week, positive means weeks in the past
+  const [allData, setAllData] = useState<{ session_date: string; weight_kg: number; reps_done: number }[]>([]);
 
+  // Fetch all data once
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -48,24 +52,15 @@ const TrainingLoadCard: React.FC = () => {
         }
 
         const { data, error: queryError } = await supabase
-          .from('workout_full_view') // Changed from modular_training_set
-          // Assuming workout_full_view provides these fields directly or they can be derived.
-          // If workout_full_view is session-level, this select might need to access a JSONB field (e.g., session_state.sets)
-          // For now, proceeding with the assumption that these fields are available per 'row' that contributes to load.
-          .select('session_date, weight_kg, reps_done') // Changed recorded_at to session_date
+          .from('workout_full_view')
+          .select('session_date, weight_kg, reps_done')
           .order('session_date', { ascending: true });
 
         if (queryError) throw queryError;
 
         const rawData = data || [];
-        if (rawData.length === 0) {
-          setChartData([]);
-          setLoading(false);
-          return;
-        }
-
-        // --- Client-side data transformation ---
-        // Filter out rows with null essential data BEFORE any processing
+        
+        // Filter out rows with null essential data
         const cleanData = rawData.filter(
           item =>
             item.session_date !== null &&
@@ -73,63 +68,76 @@ const TrainingLoadCard: React.FC = () => {
             item.reps_done !== null
         ) as { session_date: string; weight_kg: number; reps_done: number }[];
 
-        if (cleanData.length === 0) {
-          setChartData([]);
-          setLoading(false);
-          return;
-        }
-
-        const weeklyLoads = cleanData.reduce((acc: Record<string, number>, item) => {
-            const itemDate = new Date(item.session_date); // Changed from set.recorded_at
-            const dayOfWeek = itemDate.getUTCDay(); // Sunday=0, Monday=1, etc.
-            const offsetToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Calculate offset to get to Monday
-            
-            const weekStartDate = new Date(itemDate);
-            weekStartDate.setUTCDate(itemDate.getUTCDate() - offsetToMonday);
-            weekStartDate.setUTCHours(0, 0, 0, 0); // Normalize to the start of the day
-
-            const weekStartString = weekStartDate.toISOString().split('T')[0];
-
-            if (!acc[weekStartString]) {
-                acc[weekStartString] = 0;
-            }
-            // item.weight_kg and item.reps_done are guaranteed non-null here due to prior filtering
-            acc[weekStartString] += item.weight_kg * item.reps_done;
-            return acc;
-        }, {});
-
-
-        const sortedWeeks = Object.keys(weeklyLoads).sort();
-        const processedData: ChartData[] = [];
-
-        for (let i = 0; i < sortedWeeks.length; i++) {
-            const week = sortedWeeks[i];
-            const weeklyLoad = weeklyLoads[week];
-
-            // Calculate chronic load (4-week rolling average)
-            const chronicLoadWindow = sortedWeeks.slice(Math.max(0, i - 3), i + 1);
-            const chronicLoadSum = chronicLoadWindow.reduce((sum, w) => sum + weeklyLoads[w], 0);
-            const chronicLoad = chronicLoadSum / chronicLoadWindow.length;
-
-            processedData.push({
-                week: `W${i + 1}`,
-                weeklyLoad: Math.round(weeklyLoad),
-                chronicLoad: Math.round(chronicLoad),
-                acwr: chronicLoad > 0 ? weeklyLoad / chronicLoad : 0,
-            });
-        }
-
-        setChartData(processedData.slice(-12)); // Show last 12 weeks
-
+        setAllData(cleanData);
+        setLoading(false);
       } catch (e: any) {
         setError(e.message);
-      } finally {
         setLoading(false);
       }
     };
 
     fetchData();
   }, []);
+
+  // Process data based on week offset
+  useEffect(() => {
+    if (allData.length === 0 && !loading) {
+      setChartData([]);
+      return;
+    }
+
+    // Generate 7 weeks based on offset
+    const today = new Date();
+    const endWeek = subWeeks(today, weekOffset);
+    const weeks: Date[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const weekStart = startOfWeek(subWeeks(endWeek, i), { weekStartsOn: 1 });
+      weeks.push(weekStart);
+    }
+
+    // Calculate weekly loads from clean data
+    const weeklyLoads: Record<string, number> = {};
+    
+    // Initialize all weeks with 0
+    weeks.forEach(weekStart => {
+      const weekKey = weekStart.toISOString().split('T')[0];
+      weeklyLoads[weekKey] = 0;
+    });
+
+    // Add actual data where it exists
+    allData.forEach(item => {
+      const itemDate = new Date(item.session_date);
+      const weekStart = startOfWeek(itemDate, { weekStartsOn: 1 });
+      const weekKey = weekStart.toISOString().split('T')[0];
+      
+      if (weeklyLoads.hasOwnProperty(weekKey)) {
+        weeklyLoads[weekKey] += item.weight_kg * item.reps_done;
+      }
+    });
+
+    // Process data for all 7 weeks
+    const processedData: ChartData[] = [];
+    const sortedWeekKeys = weeks.map(w => w.toISOString().split('T')[0]);
+
+    for (let i = 0; i < sortedWeekKeys.length; i++) {
+      const weekKey = sortedWeekKeys[i];
+      const weeklyLoad = weeklyLoads[weekKey];
+
+      // Calculate chronic load (4-week rolling average)
+      const chronicLoadWindow = sortedWeekKeys.slice(Math.max(0, i - 3), i + 1);
+      const chronicLoadSum = chronicLoadWindow.reduce((sum, w) => sum + weeklyLoads[w], 0);
+      const chronicLoad = chronicLoadSum / chronicLoadWindow.length;
+
+      processedData.push({
+        week: `W${i + 1}`, // W1 is oldest, W7 is current/end week
+        weeklyLoad: Math.round(weeklyLoad),
+        chronicLoad: Math.round(chronicLoad),
+        acwr: chronicLoad > 0 ? weeklyLoad / chronicLoad : 0,
+      });
+    }
+
+    setChartData(processedData);
+  }, [allData, weekOffset, loading]);
 
   if (loading) {
     return (
@@ -149,6 +157,8 @@ const TrainingLoadCard: React.FC = () => {
     );
   }
 
+  // Note: We'll always have 7 weeks of data now (even if all zeros)
+  // This check is just for safety
   if (chartData.length === 0) {
     return (
       <div className="bg-neutral-800/50 p-4 md:p-6 rounded-2xl shadow-lg flex flex-col justify-center items-center h-full min-h-[300px]">
@@ -162,13 +172,63 @@ const TrainingLoadCard: React.FC = () => {
   const latestWeek = chartData[chartData.length - 1];
   const acwrStatus = getACWRStatus(latestWeek.acwr);
 
+  // Calculate date range for display
+  const today = new Date();
+  const endWeek = subWeeks(today, weekOffset);
+  const startWeek = subWeeks(endWeek, 6);
+  const dateRangeText = `${format(startWeek, 'MMM d')} - ${format(endWeek, 'MMM d, yyyy')}`;
+
+  // Check if we can navigate forward/backward
+  const canGoForward = weekOffset > 0;
+  const canGoBack = allData.length > 0 && allData.some(item => {
+    const itemDate = new Date(item.session_date);
+    return itemDate < startWeek;
+  });
+
   return (
     <div className="bg-neutral-800/50 p-4 md:p-6 rounded-2xl shadow-lg flex flex-col h-full">
       <div className="flex justify-between items-start mb-4">
-        <h2 className="text-lg font-semibold text-white flex items-center">
-          <BarChartIcon size={20} className="mr-2 text-accent-lime" />
-          Training Load & Readiness
-        </h2>
+        <div>
+          <h2 className="text-lg font-semibold text-white flex items-center">
+            <BarChartIcon size={20} className="mr-2 text-accent-lime" />
+            Training Load & Readiness
+          </h2>
+          <p className="text-xs text-text-secondary mt-1">{dateRangeText}</p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setWeekOffset(weekOffset + 7)}
+            disabled={!canGoBack}
+            className={`p-1.5 rounded-lg transition-colors ${
+              canGoBack 
+                ? 'hover:bg-neutral-700 text-white cursor-pointer' 
+                : 'text-neutral-600 cursor-not-allowed'
+            }`}
+            aria-label="Previous 7 weeks"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <button
+            onClick={() => setWeekOffset(weekOffset - 7)}
+            disabled={!canGoForward}
+            className={`p-1.5 rounded-lg transition-colors ${
+              canGoForward 
+                ? 'hover:bg-neutral-700 text-white cursor-pointer' 
+                : 'text-neutral-600 cursor-not-allowed'
+            }`}
+            aria-label="Next 7 weeks"
+          >
+            <ChevronRight size={18} />
+          </button>
+          {weekOffset !== 0 && (
+            <button
+              onClick={() => setWeekOffset(0)}
+              className="ml-1 px-2 py-1 text-xs bg-accent-lime/20 text-accent-lime rounded hover:bg-accent-lime/30 transition-colors"
+            >
+              Today
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="mb-6 flex items-center space-x-4">

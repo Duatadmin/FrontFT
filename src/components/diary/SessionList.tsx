@@ -1,9 +1,9 @@
 import React from 'react';
 import { useCompletedSessions } from '@/hooks/useCompletedSessions';
 import { SessionCard } from './SessionCard';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/Alert';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner';
+import { LoadingSpinner } from '@/components/ui/loading-spinner';
 
 export const SessionList: React.FC = () => {
   const { data: sessions, isLoading, isError, error } = useCompletedSessions();

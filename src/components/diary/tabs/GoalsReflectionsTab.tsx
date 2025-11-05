@@ -4,7 +4,7 @@ import ReflectionTimeline from '../goals/ReflectionTimeline';
 import PhotoSlot from '../goals/PhotoSlot';
 import StreakCounter from '../goals/StreakCounter';
 import createLogger from '../../../utils/logger';
-import ErrorBoundary from '../../ui/ErrorBoundary';
+import ErrorBoundary from '../../ui/error-boundary';
 
 /**
  * Goals & Reflections Tab
