@@ -6,15 +6,12 @@ import { Button } from '@/components/ui/button';
 import {
   CircleAlert,
   LoaderCircle,
-  Sparkles,
   ShieldCheck,
   Dumbbell,
   TrendingUp,
   BarChart3,
   Mic,
   Heart,
-  Users,
-  Star,
   Lock,
   XCircle,
   Zap,
@@ -134,13 +131,9 @@ export default function SubscriptionRequiredPage() {
           {/* Premium card with gradient stroke */}
           <div className="relative rounded-3xl p-[1px] bg-gradient-to-br from-accent-lime/30 via-white/10 to-accent-orange/30 shadow-2xl shadow-black/40">
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 backdrop-blur-xl">
-              {/* Logo + Premium badge */}
-              <div className="mb-5 flex items-center justify-between">
-                <Logo className="h-10 w-10 text-accent-lime" />
-                <div className="flex items-center gap-1 rounded-full border border-accent-lime/30 bg-accent-lime/15 px-3 py-1 text-xs font-medium text-accent-lime">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Premium
-                </div>
+              {/* Logo */}
+              <div className="mb-5">
+                <Logo className="h-16 w-16 text-accent-lime" />
               </div>
 
               {/* Heading */}
@@ -153,24 +146,6 @@ export default function SubscriptionRequiredPage() {
               <p className="text-sm sm:text-base text-neutral-400 leading-relaxed">
                 AI-powered coaching that adapts to you — every rep, every week, every goal.
               </p>
-
-              {/* Social proof */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3 }}
-                className="mt-4 flex items-center gap-4 text-xs text-white/50"
-              >
-                <span className="flex items-center gap-1.5">
-                  <Users className="h-3.5 w-3.5 text-accent-lime" />
-                  50,000+ athletes
-                </span>
-                <span className="h-3 w-px bg-white/15" />
-                <span className="flex items-center gap-1.5">
-                  <Star className="h-3.5 w-3.5 text-accent-orange" />
-                  4.8 average rating
-                </span>
-              </motion.div>
 
               {/* Divider */}
               <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
@@ -234,16 +209,6 @@ export default function SubscriptionRequiredPage() {
                 ))}
               </div>
 
-              {/* Restore link */}
-              <p className="mt-4 text-center text-xs text-neutral-600">
-                Already subscribed?{' '}
-                <button
-                  onClick={handleSubscribe}
-                  className="text-accent-lime/70 underline underline-offset-2 hover:text-accent-lime transition-colors"
-                >
-                  Restore purchase
-                </button>
-              </p>
             </div>
           </div>
         </motion.div>
