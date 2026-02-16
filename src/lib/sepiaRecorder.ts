@@ -31,6 +31,34 @@ export interface RecorderHandle {
 
 const CHUNK_DURATION_MS = 30; // Corresponds to useWalkie CHUNK_MS
 
+// --- Recorder lock (ensures single owner at a time) ---
+let lockHolder: string | null = null;
+let lockRelease: (() => void) | null = null;
+
+/** Check whether the recorder is currently held by another owner. */
+export function isRecorderLocked(): boolean {
+  return lockHolder !== null;
+}
+
+function acquireRecorderLock(owner: string): void {
+  if (lockHolder !== null) {
+    throw new Error(`[sepiaRecorder] Lock already held by "${lockHolder}", cannot acquire for "${owner}"`);
+  }
+  lockHolder = owner;
+  console.log(`[sepiaRecorder] Lock acquired by "${owner}"`);
+}
+
+function releaseRecorderLock(owner: string): void {
+  if (lockHolder === owner) {
+    console.log(`[sepiaRecorder] Lock released by "${owner}"`);
+    lockHolder = null;
+    if (lockRelease) {
+      lockRelease();
+      lockRelease = null;
+    }
+  }
+}
+
 // Module-level state for SEPIA's global recorder
 let internalIsRecorderReady = false;
 let internalOnReadyPromise: Promise<void> | null = null;
@@ -126,12 +154,15 @@ export interface CreateRecorderOptions {
   audioConstraints?: MediaTrackConstraints; // Custom audio constraints for echo cancellation
 }
 
-export async function createRecorder(options: CreateRecorderOptions): Promise<RecorderHandle> {
+export async function createRecorder(options: CreateRecorderOptions & { owner?: string } = {} as any): Promise<RecorderHandle> {
   if (typeof SepiaFW === 'undefined' || typeof SepiaVoiceRecorder === 'undefined') {
     const err = new Error('SEPIA libraries (SepiaFW, SepiaVoiceRecorder) not found. Ensure they are loaded globally.');
     if (options.onError) options.onError(err);
     throw err;
   }
+
+  const owner = options.owner || 'default';
+  acquireRecorderLock(owner);
 
   initializeSepiaGlobalHandlers(); // Ensure global handlers are set up
 
@@ -172,11 +203,13 @@ export async function createRecorder(options: CreateRecorderOptions): Promise<Re
     } catch (err) {
       // Reset all state so the next createRecorder() call starts clean
       resetSepiaState();
+      releaseRecorderLock(owner);
       throw err;
     }
   }
   if (!internalIsRecorderReady) {
     resetSepiaState();
+    releaseRecorderLock(owner);
     throw new Error('SEPIA recorder did not become ready.');
   }
 
@@ -228,6 +261,7 @@ export async function createRecorder(options: CreateRecorderOptions): Promise<Re
         console.warn('[sepiaRecorder] Neither SepiaVoiceRecorder.release() nor .destroy() method found.');
       }
 
+      releaseRecorderLock(owner);
       console.log('RecorderHandle closed and internal state reset.');
     },
   };

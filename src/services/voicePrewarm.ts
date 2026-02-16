@@ -4,7 +4,7 @@
  */
 
 import { ASRServiceV3 } from './ASRServiceV3';
-import { createRecorder } from '../lib/sepiaRecorder';
+import { createRecorder, isRecorderLocked } from '../lib/sepiaRecorder';
 import { getASRAudioConstraints } from '../lib/audioConstraints';
 
 class VoicePrewarmService {
@@ -65,7 +65,7 @@ class VoicePrewarmService {
         // Permissions API not available (e.g. Safari < 16)
       }
 
-      if (micGranted) {
+      if (micGranted && !isRecorderLocked()) {
         const audioConstraints = getASRAudioConstraints({
           echoCancellation: true,
           noiseSuppression: true,
@@ -79,10 +79,13 @@ class VoicePrewarmService {
           audioConstraints: audioConstraints.audio as MediaTrackConstraints,
           sepiaModulesPath: '/sepia/modules/',
           onError: (err) => console.warn('[VoicePrewarm] Recorder error during prewarm:', err),
+          owner: 'prewarm',
         });
 
         recorder.close();
         console.log('[VoicePrewarm] SEPIA modules pre-loaded');
+      } else if (micGranted) {
+        console.log('[VoicePrewarm] Skipping SEPIA pre-load — recorder lock held by active session');
       } else {
         console.log('[VoicePrewarm] Skipping SEPIA pre-load — mic permission not yet granted');
       }

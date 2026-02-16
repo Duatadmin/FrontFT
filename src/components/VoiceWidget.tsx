@@ -1,6 +1,5 @@
 // src/components/VoiceWidget.tsx
 import React, { useRef, useState, Fragment, useEffect } from 'react';
-import { useVoice } from '../hooks/VoiceContext';
 import { useWalkieV3 } from '../hooks/useWalkieV3';
 import { v4 as uuid } from 'uuid';
 import { Player } from '@lottiefiles/react-lottie-player';
@@ -45,7 +44,6 @@ interface VoiceWidgetProps {
 
 const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, isChatProcessing, onStatusChange, isSendingRef, onRmsData }) => {
   // console.log('[VoiceWidget] Initializing / Re-rendering. isChatProcessing:', isChatProcessing);
-  const { voiceEnabled, toggleVoice } = useVoice();
   // Extract host from the full WebSocket URL
   const wsUrl = import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws';
   const wsHost = wsUrl.replace(/^wss?:\/\//, '').replace(/\/.*$/, ''); // Remove protocol and path
@@ -111,10 +109,6 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     try {
       setShowErrorToast(false);
       setToastMessage('');
-      if (!voiceEnabled) {
-        // console.log('[VoiceWidget] voiceEnabled is false, calling toggleVoice() to enable TTS.');
-        toggleVoice();
-      }
       await walkie.start(); // V3 doesn't need session ID
       // console.log('[VoiceWidget] walkie.start() called successfully.');
       
@@ -132,10 +126,6 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     try {
       await walkie.stop();
       // console.log('[VoiceWidget] walkie.stop() called successfully.');
-      if (voiceEnabled) {
-        // console.log('[VoiceWidget] voiceEnabled is true, calling toggleVoice() to disable TTS.');
-        toggleVoice();
-      }
     } catch (e: any) {
       console.error('Failed to stop walkie:', e);
       setToastMessage(e.message || 'Failed to stop recording.');
@@ -154,15 +144,15 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   let cursorClass = "cursor-pointer";
   let stateSpecificClasses = "";
 
-  // Combined isDisabled logic for clarity and use in event handlers and ARIA attributes
-  const effectiveIsDisabled = status === 'connecting' || status === 'error' || !!isChatProcessing || !!isSendingRef.current;
+  // Combined isDisabled logic — error is recoverable so not included here
+  const effectiveIsDisabled = status === 'connecting' || !!isChatProcessing || !!isSendingRef.current;
 
   switch (status) {
     case 'error':
       currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-yellow-300 flex-shrink-0" />;
-      currentLabel = "Error";
-      currentTitle = errorMessage || 'Microphone error';
-      cursorClass = "cursor-not-allowed";
+      currentLabel = "Tap to retry";
+      currentTitle = errorMessage || 'Microphone error — tap to retry';
+      cursorClass = "cursor-pointer";
       stateSpecificClasses = "opacity-80";
       break;
     case 'connecting':
@@ -200,19 +190,52 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
 
   const dynamicButtonClasses = `${baseButtonClasses} ${cursorClass} ${stateSpecificClasses}`.replace(/\s+/g, ' ').trim();
 
+  const btnRef = useRef<HTMLDivElement>(null);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (effectiveIsDisabled || e.button !== 0) return;
+
+    // Recover from error on tap
+    if (status === 'error') {
+      walkie.resetError();
+      return;
+    }
+
+    if (status === 'idle') {
+      btnRef.current?.setPointerCapture(e.pointerId);
+      handleStart();
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (status === 'active') {
+      btnRef.current?.releasePointerCapture(e.pointerId);
+      handleStop();
+    }
+  };
+
+  // Safety net: window-level pointerup while recording
+  useEffect(() => {
+    if (status !== 'active') return;
+    const onWindowPointerUp = () => { handleStop(); };
+    window.addEventListener('pointerup', onWindowPointerUp);
+    return () => window.removeEventListener('pointerup', onWindowPointerUp);
+  }, [status]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleKeyPress = (e: React.KeyboardEvent<HTMLDivElement>) => {
     if (effectiveIsDisabled) return;
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault();
-      if (status === 'idle') {
+      if (status === 'error') {
+        walkie.resetError();
+      } else if (status === 'idle') {
         handleStart();
       }
     }
   };
 
   const handleKeyRelease = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    // Stop only if it was active and we are not generally disabled
-    if (status === 'active' && !effectiveIsDisabled) { 
+    if (status === 'active') {
       if (e.key === ' ' || e.key === 'Enter') {
         e.preventDefault();
         handleStop();
@@ -220,47 +243,15 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     }
   };
 
-  // Event handlers for the single button approach
-  const handleMouseDown = () => {
-    if (effectiveIsDisabled) return;
-    if (status === 'idle') {
-      handleStart();
-    }
-  };
-
-  const handleMouseUp = () => {
-    if (effectiveIsDisabled) return;
-    if (status === 'active') {
-      handleStop();
-    }
-  };
-
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (effectiveIsDisabled) return;
-    if (status === 'idle') {
-      // Prevent default to avoid mouse events on touch devices
-      e.preventDefault();
-      handleStart();
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (effectiveIsDisabled) return;
-    if (status === 'active') {
-      e.preventDefault();
-      handleStop();
-    }
-  };
-
   return (
     <>
       {/* Single button element with conditional event handlers based on state */}
       <div
+        ref={btnRef}
         className={dynamicButtonClasses}
-        onMouseDown={isActivated ? undefined : handleMouseDown}
-        onMouseUp={isActivated ? handleMouseUp : undefined}
-        onTouchStart={isActivated ? undefined : handleTouchStart}
-        onTouchEnd={isActivated ? handleTouchEnd : undefined}
+        onPointerDown={handlePointerDown}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onKeyDown={handleKeyPress}
         onKeyUp={handleKeyRelease}
         role="button"

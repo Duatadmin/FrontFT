@@ -17,32 +17,38 @@ interface VoiceInputFieldProps {
   onTtsPlaybackEnd?: () => void;
 }
 
-const VoiceInputField: React.FC<VoiceInputFieldProps> = ({ 
-  onSendMessage, 
+/** @deprecated Use VoiceWidget (via ChatInput) instead. This component uses the removed VoiceModule singleton. */
+const VoiceInputField: React.FC<VoiceInputFieldProps> = ({
+  onSendMessage,
   isLoading
 }) => {
+  console.warn('[VoiceInputField] This component is deprecated. Use VoiceWidget instead.');
+  // Return null to prevent rendering — the legacy singleton imports throw on call.
+  return null;
+
+  // --- Dead code below kept for reference only ---
   const [inputValue, setInputValue] = useState('');
   const [isListening, setIsListening] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const voiceTickerRecorderRef = useRef<ISepiaVoiceRecorder>({ onResamplerData: undefined });
-  
+
   // Unique ID for transcript targeting
   const chatInputId = 'chat-input';
-  
+
   // Initialize voice module on component mount
   useEffect(() => {
     try {
       // Initialize voice module
       getVoiceModule();
-      
+
       // Set transcript target
       setTranscriptTarget(chatInputId);
-      
+
       // Listen for state changes
       onVoiceState((state) => {
         setIsListening(state === 'recording');
       });
-      
+
       console.log('Voice module initialized in voice input field');
     } catch (error) {
       console.error('Failed to initialize voice module in voice input field:', error);

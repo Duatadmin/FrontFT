@@ -20,15 +20,19 @@ export interface ASRServiceOptions {
 }
 
 export class ASRServiceV3 {
+  private static readonly INITIAL_RECONNECT_DELAY = 200;
+  private static readonly DEFAULT_CONNECT_TIMEOUT = 7000;
+
   private socket: WebSocket | null = null;
   private options: ASRServiceOptions;
   private reconnectTimer: NodeJS.Timeout | null = null;
-  private reconnectDelay = 200;  // Reduced from 1000ms for faster initial reconnect
+  private reconnectDelay = ASRServiceV3.INITIAL_RECONNECT_DELAY;
   private maxReconnectDelay = 30000;
   private isIntentionalClose = false;
   private connectionPromise: Promise<void> | null = null;
   private resolveConnection: (() => void) | null = null;
   private rejectConnection: ((error: Error) => void) | null = null;
+  private connectTimer: NodeJS.Timeout | null = null;
 
   constructor(options: ASRServiceOptions) {
     this.options = {
@@ -43,7 +47,7 @@ export class ASRServiceV3 {
     return `${protocol}://${this.options.host}${endpoint}`;
   }
 
-  async connect(): Promise<void> {
+  async connect(timeoutMs: number = ASRServiceV3.DEFAULT_CONNECT_TIMEOUT): Promise<void> {
     if (this.connectionPromise) {
       return this.connectionPromise;
     }
@@ -54,30 +58,50 @@ export class ASRServiceV3 {
       this.resolveConnection = resolve;
       this.rejectConnection = reject;
 
+      // Connection timeout
+      this.connectTimer = setTimeout(() => {
+        console.error(`[ASRServiceV3] Connection timed out after ${timeoutMs}ms`);
+        if (this.socket) {
+          this.socket.close();
+          this.socket = null;
+        }
+        if (this.rejectConnection) {
+          this.rejectConnection(new Error(`WebSocket connection timed out after ${timeoutMs}ms`));
+          this.resolveConnection = null;
+          this.rejectConnection = null;
+        }
+      }, timeoutMs);
+
       try {
         const url = this.getWebSocketUrl();
         console.log(`[ASRServiceV3] Connecting to ${url}`);
-        
+
         this.socket = new WebSocket(url);
         this.socket.binaryType = 'arraybuffer';
 
         this.socket.onopen = () => {
+          if (this.connectTimer) {
+            clearTimeout(this.connectTimer);
+            this.connectTimer = null;
+          }
           console.log('[ASRServiceV3] WebSocket connected');
-          this.reconnectDelay = 200; // Reset reconnect delay to fast value
-          
+          this.reconnectDelay = ASRServiceV3.INITIAL_RECONNECT_DELAY;
+
           if (this.options.onConnectionChange) {
             this.options.onConnectionChange(true);
           }
-          
+
           if (this.resolveConnection) {
             this.resolveConnection();
+            this.resolveConnection = null;
+            this.rejectConnection = null;
           }
         };
 
         this.socket.onmessage = (event) => {
           try {
             const data: ASRMessage = JSON.parse(event.data);
-            
+
             if ('error' in data) {
               console.error('[ASRServiceV3] Server error:', data.error);
               if (this.options.onError) {
@@ -85,7 +109,7 @@ export class ASRServiceV3 {
               }
             } else if ('text' in data && 'final' in data) {
               console.log(`[ASRServiceV3] Transcript received - Text: "${data.text}", Final: ${data.final}`);
-              
+
               // Only process final transcripts as requested
               if (data.final && this.options.onTranscript) {
                 this.options.onTranscript(data);
@@ -107,21 +131,25 @@ export class ASRServiceV3 {
         };
 
         this.socket.onclose = (event) => {
+          if (this.connectTimer) {
+            clearTimeout(this.connectTimer);
+            this.connectTimer = null;
+          }
           console.log(`[ASRServiceV3] WebSocket closed - Code: ${event.code}, Reason: ${event.reason}`);
-          
+
           if (this.options.onConnectionChange) {
             this.options.onConnectionChange(false);
           }
 
-          // Handle connection rejection if still pending
-          if (this.rejectConnection && !event.wasClean) {
-            this.rejectConnection(new Error(`WebSocket closed unexpectedly: ${event.reason || 'Unknown reason'}`));
+          // Reject pending connect on ANY close before onopen resolved
+          if (this.rejectConnection) {
+            this.rejectConnection(new Error(`WebSocket closed before open: code=${event.code}, reason=${event.reason || 'none'}`));
+            this.resolveConnection = null;
+            this.rejectConnection = null;
           }
 
           // Cleanup connection promise state
           this.connectionPromise = null;
-          this.resolveConnection = null;
-          this.rejectConnection = null;
 
           // Auto-reconnect for walkie mode unless intentionally closed
           if (this.options.mode === 'walkie' && !this.isIntentionalClose && !event.wasClean) {
@@ -130,9 +158,15 @@ export class ASRServiceV3 {
         };
 
       } catch (error) {
+        if (this.connectTimer) {
+          clearTimeout(this.connectTimer);
+          this.connectTimer = null;
+        }
         console.error('[ASRServiceV3] Failed to create WebSocket:', error);
         if (this.rejectConnection) {
           this.rejectConnection(error instanceof Error ? error : new Error(String(error)));
+          this.resolveConnection = null;
+          this.rejectConnection = null;
         }
       }
     });
@@ -204,13 +238,23 @@ export class ASRServiceV3 {
     console.log('[ASRServiceV3] Disconnecting...');
     this.isIntentionalClose = true;
 
+    if (this.connectTimer) {
+      clearTimeout(this.connectTimer);
+      this.connectTimer = null;
+    }
+
     if (this.reconnectTimer) {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
 
+    // Reject any pending connection promise so callers aren't left hanging
+    if (this.rejectConnection) {
+      this.rejectConnection(new Error('Disconnected by client'));
+    }
+
     if (this.socket) {
-      if (this.socket.readyState === WebSocket.OPEN) {
+      if (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING) {
         this.socket.close(1000, 'Client disconnect');
       }
       this.socket = null;
@@ -220,6 +264,6 @@ export class ASRServiceV3 {
     this.connectionPromise = null;
     this.resolveConnection = null;
     this.rejectConnection = null;
-    this.reconnectDelay = 1000;
+    this.reconnectDelay = ASRServiceV3.INITIAL_RECONNECT_DELAY;
   }
 }

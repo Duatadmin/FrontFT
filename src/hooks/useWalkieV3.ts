@@ -26,6 +26,7 @@ export function useWalkieV3(options: UseWalkieV3Options): {
   state: WalkieState;
   start(): Promise<void>;
   stop(): Promise<void>;
+  resetError(): Promise<void>;
 } {
   const { wsHost, mode = 'walkie', recorderConfig, onTranscription, onError } = options;
 
@@ -105,6 +106,11 @@ export function useWalkieV3(options: UseWalkieV3Options): {
     }
   }, []);
 
+  const failAndCleanup = useCallback(async (error: Error, context: string) => {
+    handleInternalError(error, context);
+    await cleanupResources();
+  }, [handleInternalError, cleanupResources]);
+
   // Ensure microphone permission
   const ensureMicrophonePermission = async (): Promise<void> => {
     const permStartTime = performance.now();
@@ -153,7 +159,7 @@ export function useWalkieV3(options: UseWalkieV3Options): {
         host: wsHost,
         mode,
         onTranscript: handleTranscript,
-        onError: (error) => handleInternalError(error, 'ASR service'),
+        onError: (error) => { failAndCleanup(error, 'ASR service'); },
         onConnectionChange: handleConnectionChange,
       });
       asrServiceRef.current = asrService;
@@ -169,17 +175,18 @@ export function useWalkieV3(options: UseWalkieV3Options): {
         sampleRate: 16000
       });
       
-      const recConfig: CreateRecorderOptions = {
+      const recConfig = {
         targetSampleRate: 16000,
         mono: true,
         ...(recorderConfig || {}),
         audioConstraints: audioConstraints.audio as MediaTrackConstraints,
         onError: (err: any) => {
-          handleInternalError(
-            err instanceof Error ? err : new Error(String(err || 'Unknown recorder error')), 
+          failAndCleanup(
+            err instanceof Error ? err : new Error(String(err || 'Unknown recorder error')),
             'recorder'
           );
         },
+        owner: 'walkieV3',
       };
       
       const recorder = await createRecorder(recConfig);
@@ -224,23 +231,30 @@ export function useWalkieV3(options: UseWalkieV3Options): {
       console.log(`[useWalkieV3] Streaming started successfully in ${elapsedTime.toFixed(2)}ms`);
 
     } catch (error: any) {
-      handleInternalError(
-        error instanceof Error ? error : new Error(String(error)), 
+      await failAndCleanup(
+        error instanceof Error ? error : new Error(String(error)),
         'starting stream'
       );
-      await cleanupResources();
     }
-  }, [wsHost, mode, recorderConfig, handleTranscript, handleInternalError, handleConnectionChange, cleanupResources, state.status]);
+  }, [wsHost, mode, recorderConfig, handleTranscript, failAndCleanup, handleConnectionChange, cleanupResources, state.status]);
 
   const stop = useCallback(async () => {
     console.log('[useWalkieV3] Stopping stream...');
     await cleanupResources();
-    setState(prevState => ({ 
-      ...prevState, 
-      isStreaming: false, 
-      status: 'idle', 
-      level: 0 
+    setState(prevState => ({
+      ...prevState,
+      isStreaming: false,
+      status: 'idle',
+      level: 0
     }));
+  }, [cleanupResources]);
+
+  const resetError = useCallback(async () => {
+    console.log('[useWalkieV3] Resetting error state...');
+    await cleanupResources().catch(e =>
+      console.error('[useWalkieV3] Cleanup during resetError:', e)
+    );
+    setState({ isStreaming: false, level: 0, status: 'idle', errorMessage: null });
   }, [cleanupResources]);
 
   // Cleanup on unmount
@@ -265,8 +279,8 @@ export function useWalkieV3(options: UseWalkieV3Options): {
           // After 5 consecutive failures (10 seconds), trigger error
           if (consecutiveFailures >= 5) {
             console.error('[useWalkieV3] ASR connection persistently lost');
-            handleInternalError(
-              new Error('ASR connection lost and could not be recovered'), 
+            failAndCleanup(
+              new Error('ASR connection lost and could not be recovered'),
               'health check'
             );
           }
@@ -284,7 +298,7 @@ export function useWalkieV3(options: UseWalkieV3Options): {
         clearInterval(healthCheckInterval);
       }
     };
-  }, [state.status, mode, handleInternalError]);
+  }, [state.status, mode, failAndCleanup]);
 
-  return { state, start, stop };
+  return { state, start, stop, resetError };
 }
