@@ -133,7 +133,7 @@ export default function SubscriptionRequiredPage() {
             <div className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 backdrop-blur-xl">
               {/* Logo */}
               <div className="mb-5">
-                <Logo className="h-16 w-16 text-accent-lime" />
+                <Logo className="h-20 w-20 text-accent-lime" />
               </div>
 
               {/* Heading */}
