@@ -120,10 +120,16 @@ export function useWalkieV3(options: UseWalkieV3Options): {
         console.log('[useWalkieV3] Microphone permission already granted');
         return;
       }
-    } catch {
-      // Permissions API might not be available
+      if (status.state === 'denied') {
+        throw new Error('Microphone access is blocked. Please enable it in your browser\'s site settings, then try again.');
+      }
+      // 'prompt' — fall through to getUserMedia which shows the browser prompt
+    } catch (err: any) {
+      // Re-throw our own permission-blocked error
+      if (err?.message?.includes('Microphone access is blocked')) throw err;
+      // Permissions API not available (Safari <16) — fall through
     }
-    
+
     // Request permission
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     stream.getTracks().forEach(track => track.stop());

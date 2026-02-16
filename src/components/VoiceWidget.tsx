@@ -148,13 +148,15 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   const effectiveIsDisabled = status === 'connecting' || !!isChatProcessing || !!isSendingRef.current;
 
   switch (status) {
-    case 'error':
+    case 'error': {
       currentIcon = <ExclamationTriangleIcon className="h-5 w-5 text-yellow-300 flex-shrink-0" />;
-      currentLabel = "Tap to retry";
+      const isPermissionError = errorMessage?.includes('blocked') || errorMessage?.includes('Permission denied');
+      currentLabel = isPermissionError ? "Mic blocked" : "Tap to retry";
       currentTitle = errorMessage || 'Microphone error — tap to retry';
       cursorClass = "cursor-pointer";
       stateSpecificClasses = "opacity-80";
       break;
+    }
     case 'connecting':
       currentIcon = (
         <svg className="animate-spin h-5 w-5 text-white/50 flex-shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
