@@ -96,6 +96,28 @@ function initializeSepiaGlobalHandlers() {
   isSepiaInitialized = true;
 }
 
+/**
+ * Reset all module-level state after a failed createRecorder() call.
+ * Ensures subsequent calls start with a clean slate instead of
+ * inheriting corrupted state from the failed attempt.
+ */
+function resetSepiaState(): void {
+  internalIsRecorderReady = false;
+  internalOnReadyPromise = null;
+  internalOnReadyResolve = null;
+  internalOnReadyReject = null;
+  isSepiaInitialized = false;
+  activeErrorCallback = null;
+
+  if (typeof SepiaVoiceRecorder !== 'undefined') {
+    if (typeof SepiaVoiceRecorder.release === 'function') {
+      try { SepiaVoiceRecorder.release(); } catch (_) { /* best-effort */ }
+    } else if (typeof SepiaVoiceRecorder.destroy === 'function') {
+      try { SepiaVoiceRecorder.destroy(); } catch (_) { /* best-effort */ }
+    }
+  }
+}
+
 export interface CreateRecorderOptions {
   targetSampleRate: number;
   mono: boolean;
@@ -148,12 +170,13 @@ export async function createRecorder(options: CreateRecorderOptions): Promise<Re
     try {
       await internalOnReadyPromise;
     } catch (err) {
-      // Error already handled by onProcessorInitError via activeErrorCallback
-      throw err; // Re-throw to indicate creation failure
+      // Reset all state so the next createRecorder() call starts clean
+      resetSepiaState();
+      throw err;
     }
   }
   if (!internalIsRecorderReady) {
-    // Should not happen if await internalOnReadyPromise resolved without error
+    resetSepiaState();
     throw new Error('SEPIA recorder did not become ready.');
   }
 

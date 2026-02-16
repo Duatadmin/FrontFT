@@ -54,37 +54,37 @@ class VoicePrewarmService {
       
       console.log('[VoicePrewarm] WebSocket pre-warmed');
       
-      // Step 2: Pre-load SEPIA modules by creating a recorder
-      const audioConstraints = getASRAudioConstraints({
-        echoCancellation: true,
-        noiseSuppression: true,
-        autoGainControl: true,
-        sampleRate: 16000
-      });
-      
-      const recorder = await createRecorder({
-        targetSampleRate: 16000,
-        mono: true,
-        audioConstraints: audioConstraints.audio as MediaTrackConstraints,
-        sepiaModulesPath: '/sepia/modules/',
-        onError: (err) => console.warn('[VoicePrewarm] Recorder error during prewarm:', err),
-      });
-      
-      // Close the recorder immediately
-      recorder.close();
-      
-      console.log('[VoicePrewarm] SEPIA modules pre-loaded');
-      
-      // Step 3: Pre-request microphone permission (optional - only if user has used voice before)
-      const hasUsedVoice = localStorage.getItem('has-used-voice') === 'true';
-      if (hasUsedVoice) {
-        try {
-          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          stream.getTracks().forEach(track => track.stop());
-          console.log('[VoicePrewarm] Microphone permission cached');
-        } catch (err) {
-          console.warn('[VoicePrewarm] Could not pre-request microphone permission:', err);
-        }
+      // Step 2: Pre-load SEPIA modules (only if mic permission already granted)
+      // SEPIA's create() internally calls getUserMedia, which requires a user gesture.
+      // Without permission, this would fail with NotAllowedError and corrupt SEPIA state.
+      let micGranted = false;
+      try {
+        const permStatus = await navigator.permissions.query({ name: 'microphone' as PermissionName });
+        micGranted = permStatus.state === 'granted';
+      } catch {
+        // Permissions API not available (e.g. Safari < 16)
+      }
+
+      if (micGranted) {
+        const audioConstraints = getASRAudioConstraints({
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 16000
+        });
+
+        const recorder = await createRecorder({
+          targetSampleRate: 16000,
+          mono: true,
+          audioConstraints: audioConstraints.audio as MediaTrackConstraints,
+          sepiaModulesPath: '/sepia/modules/',
+          onError: (err) => console.warn('[VoicePrewarm] Recorder error during prewarm:', err),
+        });
+
+        recorder.close();
+        console.log('[VoicePrewarm] SEPIA modules pre-loaded');
+      } else {
+        console.log('[VoicePrewarm] Skipping SEPIA pre-load — mic permission not yet granted');
       }
       
       const elapsedTime = performance.now() - startTime;
