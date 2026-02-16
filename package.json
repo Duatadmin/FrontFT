@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && mkdir -p dist/sepia && cp -rf public/sepia/* dist/sepia/ && echo '[post-build] dist/sepia:' && ls dist/sepia/",
     "preview": "vite preview",
     "start": "npx serve -s dist -l $PORT",
     "build:legacy-voice": "cd legacy/voice-module && yarn build",
