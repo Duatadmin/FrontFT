@@ -4,8 +4,8 @@
 providers = ["node"]
 
 [phases.setup]
-# Guarantee Node 18
-nixPkgs = ["nodejs_18"]
+# Use Node 20 LTS
+nixPkgs = ["nodejs_20"]
 
 [phases.install]
 cmds = ["npm ci"]

@@ -14,7 +14,7 @@
     "start:api:prod": "node dist_server/server.js"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=20"
   },
   "devDependencies": {
     "@tailwindcss/forms": "^0.5.10",
