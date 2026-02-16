@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useUserStore } from '@/lib/stores/useUserStore';
-import { createCheckoutSession, redirectToCheckout } from '@/lib/utils/subscription';
+import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { Button } from '@/components/ui/button';
 import { Check, CircleAlert, LoaderCircle, Lock, CreditCard, Sparkles, Shield, TrendingUp } from 'lucide-react';
 import ShinyText from '@/components/ShinyText/ShinyText';
@@ -22,8 +22,8 @@ export default function SubscriptionRequiredPage() {
 
     try {
       console.log('[SubscriptionRequiredPage] Creating checkout session...');
-      const { url, error: checkoutError } = await createCheckoutSession(user);
-      
+      const { url, error: checkoutError } = await SubscriptionService.createCheckoutSession(user);
+
       if (checkoutError) {
         console.error('[SubscriptionRequiredPage] Checkout error:', checkoutError);
         setError(checkoutError);
@@ -36,8 +36,8 @@ export default function SubscriptionRequiredPage() {
       }
 
       console.log('[SubscriptionRequiredPage] Redirecting to checkout...');
-      const { error: redirectError } = await redirectToCheckout(url);
-      
+      const { error: redirectError } = await SubscriptionService.redirectToCheckout(url);
+
       if (redirectError) {
         console.error('[SubscriptionRequiredPage] Redirect error:', redirectError);
         setError(redirectError);
