@@ -3,8 +3,38 @@ import { motion } from 'framer-motion';
 import { useUserStore } from '@/lib/stores/useUserStore';
 import { SubscriptionService } from '@/lib/services/subscriptionService';
 import { Button } from '@/components/ui/button';
-import { Check, CircleAlert, LoaderCircle, Lock, CreditCard, Sparkles, Shield, TrendingUp } from 'lucide-react';
+import {
+  CircleAlert,
+  LoaderCircle,
+  Sparkles,
+  ShieldCheck,
+  Dumbbell,
+  TrendingUp,
+  BarChart3,
+  Mic,
+  Heart,
+  Users,
+  Star,
+  Lock,
+  XCircle,
+  Zap,
+} from 'lucide-react';
 import ShinyText from '@/components/ShinyText/ShinyText';
+import Logo from '../../assets/Logo.svg?react';
+
+const benefits = [
+  { icon: Dumbbell, label: 'Programs built for your body and goals', color: 'text-accent-lime' },
+  { icon: TrendingUp, label: 'Break plateaus with plans that adapt weekly', color: 'text-accent-orange' },
+  { icon: BarChart3, label: 'See exactly what works with deep analytics', color: 'text-accent-lime' },
+  { icon: Mic, label: 'Voice-controlled, hands-free workouts', color: 'text-accent-orange' },
+  { icon: Heart, label: 'Recovery insights to train smarter', color: 'text-accent-lime' },
+];
+
+const trustSignals = [
+  { icon: XCircle, label: 'Cancel anytime' },
+  { icon: ShieldCheck, label: '30-day money-back' },
+  { icon: Lock, label: 'Secure via Stripe' },
+];
 
 export default function SubscriptionRequiredPage() {
   const { user } = useUserStore();
@@ -51,76 +81,122 @@ export default function SubscriptionRequiredPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden">
-      {/* Subtle background orbs matching onboarding */}
+    <div className="relative min-h-screen w-full overflow-hidden bg-dark-bg">
+      {/* Animated gradient background — matches onboarding */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-accent-lime/20 blur-3xl" />
-        <div className="absolute -bottom-24 -right-24 h-80 w-80 rounded-full bg-accent-orange/20 blur-[90px]" />
-        <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.03] blur-2xl" />
+        <svg className="absolute inset-0 h-full w-full" preserveAspectRatio="none">
+          <defs>
+            <filter id="sub-glow">
+              <feGaussianBlur stdDeviation="40" result="coloredBlur" />
+              <feMerge>
+                <feMergeNode in="coloredBlur" />
+                <feMergeNode in="SourceGraphic" />
+              </feMerge>
+            </filter>
+            <radialGradient id="sub-grad1">
+              <stop offset="0%" stopColor="#DFF250" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#DFF250" stopOpacity="0" />
+            </radialGradient>
+            <radialGradient id="sub-grad2">
+              <stop offset="0%" stopColor="#F2A03D" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#F2A03D" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <motion.circle
+            cx="25%"
+            cy="20%"
+            r="300"
+            fill="url(#sub-grad1)"
+            filter="url(#sub-glow)"
+            animate={{ cx: ['25%', '75%', '25%'], cy: ['20%', '70%', '20%'] }}
+            transition={{ duration: 20, repeat: Infinity, ease: 'easeInOut' }}
+          />
+          <motion.circle
+            cx="75%"
+            cy="80%"
+            r="400"
+            fill="url(#sub-grad2)"
+            filter="url(#sub-glow)"
+            animate={{ cx: ['75%', '25%', '75%'], cy: ['80%', '30%', '80%'] }}
+            transition={{ duration: 25, repeat: Infinity, ease: 'easeInOut' }}
+          />
+        </svg>
+        <div className="absolute inset-0 bg-dark-bg/30 backdrop-blur-[100px]" />
       </div>
 
-      <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl items-center justify-center p-4">
+      <div className="relative z-10 mx-auto flex min-h-screen max-w-lg items-center justify-center p-4">
         <motion.div
-          initial={{ opacity: 0, y: 10 }}
+          initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: 'easeOut' }}
+          transition={{ duration: 0.45, ease: 'easeOut' }}
           className="w-full"
         >
           {/* Premium card with gradient stroke */}
           <div className="relative rounded-3xl p-[1px] bg-gradient-to-br from-accent-lime/30 via-white/10 to-accent-orange/30 shadow-2xl shadow-black/40">
-            <div className="rounded-3xl border border-white/10 bg-white/5 p-8 md:p-10 backdrop-blur-xl">
-              {/* Header */}
-              <div className="mb-6 flex items-center gap-3">
-                <div className="relative">
-                  <div className="absolute inset-0 rounded-full bg-accent-lime/25 blur-lg" />
-                  <div className="relative flex h-12 w-12 items-center justify-center rounded-full border border-white/15 bg-white/5">
-                    <Lock className="h-6 w-6 text-accent-lime" />
-                  </div>
-                </div>
+            <div className="rounded-3xl border border-white/10 bg-white/5 p-6 sm:p-8 backdrop-blur-xl">
+              {/* Logo + Premium badge */}
+              <div className="mb-5 flex items-center justify-between">
+                <Logo className="h-10 w-10 text-accent-lime" />
                 <div className="flex items-center gap-1 rounded-full border border-accent-lime/30 bg-accent-lime/15 px-3 py-1 text-xs font-medium text-accent-lime">
                   <Sparkles className="h-3.5 w-3.5" />
                   Premium
                 </div>
               </div>
 
-              <div className="mb-3">
-                <ShinyText text="Subscription Required" className="text-[28px] md:text-5xl font-extrabold tracking-tight text-white" />
+              {/* Heading */}
+              <div className="mb-2">
+                <ShinyText
+                  text="Unlock Your Full Potential"
+                  className="text-[26px] sm:text-3xl md:text-4xl font-extrabold tracking-tight text-white"
+                />
               </div>
-              <p className="text-base text-neutral-300">
-                Unlock AI-powered coaching, personalized training plans, and advanced analytics.
+              <p className="text-sm sm:text-base text-neutral-400 leading-relaxed">
+                AI-powered coaching that adapts to you — every rep, every week, every goal.
               </p>
 
+              {/* Social proof */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="mt-4 flex items-center gap-4 text-xs text-white/50"
+              >
+                <span className="flex items-center gap-1.5">
+                  <Users className="h-3.5 w-3.5 text-accent-lime" />
+                  50,000+ athletes
+                </span>
+                <span className="h-3 w-px bg-white/15" />
+                <span className="flex items-center gap-1.5">
+                  <Star className="h-3.5 w-3.5 text-accent-orange" />
+                  4.8 average rating
+                </span>
+              </motion.div>
+
               {/* Divider */}
-              <div className="my-8 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+              <div className="my-6 h-px w-full bg-gradient-to-r from-transparent via-white/10 to-transparent" />
 
               {/* Benefits */}
-              <div className="rounded-2xl border border-white/10 bg-black/25 p-5 md:p-6">
-                <h3 className="font-title mb-4 text-lg font-semibold text-white">What you get</h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {[ 
-                    'Personalized workout programs', 
-                    'Adaptive plans that evolve with you', 
-                    'Advanced analytics & insights', 
-                    'Priority support & early features' 
-                  ].map((label, i) => (
-                    <motion.div 
-                      key={label} 
-                      initial={{ opacity: 0, y: 6 }} 
-                      animate={{ opacity: 1, y: 0 }} 
-                      transition={{ delay: 0.05 * i }}
-                      className="flex items-start"
-                    >
-                      <Check className="mr-3 mt-1 h-5 w-5 shrink-0 text-accent-lime" />
-                      <span className="text-neutral-300">{label}</span>
-                    </motion.div>
-                  ))}
-                </div>
+              <div className="space-y-3">
+                {benefits.map(({ icon: Icon, label, color }, i) => (
+                  <motion.div
+                    key={label}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: 0.08 * i, type: 'spring', stiffness: 200, damping: 20 }}
+                    className="flex items-center gap-3"
+                  >
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10">
+                      <Icon className={`h-4 w-4 ${color}`} />
+                    </div>
+                    <span className="text-sm text-neutral-300">{label}</span>
+                  </motion.div>
+                ))}
               </div>
 
               {/* Error */}
               {error && (
-                <div className="mt-6 flex items-center rounded-lg border border-red-500/40 bg-red-900/50 px-4 py-3 text-sm text-red-200">
-                  <CircleAlert className="mr-3 h-4 w-4" />
+                <div className="mt-5 flex items-center rounded-lg border border-red-500/40 bg-red-900/50 px-4 py-3 text-sm text-red-200">
+                  <CircleAlert className="mr-3 h-4 w-4 shrink-0" />
                   <p>{error}</p>
                 </div>
               )}
@@ -141,38 +217,33 @@ export default function SubscriptionRequiredPage() {
                     </>
                   ) : (
                     <>
-                      <CreditCard className="mr-2 h-5 w-5" />
-                      Upgrade to Premium
+                      <Zap className="mr-2 h-5 w-5" />
+                      Start Your Transformation
                     </>
                   )}
                 </Button>
-                <p className="mt-3 text-center text-xs text-neutral-500">Secure payments powered by Stripe</p>
               </div>
 
-              {/* Highlights row */}
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                  <TrendingUp className="h-4 w-4 text-accent-lime" />
-                  <div>
-                    <p className="text-xs font-semibold text-white">Faster Progress</p>
-                    <p className="text-xs text-neutral-300">Plans that adapt weekly.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                  <Shield className="h-4 w-4 text-accent-orange" />
-                  <div>
-                    <p className="text-xs font-semibold text-white">Safe & Supported</p>
-                    <p className="text-xs text-neutral-300">Guidance when you need it.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2 rounded-xl border border-white/10 bg-white/5 p-3">
-                  <Sparkles className="h-4 w-4 text-accent-lime" />
-                  <div>
-                    <p className="text-xs font-semibold text-white">Early Access</p>
-                    <p className="text-xs text-neutral-300">Try new AI features first.</p>
-                  </div>
-                </div>
+              {/* Trust signals */}
+              <div className="mt-5 flex items-center justify-center gap-4 text-[11px] text-neutral-500">
+                {trustSignals.map(({ icon: Icon, label }) => (
+                  <span key={label} className="flex items-center gap-1">
+                    <Icon className="h-3 w-3" />
+                    {label}
+                  </span>
+                ))}
               </div>
+
+              {/* Restore link */}
+              <p className="mt-4 text-center text-xs text-neutral-600">
+                Already subscribed?{' '}
+                <button
+                  onClick={handleSubscribe}
+                  className="text-accent-lime/70 underline underline-offset-2 hover:text-accent-lime transition-colors"
+                >
+                  Restore purchase
+                </button>
+              </p>
             </div>
           </div>
         </motion.div>
