@@ -1092,9 +1092,9 @@ export function PremiumWelcomeFlow() {
 
                   {/* Chips + Text Input */}
                   {screen.inputType === 'chips_text' && (
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {screen.chipOptions && (
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap gap-3">
                           {screen.chipOptions.map((chip, index) => {
                             const isSelected = selectedChips.includes(chip);
                             return (
@@ -1113,7 +1113,7 @@ export function PremiumWelcomeFlow() {
                                   );
                                 }}
                                 className={cn(
-                                  "px-4 py-2.5 rounded-full text-sm font-medium",
+                                  "px-5 py-3.5 rounded-2xl text-base font-medium",
                                   "border transition-all duration-200",
                                   isSelected
                                     ? "bg-accent-lime/20 border-accent-lime/50 text-white"
@@ -1126,8 +1126,12 @@ export function PremiumWelcomeFlow() {
                           })}
                         </div>
                       )}
+                      <div className="flex items-center gap-3 my-1">
+                        <div className="flex-1 h-px bg-white/10" />
+                        <span className="text-xs text-white/30 uppercase tracking-widest">or</span>
+                        <div className="flex-1 h-px bg-white/10" />
+                      </div>
                       <div>
-                        <label className="text-xs text-white/40 mb-1.5 block">Or type your own</label>
                         <input
                           type="text"
                           value={inputValue}
