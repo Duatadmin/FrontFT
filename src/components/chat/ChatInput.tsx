@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 
 import { DashboardButton } from '../chat/DashboardButton'; // Adjusted path
 import VoiceWidget from '../VoiceWidget'; // Import original VoiceWidget
+import { NowSpeakingBadge } from '../chat/NowSpeakingBadge';
 import VoiceTicker, { ISepiaVoiceRecorder } from './VoiceTicker'; // Import original VoiceTicker
 // import { VoiceModeToggle } from '../chat/VoiceModeToggle';   // Adjusted path
 // import { WalkieTalkieButton } from '../chat/WalkieTalkieButton';// Adjusted path
@@ -236,10 +237,10 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
           <div className="flex items-center gap-4">
             <DashboardButton className="text-xs px-2.5 py-1.5" /> {/* Compact styling */}
             
-            <VoiceWidget 
-              onFinalTranscriptCommitted={handleVoiceSend} 
+            <VoiceWidget
+              onFinalTranscriptCommitted={handleVoiceSend}
               isChatProcessing={isVoiceWidgetDisabled}
-              isSendingRef={isSendingRef} 
+              isSendingRef={isSendingRef}
 
               onStatusChange={setVoiceWidgetStatus}
               onRmsData={(rms) => {
@@ -248,6 +249,7 @@ const ChatInput: React.FC<ChatInputProps> = memo(({
                 }
               }}
             />
+            <NowSpeakingBadge />
           </div>
           <LottieSendButton
             onClick={handleSend}

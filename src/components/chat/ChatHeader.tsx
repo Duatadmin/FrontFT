@@ -1,5 +1,4 @@
 import React from 'react';
-import { NowSpeakingBadge } from './NowSpeakingBadge';
 // @ts-ignore
 import Logo from '../../../Logo.svg';
 
@@ -12,15 +11,11 @@ const ChatHeader: React.FC = () => {
         height: 'calc(env(safe-area-inset-top) + 64px)'
       }}
     >
-      <div className="flex-1 flex items-center gap-2">
-        <NowSpeakingBadge />
-      </div>
+      <div className="flex-1" />
       <div className="flex justify-center flex-1">
         <img src={Logo} alt="Jarvis Logo" className="h-8 w-auto filter invert" />
       </div>
-      <div className="flex justify-end flex-1">
-        {/* Dashboard button removed as requested */}
-      </div>
+      <div className="flex-1" />
     </header>
   );
 };

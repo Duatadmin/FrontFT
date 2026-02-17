@@ -8,7 +8,7 @@ import { supportsMediaSource, getManagedMediaSource, canUseStreamingAudio } from
 import { useTTSPlaybackState } from './useTTSPlaybackState';
 
 const TTS_BASE_URL = 'https://ftvoiceservice-production-6960.up.railway.app/tts/v1/tts';
-const VOICE_ENABLED_KEY = 'voiceEnabled';
+// voiceEnabled is session-only (not persisted)
 
 // Debug flags to control TTS behavior
 const FORCE_PROGRESSIVE_FALLBACK = false; // Set to true to force fallback, false for original logic
@@ -28,14 +28,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   if (DEBUG_MODULE_LOADING) {
     console.log('[TTS Module] useVoicePlayback hook initialized');
   }
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('voiceEnabled');
-      return saved !== null ? JSON.parse(saved) : false;
-    } catch {
-      return false;
-    }
-  });
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false);
   const [queue, setQueue] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);
@@ -49,6 +42,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const isStreamingRef = useRef<boolean>(false); // Track ManagedMediaSource streaming state
   const pendingBuffersRef = useRef<Uint8Array[]>([]); // Queue buffers when not streaming
   const playbackStartedRef = useRef<boolean>(false); // Track if playback has started
+  const hasPlayedRef = useRef<boolean>(false); // Track if TTS has played (for auto-disable)
 
   const OGG_PAGE_HEADER = new Uint8Array([0x4f, 0x67, 0x67, 0x53]); // "OggS"
 
@@ -174,9 +168,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     };
   }, []); // Empty dependency array means this only runs once per component lifecycle
 
-  useEffect(() => {
-    localStorage.setItem('voiceEnabled', JSON.stringify(voiceEnabled));
-  }, [voiceEnabled]);
+  // voiceEnabled is session-only — no localStorage persistence
 
   // Mobile browser detection utility
   const isMobileBrowser = useCallback(() => {
@@ -288,6 +280,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     }
 
     setIsPlaying(true);
+    hasPlayedRef.current = true;
     const textToPlay = queue[0]; // Peek at the next item
     const newRequestId = crypto.randomUUID();
     setCurrentRequestId(newRequestId);
@@ -820,7 +813,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const toggleVoice = useCallback(async () => {
     const newVoiceEnabled = !voiceEnabled;
     setVoiceEnabled(newVoiceEnabled);
-    localStorage.setItem(VOICE_ENABLED_KEY, JSON.stringify(newVoiceEnabled));
+    // No localStorage persistence — voice mode is session-only
 
     if (newVoiceEnabled) {
       const mobile = isMobileBrowser();
@@ -875,6 +868,11 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     if (voiceEnabled && queue.length > 0 && !isPlaying) {
       console.log('[TTS] Conditions met to play next item from queue');
       playNext();
+    } else if (voiceEnabled && queue.length === 0 && !isPlaying && hasPlayedRef.current) {
+      // TTS queue drained after playing — auto-disable voice mode
+      console.log('[TTS] Queue drained after playback — auto-disabling voice mode');
+      setVoiceEnabled(false);
+      hasPlayedRef.current = false;
     } else {
       console.log('[TTS] Conditions not met to play next. Voice:', voiceEnabled, 'Queue length:', queue.length, 'Is playing:', isPlaying);
     }

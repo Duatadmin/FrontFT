@@ -1,17 +1,16 @@
 import React from 'react';
-import { Radio } from 'lucide-react';
-import { useVoice } from '../../hooks/VoiceContext'; // Assuming this path will be correct
+import { Volume2 } from 'lucide-react';
+import { useVoice } from '../../hooks/VoiceContext';
 
 export const NowSpeakingBadge: React.FC = () => {
-  // Fallback logic in case context is not ready
   let voiceEnabled = false;
   let isPlaying = false;
   try {
     const voiceContext = useVoice();
     voiceEnabled = voiceContext.voiceEnabled;
     isPlaying = voiceContext.isPlaying;
-  } catch (error) {
-    // console.warn('NowSpeakingBadge: VoiceContext not ready, using fallback.', error);
+  } catch {
+    // VoiceContext not ready
   }
 
   if (!voiceEnabled || !isPlaying) {
@@ -19,12 +18,9 @@ export const NowSpeakingBadge: React.FC = () => {
   }
 
   return (
-    <div
-      className="flex items-center gap-1 px-2 py-1 text-xs text-green-400 bg-green-900/50 rounded-md animate-pulse"
-      title="Now Speaking"
-    >
-      <Radio size={14} />
-      <span>Speaking...</span>
-    </div>
+    <span className="flex items-center gap-2" title="Now Speaking">
+      <Volume2 size={18} className="text-white/50 animate-pulse flex-shrink-0" />
+      <span className="font-medium text-xs whitespace-nowrap text-white/50">Speaking...</span>
+    </span>
   );
 };
