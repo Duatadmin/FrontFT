@@ -438,9 +438,12 @@ const screens: WelcomeScreen[] = [
     subtitle: "limitations?",
     description: "Your safety is my priority.",
     isOnboarding: true,
-    inputType: 'text',
+    inputType: 'chips_text',
     fieldName: 'injuries',
-    placeholder: 'E.g., bad knee, lower back pain, or none'
+    placeholder: 'E.g., bad knee, lower back pain...',
+    chipOptions: [
+      'No Limitations',
+    ],
   },
   // 16. sleep_hours_normalized
   {
