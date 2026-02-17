@@ -427,7 +427,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
                   setIsPlaying(true);
                   useTTSPlaybackState.getState().setTTSPlaying(true);
                 })
-                .catch(e => console.error('[TTS] Play on canplay error:', e));
+                .catch(e => {
+                  console.error('[TTS] Play on canplay error:', e);
+                  setIsPlaying(false);
+                  useTTSPlaybackState.getState().setTTSPlaying(false);
+                  setCurrentRequestId(null);
+                  setQueue(prev => prev.slice(1));
+                });
               playbackStartedRef.current = true;
             }
           };
@@ -443,7 +449,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
                   setIsPlaying(true);
                   useTTSPlaybackState.getState().setTTSPlaying(true);
                 })
-                .catch(e => console.error('[TTS] Play on loadedmetadata error:', e));
+                .catch(e => {
+                  console.error('[TTS] Play on loadedmetadata error:', e);
+                  setIsPlaying(false);
+                  useTTSPlaybackState.getState().setTTSPlaying(false);
+                  setCurrentRequestId(null);
+                  setQueue(prev => prev.slice(1));
+                });
               playbackStartedRef.current = true;
             }
           };
@@ -526,7 +538,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
                   setIsPlaying(true);
                   useTTSPlaybackState.getState().setTTSPlaying(true);
                 })
-                .catch(e => console.error('[TTS] Play on startstreaming error:', e));
+                .catch(e => {
+                  console.error('[TTS] Play on startstreaming error:', e);
+                  setIsPlaying(false);
+                  useTTSPlaybackState.getState().setTTSPlaying(false);
+                  setCurrentRequestId(null);
+                  setQueue(prev => prev.slice(1));
+                });
               playbackStartedRef.current = true;
             }
           });
@@ -581,7 +599,13 @@ export const useVoicePlayback = (): UseVoicePlayback => {
                           setIsPlaying(true);
                           useTTSPlaybackState.getState().setTTSPlaying(true);
                         })
-                        .catch(e => console.error('[TTS] Early play() error:', e));
+                        .catch(e => {
+                          console.error('[TTS] Early play() error:', e);
+                          setIsPlaying(false);
+                          useTTSPlaybackState.getState().setTTSPlaying(false);
+                          setCurrentRequestId(null);
+                          setQueue(prev => prev.slice(1));
+                        });
                       playbackStartedRef.current = true;
                     }
                   }

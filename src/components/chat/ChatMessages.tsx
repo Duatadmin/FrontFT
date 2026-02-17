@@ -23,8 +23,13 @@ const ChatMessages: React.FC<ChatMessagesProps> = ({ messages, isLoading }) => {
   }, [messages, isLoading]);
 
   const lastEnqueuedMessageIdRef = useRef<string | null>(null);
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return; // Skip TTS for messages present on initial render (avoids autoplay policy violation)
+    }
     if (messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (
