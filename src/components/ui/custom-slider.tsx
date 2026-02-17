@@ -51,7 +51,7 @@ export function CustomSlider({
   useEffect(() => {
     const el = sliderRef.current;
     if (!el) return;
-    const prevent = (e: TouchEvent) => e.preventDefault();
+    const prevent = (e: TouchEvent) => { e.preventDefault(); e.stopPropagation(); };
     el.addEventListener('touchstart', prevent, { passive: false });
     return () => el.removeEventListener('touchstart', prevent);
   }, []);
@@ -72,13 +72,14 @@ export function CustomSlider({
   // Unified pointer handler for both tap-to-position and drag
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     const el = sliderRef.current;
     if (!el) return;
     el.setPointerCapture(e.pointerId);
     setIsDragging(true);
 
+    const rect = el.getBoundingClientRect();
     const updateFromPointer = (clientX: number) => {
-      const rect = el.getBoundingClientRect();
       const thumbRadius = 24;
       const x = clientX - rect.left;
       const adjusted = x - thumbRadius;
