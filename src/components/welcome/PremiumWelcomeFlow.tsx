@@ -56,8 +56,9 @@ interface WelcomeScreen {
   features?: Feature[];
   cta?: string;
   isOnboarding?: boolean;
-  inputType?: 'select' | 'multiselect' | 'slider' | 'text' | 'number' | 'strength';
+  inputType?: 'select' | 'multiselect' | 'slider' | 'text' | 'number' | 'strength' | 'chips_text';
   options?: { value: string; label: string; icon?: React.ReactNode }[];
+  chipOptions?: string[];
   min?: number;
   max?: number;
   step?: number;
@@ -229,9 +230,19 @@ const screens: WelcomeScreen[] = [
     subtitle: "to focus on?",
     description: "Tell me what matters most to you.",
     isOnboarding: true,
-    inputType: 'text',
+    inputType: 'chips_text',
     fieldName: 'goal_detail',
-    placeholder: 'E.g., bigger arms, stronger core, better stamina'
+    placeholder: 'Add your own...',
+    chipOptions: [
+      'Bigger Arms',
+      'Stronger Core',
+      'Better Stamina',
+      'Leg Strength',
+      'Flexibility & Mobility',
+      'Back & Posture',
+      'Weight Loss',
+      'Overall Strength',
+    ],
   },
   // 3. goal_timeline_weeks
   {
@@ -531,6 +542,7 @@ export function PremiumWelcomeFlow() {
   const [currentScreen, setCurrentScreen] = useState(savedState.currentScreen);
   const [onboardingData, setOnboardingData] = useState<Record<string, any>>(savedState.onboardingData);
   const [inputValue, setInputValue] = useState('');
+  const [selectedChips, setSelectedChips] = useState<string[]>([]);
   const [strengthValues, setStrengthValues] = useState<Record<string, number>>(savedState.strengthValues);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -606,11 +618,21 @@ export function PremiumWelcomeFlow() {
         const strengthString = `${strengthValues.pushups} pushups, ${strengthValues.squats} squats, ${strengthValues.plank} sec plank`;
         setOnboardingData(prev => ({ ...prev, [screen.fieldName!]: strengthString }));
       }
+      // For chips_text inputs, compose selected chips + custom text into a string
+      else if (screen.inputType === 'chips_text') {
+        const parts = [...selectedChips];
+        if (inputValue.trim()) {
+          parts.push(inputValue.trim());
+        }
+        const composedValue = parts.join(', ');
+        setOnboardingData(prev => ({ ...prev, [screen.fieldName!]: composedValue }));
+      }
     }
 
     if (currentScreen < screens.length - 1) {
       setCurrentScreen(currentScreen + 1);
       setInputValue(''); // Reset input for next screen
+      setSelectedChips([]); // Reset chips for next screen
     } else {
       // On the final "complete" screen, navigate to chat
       navigate('/');
@@ -849,7 +871,7 @@ export function PremiumWelcomeFlow() {
               <motion.button
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                onClick={() => setCurrentScreen(prev => prev - 1)}
+                onClick={() => { setCurrentScreen(prev => prev - 1); setInputValue(''); setSelectedChips([]); }}
                 className="flex items-center gap-2 text-white/60 hover:text-white transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
                 aria-label="Go back to previous step"
               >
@@ -1053,6 +1075,56 @@ export function PremiumWelcomeFlow() {
                           </motion.button>
                         );
                       })}
+                    </div>
+                  )}
+
+                  {/* Chips + Text Input */}
+                  {screen.inputType === 'chips_text' && (
+                    <div className="space-y-4">
+                      {screen.chipOptions && (
+                        <div className="flex flex-wrap gap-2">
+                          {screen.chipOptions.map((chip, index) => {
+                            const isSelected = selectedChips.includes(chip);
+                            return (
+                              <motion.button
+                                key={chip}
+                                type="button"
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: index * 0.03 }}
+                                whileTap={{ scale: 0.95 }}
+                                onClick={() => {
+                                  setSelectedChips(prev =>
+                                    isSelected
+                                      ? prev.filter(c => c !== chip)
+                                      : [...prev, chip]
+                                  );
+                                }}
+                                className={cn(
+                                  "px-4 py-2.5 rounded-full text-sm font-medium",
+                                  "border transition-all duration-200",
+                                  isSelected
+                                    ? "bg-accent-lime/20 border-accent-lime/50 text-white"
+                                    : "bg-white/5 border-white/10 text-white/70 hover:bg-white/10 hover:border-white/20"
+                                )}
+                              >
+                                {chip}
+                              </motion.button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      <div>
+                        <label className="text-xs text-white/40 mb-1.5 block">Or type your own</label>
+                        <input
+                          type="text"
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          placeholder={screen.placeholder}
+                          className="w-full p-4 bg-white/5 border border-white/20 rounded-2xl text-white text-base placeholder-white/40 focus:outline-none focus:border-accent-lime/50 focus:bg-white/10 transition-all"
+                          autoComplete="off"
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -1268,7 +1340,7 @@ export function PremiumWelcomeFlow() {
               <div className="absolute inset-0 bg-gradient-to-r from-accent-lime to-accent-orange rounded-2xl blur-xl opacity-50" />
               
               {/* CTA Button */}
-              {(!isOnboardingScreen || (isOnboardingScreen && (screen.inputType === 'slider' || screen.inputType === 'multiselect' || screen.inputType === 'strength'))) && screen.id !== 'complete' && (
+              {(!isOnboardingScreen || (isOnboardingScreen && (screen.inputType === 'slider' || screen.inputType === 'multiselect' || screen.inputType === 'strength' || screen.inputType === 'chips_text'))) && screen.id !== 'complete' && (
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
@@ -1276,7 +1348,8 @@ export function PremiumWelcomeFlow() {
                   disabled={
                     isSubmitting ||
                     (isOnboardingScreen && screen.inputType === 'number' && !inputValue) ||
-                    (isOnboardingScreen && screen.inputType === 'multiselect' && (!onboardingData[screen.fieldName!] || (onboardingData[screen.fieldName!] as string[]).length === 0))
+                    (isOnboardingScreen && screen.inputType === 'multiselect' && (!onboardingData[screen.fieldName!] || (onboardingData[screen.fieldName!] as string[]).length === 0)) ||
+                    (isOnboardingScreen && screen.inputType === 'chips_text' && selectedChips.length === 0 && !inputValue.trim())
                   }
                   className={cn(
                     "relative w-full h-14 rounded-2xl font-semibold text-dark-bg",
@@ -1288,11 +1361,13 @@ export function PremiumWelcomeFlow() {
                   )}
                 >
                   <span className="text-base font-bold">
-                    {isSubmitting ? 'Creating your plan...' : 
-                      screen.cta || (currentScreen === screens.length - 1 ? 'Get Started' : 
+                    {isSubmitting ? 'Creating your plan...' :
+                      screen.cta || (currentScreen === screens.length - 1 ? 'Get Started' :
                       screen.inputType === 'multiselect' && onboardingData[screen.fieldName!] && (onboardingData[screen.fieldName!] as string[]).length > 0
                         ? `Continue (${(onboardingData[screen.fieldName!] as string[]).length} selected)`
-                        : 'Continue'
+                        : screen.inputType === 'chips_text' && (selectedChips.length > 0 || inputValue.trim())
+                          ? `Continue (${selectedChips.length + (inputValue.trim() ? 1 : 0)} selected)`
+                          : 'Continue'
                     )}
                   </span>
                   <ChevronRight className="w-5 h-5" strokeWidth={2.5} />
