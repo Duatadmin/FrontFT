@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
-import { motion, PanInfo } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import { Plus, Minus } from 'lucide-react';
 
@@ -53,15 +53,6 @@ export function CustomSlider({
   const displayMin = isImperial && toImperial ? toImperial(min) : min;
   const displayMax = isImperial && toImperial ? toImperial(max) : max;
 
-  // Calculate position from value (accounting for thumb radius)
-  const valueToPosition = useCallback((val: number) => {
-    if (!sliderRef.current) return 0;
-    const percentage = (val - min) / (max - min);
-    const thumbRadius = 24; // Half of 48px thumb
-    const availableWidth = sliderRef.current.offsetWidth - (thumbRadius * 2);
-    return thumbRadius + (percentage * availableWidth);
-  }, [min, max]);
-
   // Update input when value changes externally
   useEffect(() => {
     if (!isDragging) {
@@ -69,53 +60,44 @@ export function CustomSlider({
     }
   }, [displayValue, isDragging]);
 
-  // Calculate value from position (accounting for thumb radius)
-  const positionToValue = useCallback((pos: number) => {
-    if (!sliderRef.current) return min;
-    const thumbRadius = 24; // Half of 48px thumb
-    const availableWidth = sliderRef.current.offsetWidth - (thumbRadius * 2);
-    const adjustedPos = pos - thumbRadius;
-    const percentage = Math.max(0, Math.min(1, adjustedPos / availableWidth));
-    let newValue = min + percentage * (max - min);
-    
-    // Snap to step
-    newValue = Math.round(newValue / step) * step;
-    
-    // Snap to ticks if enabled
-    if (snapToTicks && tickInterval) {
-      const nearestTick = Math.round(newValue / tickInterval) * tickInterval;
-      if (Math.abs(newValue - nearestTick) < tickInterval * 0.2) {
-        newValue = nearestTick;
+  // Unified pointer handler for both tap-to-position and drag
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    const el = sliderRef.current;
+    if (!el) return;
+    el.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+
+    const updateFromPointer = (clientX: number) => {
+      const rect = el.getBoundingClientRect();
+      const thumbRadius = 24;
+      const x = clientX - rect.left;
+      const adjusted = x - thumbRadius;
+      const available = rect.width - thumbRadius * 2;
+      const pct = Math.max(0, Math.min(1, adjusted / available));
+      let val = min + pct * (max - min);
+      val = Math.round(val / step) * step;
+      if (snapToTicks && tickInterval) {
+        const nearest = Math.round(val / tickInterval) * tickInterval;
+        if (Math.abs(val - nearest) < tickInterval * 0.2) val = nearest;
       }
-    }
-    
-    return Math.max(min, Math.min(max, newValue));
-  }, [min, max, step, snapToTicks, tickInterval]);
+      onChange(Math.max(min, Math.min(max, val)));
+    };
 
-  // Handle drag
-  const handleDrag = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    const newValue = positionToValue(info.point.x - (sliderRef.current?.getBoundingClientRect().left || 0));
-    onChange(newValue);
-  }, [positionToValue, onChange]);
+    updateFromPointer(e.clientX);
 
-  // Handle drag start/end
-  const handleDragStart = () => setIsDragging(true);
-  const handleDragEnd = () => {
-    setIsDragging(false);
-    setInputValue(displayValue.toString());
-  };
+    const onMove = (ev: PointerEvent) => updateFromPointer(ev.clientX);
+    const onUp = () => {
+      setIsDragging(false);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+    };
 
-  // Handle click on track
-  const handleTrackClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (isDragging) return;
-    const rect = sliderRef.current?.getBoundingClientRect();
-    if (!rect) return;
-    const clickX = e.clientX - rect.left;
-    const newValue = positionToValue(clickX);
-    onChange(newValue);
-    // Force update of input value
-    setInputValue((isImperial && toImperial ? toImperial(newValue) : newValue).toString());
-  };
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+  }, [min, max, step, snapToTicks, tickInterval, onChange]);
 
   // Handle input change
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -276,40 +258,31 @@ export function CustomSlider({
         {/* Slider Track Container */}
         <div
           ref={sliderRef}
-          className="relative h-12"
+          className="relative h-12 touch-none cursor-pointer"
+          onPointerDown={handlePointerDown}
         >
           {/* Track Background */}
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 bg-black/40 rounded-full overflow-hidden">
-            {/* Progress Fill */}
-            <motion.div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-accent-lime to-accent-orange rounded-full"
-              initial={false}
-              animate={{ width: `${progress}%` }}
-              transition={{ type: "spring", stiffness: 400, damping: 40 }}
+            {/* Progress Fill — aligned to thumb center */}
+            <div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-accent-lime to-accent-orange rounded-full transition-[width] duration-75 ease-out"
+              style={{ width: `calc(${progress}% * (100% - 48px) / 100% + 24px)` }}
             />
           </div>
 
-          {/* Thumb */}
+          {/* Thumb — pointer-events-none since track handles all interaction */}
           <motion.div
-            drag="x"
-            dragConstraints={sliderRef}
-            dragElastic={0}
-            dragMomentum={false}
-            onDrag={handleDrag}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            className="absolute w-12 h-12 -translate-x-1/2 touch-none z-20"
-            style={{ 
+            className="absolute w-12 h-12 -translate-x-1/2 touch-none z-20 pointer-events-none"
+            style={{
               left: `calc(${progress}% * (100% - 48px) / 100% + 24px)`,
               top: '50%',
               y: '-50%',
-              touchAction: 'none'
+              touchAction: 'none',
             }}
             initial={false}
-            animate={{ 
+            animate={{
               scale: isDragging ? 1.1 : 1,
             }}
-            whileHover={{ scale: 1.05 }}
             transition={{ type: "spring", stiffness: 400, damping: 30 }}
           >
             <div className={cn(
@@ -323,12 +296,12 @@ export function CustomSlider({
             )}>
               {/* Inner highlight */}
               <div className="absolute inset-[2px] rounded-full bg-gradient-to-tr from-white/30 to-transparent" />
-              
+
               {/* Center dot */}
               <div className="absolute inset-0 flex items-center justify-center">
                 <div className="w-4 h-4 rounded-full bg-black/30 backdrop-blur-sm" />
               </div>
-              
+
               {/* Outer glow effect when dragging */}
               {isDragging && (
                 <motion.div
