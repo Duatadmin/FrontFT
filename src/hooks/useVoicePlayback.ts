@@ -28,7 +28,14 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   if (DEBUG_MODULE_LOADING) {
     console.log('[TTS Module] useVoicePlayback hook initialized');
   }
-  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(false);
+  const [voiceEnabled, setVoiceEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('voiceEnabled');
+      return saved !== null ? JSON.parse(saved) : false;
+    } catch {
+      return false;
+    }
+  });
   const [queue, setQueue] = useState<string[]>([]);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [currentRequestId, setCurrentRequestId] = useState<string | null>(null);

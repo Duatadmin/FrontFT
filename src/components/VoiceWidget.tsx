@@ -7,6 +7,7 @@ import { Mic } from 'lucide-react';
 import { Transition } from '@headlessui/react';
 import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { voicePrewarmService } from '../services/voicePrewarm';
+import { useVoice } from '../hooks/VoiceContext';
 
 const EarbudIcon = () => {
   const playerRef = useRef<any>(null);
@@ -48,6 +49,8 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   const wsUrl = import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws';
   const wsHost = wsUrl.replace(/^wss?:\/\//, '').replace(/\/.*$/, ''); // Remove protocol and path
   
+  const { voiceEnabled, toggleVoice } = useVoice();
+
   const walkie = useWalkieV3({
     wsHost,
     mode: 'walkie', // Always-on listening mode
@@ -109,9 +112,15 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     try {
       setShowErrorToast(false);
       setToastMessage('');
+
+      // Auto-enable TTS so bot responses are spoken aloud
+      if (!voiceEnabled) {
+        toggleVoice();
+      }
+
       await walkie.start(); // V3 doesn't need session ID
       // console.log('[VoiceWidget] walkie.start() called successfully.');
-      
+
       // Mark that voice has been used for future pre-warming
       voicePrewarmService.markVoiceUsed();
     } catch (e: any) {
