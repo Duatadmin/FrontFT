@@ -47,6 +47,15 @@ export function CustomSlider({
   const [isDragging, setIsDragging] = useState(false);
   const sliderRef = useRef<HTMLDivElement>(null);
 
+  // Prevent page scrolling when touching the slider track
+  useEffect(() => {
+    const el = sliderRef.current;
+    if (!el) return;
+    const prevent = (e: TouchEvent) => e.preventDefault();
+    el.addEventListener('touchstart', prevent, { passive: false });
+    return () => el.removeEventListener('touchstart', prevent);
+  }, []);
+
   // Calculate display values based on unit system
   const displayValue = isImperial && toImperial ? toImperial(value) : value;
   const displayUnit = isImperial && imperialUnit ? imperialUnit : unit;
@@ -265,7 +274,7 @@ export function CustomSlider({
           <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-3 bg-black/40 rounded-full overflow-hidden">
             {/* Progress Fill — aligned to thumb center */}
             <div
-              className="absolute inset-y-0 left-0 bg-gradient-to-r from-accent-lime to-accent-orange rounded-full transition-[width] duration-75 ease-out"
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-accent-lime to-accent-orange"
               style={{ width: `calc(${progress}% * (100% - 48px) / 100% + 24px)` }}
             />
           </div>
