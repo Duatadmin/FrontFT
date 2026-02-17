@@ -7,6 +7,7 @@ interface VoiceContextType {
   toggleVoice: () => void;
   enqueueBotUtterance: (text: string, messageId: string) => void;
   stopCurrentPlayback: () => void;
+  scheduleDisableAfterPlayback: () => void;
 }
 
 const VoiceContext = createContext<VoiceContextType | undefined>(undefined);

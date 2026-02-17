@@ -21,7 +21,8 @@ interface UseVoicePlayback {
   isPlaying: boolean;
   toggleVoice: () => void;
   enqueueBotUtterance: (text: string, messageId: string) => void;
-  stopCurrentPlayback: () => void; // Renamed for clarity from stopCurrent
+  stopCurrentPlayback: () => void;
+  scheduleDisableAfterPlayback: () => void;
 }
 
 export const useVoicePlayback = (): UseVoicePlayback => {
@@ -42,7 +43,7 @@ export const useVoicePlayback = (): UseVoicePlayback => {
   const isStreamingRef = useRef<boolean>(false); // Track ManagedMediaSource streaming state
   const pendingBuffersRef = useRef<Uint8Array[]>([]); // Queue buffers when not streaming
   const playbackStartedRef = useRef<boolean>(false); // Track if playback has started
-  const hasPlayedRef = useRef<boolean>(false); // Track if TTS has played (for auto-disable)
+  const pendingDisableRef = useRef<boolean>(false); // Deferred TTS disable (set when walkie stops)
 
   const OGG_PAGE_HEADER = new Uint8Array([0x4f, 0x67, 0x67, 0x53]); // "OggS"
 
@@ -280,7 +281,6 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     }
 
     setIsPlaying(true);
-    hasPlayedRef.current = true;
     const textToPlay = queue[0]; // Peek at the next item
     const newRequestId = crypto.randomUUID();
     setCurrentRequestId(newRequestId);
@@ -868,11 +868,11 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     if (voiceEnabled && queue.length > 0 && !isPlaying) {
       console.log('[TTS] Conditions met to play next item from queue');
       playNext();
-    } else if (voiceEnabled && queue.length === 0 && !isPlaying && hasPlayedRef.current) {
-      // TTS queue drained after playing — auto-disable voice mode
-      console.log('[TTS] Queue drained after playback — auto-disabling voice mode');
+    } else if (voiceEnabled && queue.length === 0 && !isPlaying && pendingDisableRef.current) {
+      // Walkie stopped and TTS queue drained — auto-disable voice mode
+      console.log('[TTS] Walkie stopped + queue drained — auto-disabling voice mode');
       setVoiceEnabled(false);
-      hasPlayedRef.current = false;
+      pendingDisableRef.current = false;
     } else {
       console.log('[TTS] Conditions not met to play next. Voice:', voiceEnabled, 'Queue length:', queue.length, 'Is playing:', isPlaying);
     }
@@ -909,5 +909,16 @@ export const useVoicePlayback = (): UseVoicePlayback => {
     };
   }, [voiceEnabled, isPlaying, currentRequestId, stopCurrentPlayback]); // Added stopCurrentPlayback
 
-  return { voiceEnabled, isPlaying, toggleVoice, enqueueBotUtterance, stopCurrentPlayback };
+  const scheduleDisableAfterPlayback = useCallback(() => {
+    console.log('[TTS] Scheduled disable after playback (walkie stopped)');
+    pendingDisableRef.current = true;
+    // If nothing is playing and queue is empty, disable immediately
+    if (queue.length === 0 && !isPlaying) {
+      console.log('[TTS] No pending playback — disabling voice mode now');
+      setVoiceEnabled(false);
+      pendingDisableRef.current = false;
+    }
+  }, [queue, isPlaying]);
+
+  return { voiceEnabled, isPlaying, toggleVoice, enqueueBotUtterance, stopCurrentPlayback, scheduleDisableAfterPlayback };
 };

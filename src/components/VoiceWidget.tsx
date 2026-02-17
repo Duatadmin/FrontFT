@@ -49,7 +49,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
   const wsUrl = import.meta.env.VITE_WALKIE_HOOK_WS_URL || 'ws://localhost:8080/ws';
   const wsHost = wsUrl.replace(/^wss?:\/\//, '').replace(/\/.*$/, ''); // Remove protocol and path
   
-  const { voiceEnabled, toggleVoice } = useVoice();
+  const { voiceEnabled, toggleVoice, scheduleDisableAfterPlayback } = useVoice();
 
   const walkie = useWalkieV3({
     wsHost,
@@ -134,6 +134,8 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
     // console.log(`[VoiceWidget] handleStop called. Current walkie status: ${walkie.state.status}`);
     try {
       await walkie.stop();
+      // Schedule TTS disable after any pending playback finishes
+      scheduleDisableAfterPlayback();
       // console.log('[VoiceWidget] walkie.stop() called successfully.');
     } catch (e: any) {
       console.error('Failed to stop walkie:', e);

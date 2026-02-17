@@ -19,8 +19,8 @@ export const NowSpeakingBadge: React.FC = () => {
 
   return (
     <span className="flex items-center gap-2" title="Now Speaking">
-      <Volume2 size={18} className="text-white/50 animate-pulse flex-shrink-0" />
-      <span className="font-medium text-xs whitespace-nowrap text-white/50">Speaking...</span>
+      <Volume2 size={18} className="animate-pulse flex-shrink-0" style={{ color: '#00ff88', filter: 'drop-shadow(0 0 6px #00ff88)' }} />
+      <span className="font-medium text-xs whitespace-nowrap animate-pulse" style={{ color: '#00ff88' }}>Speaking...</span>
     </span>
   );
 };
