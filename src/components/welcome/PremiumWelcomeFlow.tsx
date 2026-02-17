@@ -503,9 +503,10 @@ const screens: WelcomeScreen[] = [
     subtitle: "preferences?",
     description: "What do you love or hate?",
     isOnboarding: true,
-    inputType: 'text',
+    inputType: 'chips_text',
     fieldName: 'preferences',
-    placeholder: 'E.g., Love deadlifts, hate burpees'
+    placeholder: 'E.g., Love deadlifts, hate burpees',
+    chipOptions: ['No Preferences'],
   },
   {
     id: 'complete',
@@ -630,6 +631,15 @@ export function PremiumWelcomeFlow() {
         }
         const composedValue = parts.join(', ');
         setOnboardingData(prev => ({ ...prev, [screen.fieldName!]: composedValue }));
+
+        // If this is the preferences field, submit to backend
+        if (screen.fieldName === 'preferences') {
+          setCurrentScreen(currentScreen + 1);
+          setInputValue('');
+          setSelectedChips([]);
+          submitOnboardingData({ ...onboardingData, [screen.fieldName]: composedValue });
+          return;
+        }
       }
     }
 
