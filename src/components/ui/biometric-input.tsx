@@ -50,6 +50,13 @@ export function BiometricInput({ type, value, onChange, className }: BiometricIn
           const { display } = cmToFeetInches(Math.round(val));
           return display;
         },
+        imperialTickInterval: 0.5,
+        formatImperialTick: (decimalFeet: number) => {
+          const feet = Math.floor(decimalFeet);
+          const inches = Math.round((decimalFeet - feet) * 12);
+          if (inches === 12) return `${feet + 1}'0"`;
+          return `${feet}'${inches}"`;
+        },
       }
     : {
         icon: <Weight className="w-5 h-5" />,
@@ -62,6 +69,7 @@ export function BiometricInput({ type, value, onChange, className }: BiometricIn
         tickInterval: 10,
         toImperial: kgToLbs,
         fromImperial: lbsToKg,
+        imperialTickInterval: 25,
       };
 
   return (

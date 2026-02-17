@@ -21,6 +21,8 @@ interface CustomSliderProps {
   imperialUnit?: string;
   toImperial?: (value: number) => number;
   fromImperial?: (value: number) => number;
+  imperialTickInterval?: number;
+  formatImperialTick?: (value: number) => string;
 }
 
 export function CustomSlider({
@@ -41,6 +43,8 @@ export function CustomSlider({
   imperialUnit,
   toImperial,
   fromImperial,
+  imperialTickInterval,
+  formatImperialTick,
 }: CustomSliderProps) {
   const [isImperial, setIsImperial] = useState(false);
   const [inputValue, setInputValue] = useState(value.toString());
@@ -328,32 +332,57 @@ export function CustomSlider({
         {tickInterval && (
           <div className="relative mt-3">
             <div className="relative h-2">
-              {Array.from({ length: Math.floor((max - min) / tickInterval) + 1 }, (_, i) => {
-                const tickValue = min + i * tickInterval;
-                const tickProgress = ((tickValue - min) / (max - min)) * 100;
-                const showLabel = i % 2 === 0; // Show every other label
-                
-                return (
-                  <div
-                    key={i}
-                    className="absolute -translate-x-1/2"
-                    style={{ left: `${tickProgress}%` }}
-                  >
-                    {/* Tick mark */}
-                    <div className={cn(
-                      "w-px bg-white/10",
-                      showLabel ? "h-2" : "h-1"
-                    )} />
-                    
-                    {/* Label */}
-                    {showLabel && (
-                      <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] text-white/30 whitespace-nowrap">
-                        {tickValue}
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
+              {isImperial && toImperial && fromImperial && imperialTickInterval
+                ? (() => {
+                    const impMin = toImperial(min);
+                    const impMax = toImperial(max);
+                    const firstTick = Math.ceil(impMin / imperialTickInterval) * imperialTickInterval;
+                    const ticks: number[] = [];
+                    for (let t = firstTick; t <= impMax + imperialTickInterval * 0.001; t += imperialTickInterval) {
+                      ticks.push(Math.round(t * 1e9) / 1e9);
+                    }
+                    return ticks.map((impVal) => {
+                      const metricVal = fromImperial(impVal);
+                      const tickProgress = ((metricVal - min) / (max - min)) * 100;
+                      if (tickProgress < 0 || tickProgress > 100) return null;
+                      const label = formatImperialTick ? formatImperialTick(impVal) : String(Math.round(impVal));
+                      return (
+                        <div
+                          key={impVal}
+                          className="absolute -translate-x-1/2"
+                          style={{ left: `${tickProgress}%` }}
+                        >
+                          <div className="w-px h-2 bg-white/10" />
+                          <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] text-white/30 whitespace-nowrap">
+                            {label}
+                          </span>
+                        </div>
+                      );
+                    });
+                  })()
+                : Array.from({ length: Math.floor((max - min) / tickInterval) + 1 }, (_, i) => {
+                    const tickValue = min + i * tickInterval;
+                    const tickProgress = ((tickValue - min) / (max - min)) * 100;
+                    const showLabel = i % 2 === 0;
+                    return (
+                      <div
+                        key={i}
+                        className="absolute -translate-x-1/2"
+                        style={{ left: `${tickProgress}%` }}
+                      >
+                        <div className={cn(
+                          "w-px bg-white/10",
+                          showLabel ? "h-2" : "h-1"
+                        )} />
+                        {showLabel && (
+                          <span className="absolute top-3 left-1/2 -translate-x-1/2 text-[10px] text-white/30 whitespace-nowrap">
+                            {tickValue}
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })
+              }
             </div>
           </div>
         )}
