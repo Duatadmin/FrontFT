@@ -114,27 +114,36 @@ export function useWalkieV3(options: UseWalkieV3Options): {
   // Ensure microphone permission
   const ensureMicrophonePermission = async (): Promise<void> => {
     const permStartTime = performance.now();
+
+    // Check if permission is already granted (skip getUserMedia call)
     try {
       const status = await (navigator.permissions as any).query({ name: 'microphone' });
       if (status.state === 'granted') {
         console.log('[useWalkieV3] Microphone permission already granted');
         return;
       }
-      if (status.state === 'denied') {
-        throw new Error('Microphone access is blocked. Please enable it in your browser\'s site settings, then try again.');
-      }
-      // 'prompt' — fall through to getUserMedia which shows the browser prompt
-    } catch (err: any) {
-      // Re-throw our own permission-blocked error
-      if (err?.message?.includes('Microphone access is blocked')) throw err;
+      // 'prompt' or 'denied' — always fall through to getUserMedia
+      // Safari may re-prompt even after denial; Chrome will fail fast if denied
+      console.log(`[useWalkieV3] Mic permission state: ${status.state}`);
+    } catch {
       // Permissions API not available (Safari <16) — fall through
     }
 
-    // Request permission
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    stream.getTracks().forEach(track => track.stop());
-    const permElapsed = performance.now() - permStartTime;
-    console.log(`[useWalkieV3] Microphone permission obtained in ${permElapsed.toFixed(2)}ms`);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach(track => track.stop());
+      const permElapsed = performance.now() - permStartTime;
+      console.log(`[useWalkieV3] Microphone permission obtained in ${permElapsed.toFixed(2)}ms`);
+    } catch (err: any) {
+      if (err?.name === 'NotAllowedError') {
+        throw new Error(
+          'Microphone access is blocked. To fix:\n' +
+          '• Click the lock/tune icon in the address bar → Site settings → Microphone → Allow\n' +
+          '• On macOS: also check System Settings → Privacy → Microphone → enable your browser'
+        );
+      }
+      throw err; // Re-throw non-permission errors (e.g. NotFoundError)
+    }
   };
 
   const start = useCallback(async () => {

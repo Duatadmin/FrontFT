@@ -292,7 +292,7 @@ const VoiceWidget: React.FC<VoiceWidgetProps> = ({ onFinalTranscriptCommitted, i
                   </div>
                   <div className="ml-3 w-0 flex-1 pt-0.5">
                     <p className="text-sm font-medium text-white">Voice Error</p>
-                    <p className="mt-1 text-sm text-red-100">
+                    <p className="mt-1 text-sm text-red-100 whitespace-pre-line">
                       {toastMessage || 'An unexpected error occurred.'}
                     </p>
                   </div>
