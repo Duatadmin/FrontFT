@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
+import { motion, AnimatePresence, useMotionValue, useDragControls } from 'framer-motion';
 import { useInViewport } from '@/hooks/useInViewport';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { AICoachVisual } from './AICoachVisual';
@@ -547,6 +547,7 @@ export function PremiumWelcomeFlow() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const dragX = useMotionValue(0);
+  const dragControls = useDragControls();
   const { user, updateOnboardingStatus } = useUserStore();
   const [backgroundRef, isBackgroundInView] = useInViewport<HTMLDivElement>();
   const isMobile = useIsMobile();
@@ -766,6 +767,11 @@ export function PremiumWelcomeFlow() {
     }
   };
 
+  const startDrag = (e: React.PointerEvent) => {
+    if ((e.target as HTMLElement).closest('[data-no-drag]')) return;
+    dragControls.start(e);
+  };
+
   const handleDragEnd = (event: any, info: any) => {
     const threshold = 50;
     if (info.offset.x < -threshold && currentScreen < screens.length - 1) {
@@ -920,6 +926,9 @@ export function PremiumWelcomeFlow() {
               exit={{ opacity: 0, y: -20 }}
               transition={{ duration: 0.5 }}
               drag="x"
+              dragListener={false}
+              dragControls={dragControls}
+              onPointerDown={startDrag}
               dragConstraints={{ left: 0, right: 0 }}
               dragElastic={0.2}
               onDragEnd={handleDragEnd}

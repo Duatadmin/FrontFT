@@ -51,7 +51,7 @@ export function CustomSlider({
   useEffect(() => {
     const el = sliderRef.current;
     if (!el) return;
-    const prevent = (e: TouchEvent) => { e.preventDefault(); e.stopPropagation(); };
+    const prevent = (e: TouchEvent) => e.preventDefault();
     el.addEventListener('touchstart', prevent, { passive: false });
     return () => el.removeEventListener('touchstart', prevent);
   }, []);
@@ -72,7 +72,6 @@ export function CustomSlider({
   // Unified pointer handler for both tap-to-position and drag
   const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
     e.preventDefault();
-    e.stopPropagation();
     const el = sliderRef.current;
     if (!el) return;
     el.setPointerCapture(e.pointerId);
@@ -160,7 +159,7 @@ export function CustomSlider({
   // }, [value, progress]);
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-4", className)} data-no-drag>
       {/* Header */}
       <div className="space-y-4">
         <div className="flex items-center justify-between">
