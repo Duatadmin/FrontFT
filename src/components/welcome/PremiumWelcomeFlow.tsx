@@ -608,7 +608,29 @@ export function PremiumWelcomeFlow() {
   const screen = screens[currentScreen];
   const isOnboardingScreen = screen.isOnboarding;
   const isPreparingPlanScreen = screen.id === 'complete';
-  
+
+  // Cycle through generating step labels on the plan screen
+  const generatingSteps = ['Analyzing...', 'Calibrating...', 'Structuring...', 'Selecting...', 'Optimizing...', 'Finalizing...'];
+  const [generatingStepIndex, setGeneratingStepIndex] = useState(0);
+  const generatingStep = generatingSteps[generatingStepIndex];
+
+  useEffect(() => {
+    if (!isPreparingPlanScreen) {
+      setGeneratingStepIndex(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setGeneratingStepIndex(prev => {
+        if (prev >= generatingSteps.length - 1) {
+          clearInterval(interval);
+          return prev;
+        }
+        return prev + 1;
+      });
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [isPreparingPlanScreen]);
+
   // Remove auto-navigation - we'll navigate after API response instead
 
   const handleNext = async () => {
@@ -1282,12 +1304,12 @@ export function PremiumWelcomeFlow() {
                             <div className="relative">
                               {/* Underlayer with 40% opacity */}
                               <h3 className="text-[1.4rem] font-bold bg-gradient-to-r from-accent-lime to-accent-orange bg-clip-text text-transparent opacity-40">
-                                Generating...
+                                {generatingStep}
                               </h3>
                               {/* ShinyText overlay */}
                               <h3 className="absolute inset-0 text-[1.4rem] font-bold">
-                                <ShinyText 
-                                  text="Generating..." 
+                                <ShinyText
+                                  text={generatingStep}
                                   speed={3}
                                   className="bg-gradient-to-r from-accent-lime to-accent-orange bg-clip-text text-transparent"
                                 />
