@@ -1093,6 +1093,21 @@ export function PremiumWelcomeFlow() {
                   {/* Chips + Text Input */}
                   {screen.inputType === 'chips_text' && (
                     <div className="space-y-5">
+                      <div>
+                        <input
+                          type="text"
+                          value={inputValue}
+                          onChange={(e) => setInputValue(e.target.value)}
+                          placeholder={screen.placeholder}
+                          className="w-full p-4 bg-white/5 border border-white/20 rounded-2xl text-white text-base placeholder-white/40 focus:outline-none focus:border-accent-lime/50 focus:bg-white/10 transition-all"
+                          autoComplete="off"
+                        />
+                      </div>
+                      <div className="flex items-center gap-3 my-1">
+                        <div className="flex-1 h-px bg-white/10" />
+                        <span className="text-xs text-white/30 uppercase tracking-widest">or</span>
+                        <div className="flex-1 h-px bg-white/10" />
+                      </div>
                       {screen.chipOptions && (
                         <div className="flex flex-wrap gap-3">
                           {screen.chipOptions.map((chip, index) => {
@@ -1126,21 +1141,6 @@ export function PremiumWelcomeFlow() {
                           })}
                         </div>
                       )}
-                      <div className="flex items-center gap-3 my-1">
-                        <div className="flex-1 h-px bg-white/10" />
-                        <span className="text-xs text-white/30 uppercase tracking-widest">or</span>
-                        <div className="flex-1 h-px bg-white/10" />
-                      </div>
-                      <div>
-                        <input
-                          type="text"
-                          value={inputValue}
-                          onChange={(e) => setInputValue(e.target.value)}
-                          placeholder={screen.placeholder}
-                          className="w-full p-4 bg-white/5 border border-white/20 rounded-2xl text-white text-base placeholder-white/40 focus:outline-none focus:border-accent-lime/50 focus:bg-white/10 transition-all"
-                          autoComplete="off"
-                        />
-                      </div>
                     </div>
                   )}
 
