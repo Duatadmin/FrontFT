@@ -1009,7 +1009,7 @@ export function PremiumWelcomeFlow() {
                           }))}
                         />
                       ) : (
-                        <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                        <div className="bg-white/5 rounded-2xl p-6 border border-white/10" data-no-drag>
                           <div className="flex items-center justify-between mb-4">
                             <span className="text-white/60">Select value</span>
                             <span className="text-3xl font-bold text-white">
@@ -1177,7 +1177,7 @@ export function PremiumWelcomeFlow() {
 
                   {/* Strength Input */}
                   {screen.inputType === 'strength' && screen.strengthExercises && (
-                    <div className="space-y-6">
+                    <div className="space-y-6" data-no-drag>
                       {screen.strengthExercises.map((exercise) => (
                         <motion.div
                           key={exercise.key}
